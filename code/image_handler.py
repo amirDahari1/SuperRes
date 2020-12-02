@@ -2,12 +2,15 @@ from tifffile import imread
 from matplotlib import pyplot as plt
 import numpy as np
 import random
+import os
 import torch
 
 IMAGE_2D_HIGH_RES = 128
 num_samples = 10000
 
-tif_images = '/home/amir/Imperial/images/NMC.tif'
+os.chdir('..')
+tif_images = 'data/NMC.tif'
+
 
 def initialize(path):
     image_3d = imread(tif_images)
