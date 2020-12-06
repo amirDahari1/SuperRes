@@ -8,23 +8,37 @@ import torch
 IMAGE_2D_HIGH_RES = 128
 num_samples = 10000
 
-os.chdir('..')
+os.chdir('..')  # takes the current directory from /SuperRes/code to SuperRes/
 tif_images = 'data/NMC.tif'
 
 
 def initialize(path):
+    """
+    :param path: path of the 3d image
+    :return: tuple of (image, min_d) where image is the image from the path
+    and min_d is the minimal number of channels from each dimension.
+    """
     image_3d = imread(tif_images)
     min_d = min(image_3d.shape)  # the minimal dimension of the 3d image
     return image_3d, min_d
 
 
 def show_image(image):
+    """
+    Plots the image in grey scale, assuming the image is 1 channel of 0-255
+    """
     plt.imshow(image, cmap='gray', vmin=0, vmax=255)
     plt.show()
 
 
-def generate_a_random_image(image, min_dim, res=IMAGE_2D_HIGH_RES):
-    dim_chosen = random.randint(0, 2)  # the dimension to slice
+def generate_a_random_image(image, min_dim, dim_chosen, res=IMAGE_2D_HIGH_RES):
+    """
+    :param image: 3d initial image
+    :param min_dim: the minimum number of channels
+    :param dim_chosen: the dimension to slice 0 x-axis, 1 y-axis and 2 z-axis.
+    :param res: the high resolution 2d image resolution
+    :return: A random image of size res from the dimension chosen of the image.
+    """
     slice_chosen = random.randint(0, min_dim-1)  # the slice chosen
     lim_pix = min_dim - res  # the maximum pixel to start with
     # the starting pixels of the other dimensions:
@@ -44,9 +58,11 @@ def down_sample(orig_image_tensor):
     Average pool twice, then assigns 255 to values closer to 255 and 0 to
     values closer to 0
     """
-    image_tensor = orig_image_tensor.detach().clone()
+    image_tensor = orig_image_tensor.detach().clone()  # detech is for no
+    # autograd and clone for not changing the original tensor.
     image_tensor = torch.nn.AvgPool2d(2, 2)(image_tensor)
     image_tensor = torch.nn.AvgPool2d(2, 2)(image_tensor)
+    # threshold in the middle - arbitrary choice
     image_tensor[image_tensor > 64] = 128
     image_tensor[image_tensor <= 64] = 0
     return image_tensor
@@ -63,7 +79,7 @@ def main():
     images = np.zeros((num_samples, 1, IMAGE_2D_HIGH_RES, IMAGE_2D_HIGH_RES),
                       dtype=np.uint8)
     for i in range(num_samples):
-        images[i, 0, :, :] = generate_a_random_image(image_3d, min_dim)
+        images[i, 0, :, :] = generate_a_random_image(image_3d, min_dim, 0)
 
     original_tensor = torch.Tensor(images)  # moving the numpy to pytorch
     # tensors
