@@ -4,6 +4,7 @@ import argparse
 import os
 import random
 import torch.nn as nn
+import torch.nn.functional as F
 import torch.nn.parallel
 import torch.backends.cudnn as cudnn
 import torch.optim as optim
@@ -26,6 +27,9 @@ batch_size = 64
 # Number of channels in the training images. For color images this is 3
 nc_g = 2  # two phases for the generator input
 nc_d = 3  # three phases for the discriminator input
+
+# Width generator channel hyperparameter
+wg = 7
 
 # Number of training epochs
 num_epochs = 5
@@ -80,28 +84,46 @@ class Generator(nn.Module):
     def __init__(self, ngpu):
         super(Generator, self).__init__()
         self.ngpu = ngpu
-        self.main = nn.Sequential(
-            # input is Z, going into a convolution
-            nn.ConvTranspose2d( nz, ngf * 8, 4, 1, 0, bias=False),
-            nn.BatchNorm2d(ngf * 8),
-            nn.ReLU(True),
-            # state size. (ngf*8) x 4 x 4
-            nn.ConvTranspose2d(ngf * 8, ngf * 4, 4, 2, 1, bias=False),
-            nn.BatchNorm2d(ngf * 4),
-            nn.ReLU(True),
-            # state size. (ngf*4) x 8 x 8
-            nn.ConvTranspose2d( ngf * 4, ngf * 2, 4, 2, 1, bias=False),
-            nn.BatchNorm2d(ngf * 2),
-            nn.ReLU(True),
-            # state size. (ngf*2) x 16 x 16
-            nn.ConvTranspose2d( ngf * 2, ngf, 4, 2, 1, bias=False),
-            nn.BatchNorm2d(ngf),
-            nn.ReLU(True),
-            # state size. (ngf) x 32 x 32
-            nn.ConvTranspose2d( ngf, nc, 4, 2, 1, bias=False),
-            nn.Tanh()
-            # state size. (nc) x 64 x 64
-        )
+        # first convolution, making many channels
+        self.conv0 = nn.Conv2d(nc_g, 2**wg, 3, 1, 1)
+        # the number of channels is because of pixel shuffling
+        self.conv1 = nn.Conv2d(2**(wg-2), 2**(wg-2), 3, 1, 1)
+        # last convolution, squashing all of the channels to 3 phases:
+        self.conv2 = nn.Conv2d(2+2**(wg-2)+2**(wg-4), nc_d, 3, 1, 1)
+        # use twice pixel shuffling:
+        self.pixel_shuffling = torch.nn.PixelShuffle(2)
+        # up samples
+        self.up1 = nn.Upsample(scale_factor=4, mode='bilinear',
+                               align_corners=False)
+        self.up2 = nn.Upsample(scale_factor=2, mode='bilinear',
+                               align_corners=False)
 
-    def forward(self, input):
-        return self.main(input)
+    def forward(self, x):
+        # x after the first block:
+        x_block_0 = nn.PReLU()(self.pixel_shuffling(self.conv0(x)))
+        # x after two blocks:
+        x_block_1 = nn.PReLU()(self.pixel_shuffling(self.conv1(x_block_0)))
+        # upsampling of x and x_block_0:
+        x_up = self.up1(x)
+        x_block_0_up = self.up2(x_block_0)
+        # the concatenation of x, x_block_0 and x_block_1
+        # TODO addition instead of concatenation maybe?
+        y = torch.cat((x_up, x_block_0_up, x_block_1), dim=1)
+        return self.conv2(y)
+
+
+if __name__ == '__main__':
+    # Create the generator
+    netG = Generator(ngpu).to(device)
+
+    # Handle multi-gpu if desired
+    if (device.type == 'cuda') and (ngpu > 1):
+        netG = nn.DataParallel(netG, list(range(ngpu)))
+
+    # Apply the weights_init function to randomly initialize all weights
+    #  to mean=0, stdev=0.2.
+    netG.apply(weights_init)
+
+    # Print the model
+    print(netG)
+
