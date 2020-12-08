@@ -33,25 +33,25 @@ class BatchMaker:
         self.n_samples = n_samples
         self.low_res = low_res
         self.high_res = high_res
-        self.rand_test = self.generate_a_random_batch(1)  # test is y slices
-        self.rand_train_hr = self.generate_a_random_batch(0)  # train
+        self.d_train = self.generate_a_random_batch(1)  # test is y slices
+        self.g_train_hr = self.generate_a_random_batch(0)  # train
         # is x slices
-        self.show_image(self.rand_train_hr[0,0,:,:])
-        self.rand_train_no_cbd = BatchMaker.cbd_to_grey(self.rand_train_hr)
-        self.rand_train = self.down_sample(self.rand_train_no_cbd)
-        self.show_image(self.rand_train[0, 0, :, :])
+        self.show_image(self.g_train_hr[0,0,:,:])
+        self.g_train_no_cbd = BatchMaker.cbd_to_grey(self.g_train_hr)
+        self.g_train = self.down_sample(self.g_train_no_cbd)
+        self.show_image(self.g_train[0, 0, :, :])
         # change both test and train to one hot encoding:
-        self.ohe_rand_test = self.one_hot_encoding(self.rand_test)
-        self.ohe_rand_train = self.one_hot_encoding(self.rand_train)
+        self.ohe_d_train = self.one_hot_encoding(self.d_train)
+        self.ohe_g_train = self.one_hot_encoding(self.g_train)
         self.save_batches()
 
     def save_batches(self):
-        self.ohe_rand_test = torch.FloatTensor(self.ohe_rand_test)
-        dataset = torch.utils.data.TensorDataset(self.ohe_rand_test)
-        torch.save(dataset, 'data/test.pth')
-        self.ohe_rand_train = torch.FloatTensor(self.ohe_rand_train)
-        dataset = torch.utils.data.TensorDataset(self.ohe_rand_train)
-        torch.save(dataset, 'data/train.pth')
+        self.ohe_d_train = torch.FloatTensor(self.ohe_d_train)
+        dataset = torch.utils.data.TensorDataset(self.ohe_d_train)
+        torch.save(dataset, 'data/d_train.pth')
+        self.ohe_g_train = torch.FloatTensor(self.ohe_g_train)
+        dataset = torch.utils.data.TensorDataset(self.ohe_g_train)
+        torch.save(dataset, 'data/g_train.pth')
 
     def generate_a_random_batch(self, dim_chosen):
         res = np.zeros(
@@ -132,6 +132,28 @@ class BatchMaker:
             res[:, cnt, :, :] = image_copy.squeeze()
         return res
 
+    @staticmethod
+    def one_hot_decoding(image):
+        """
+        decodes the image back from one hot encoding to grayscale for
+        visualization.
+        :param image: a [batch_size, phases, height, width] tensor/numpy array
+        :return: a [batch_size, height, width] numpy array
+        """
+        np_image = np.array(image)
+        im_shape = np_image.shape
+        phases = im_shape[1]
+        decodes = [0, 128, 255]
+        res = np.zeros([im_shape[0], im_shape[2], im_shape[3]])
+
+        # the assumption is that each pixel has exactly one 1 in its phases
+        # and 0 in all other phases:
+        for i in range(phases):
+            if i == 0:
+                continue  # the res is already 0 in all places..
+            phase_image = np_image[:, i, :, :]
+            res[phase_image == 1] = decodes[i]
+        return res
 
 
 def main():
@@ -165,6 +187,8 @@ def main():
     # axarr[1,2].imshow(wo_cbd[pic3,0,:,:], cmap='gray', vmin=0, vmax=255)
     # axarr[2,2].imshow(small_numpy[pic3,0,:,:], cmap='gray', vmin=0, vmax=255)
     # plt.show()
-
-
     print('hi')
+
+
+if __name__ == '__main__':
+    main()
