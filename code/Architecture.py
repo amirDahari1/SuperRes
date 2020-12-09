@@ -99,6 +99,8 @@ class Generator(nn.Module):
                                align_corners=False)
 
     def forward(self, x):
+        # TODO maybe convolution twice on the 32x32 images to catch bigger
+        #  9x9 areas of the image..
         # x after the first block:
         x_block_0 = nn.PReLU()(self.pixel_shuffling(self.conv0(x)))
         # x after two blocks:
@@ -109,7 +111,10 @@ class Generator(nn.Module):
         # the concatenation of x, x_block_0 and x_block_1
         # TODO addition instead of concatenation maybe?
         y = torch.cat((x_up, x_block_0_up, x_block_1), dim=1)
-        return self.conv2(y)
+        # TODO maybe different function in the end?
+        return nn.Softmax(dim=1)(self.conv2(y))
+
+# Discriminator code
 
 
 if __name__ == '__main__':
@@ -126,4 +131,19 @@ if __name__ == '__main__':
 
     # Print the model
     print(netG)
+
+    # see if the dimensions are correct
+    first_g_batch = next(iter(g_dataloader))
+    before_run = ImageTools.one_hot_decoding(first_g_batch[0])
+
+    test_run = netG.forward(first_g_batch[0]).detach()
+    print(test_run.shape)
+    test_run_gray = ImageTools.one_hot_decoding(ImageTools.fractions_to_ohe(
+        test_run))
+
+    ImageTools.show_three_by_two_gray(before_run[0:3,:,:],test_run_gray[0:3,
+                                                          :,:], 'Generator '
+                                                                'run without training')
+    # print an image
+
 
