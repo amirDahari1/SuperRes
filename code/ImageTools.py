@@ -15,16 +15,19 @@ def show_gray_image(image):
     plt.show()
 
 
-def show_three_by_two_gray(top_images, bottom_images, title):
+def show_three_by_two_gray(top_images, middle_images, bottom_images, title):
 
-    f, axarr = plt.subplots(2, 3)
+    f, axarr = plt.subplots(3, 3)
 
     axarr[0,0].imshow(top_images[0, :, :], cmap='gray', vmin=0, vmax=255)
     axarr[0,1].imshow(top_images[1, :, :], cmap='gray', vmin=0, vmax=255)
     axarr[0,2].imshow(top_images[2, :, :], cmap='gray', vmin=0, vmax=255)
-    axarr[1, 0].imshow(bottom_images[0, :, :], cmap='gray', vmin=0, vmax=255)
-    axarr[1, 1].imshow(bottom_images[1, :, :], cmap='gray', vmin=0, vmax=255)
-    axarr[1, 2].imshow(bottom_images[2, :, :], cmap='gray', vmin=0, vmax=255)
+    axarr[1, 0].imshow(middle_images[0, :, :], cmap='gray', vmin=0, vmax=255)
+    axarr[1, 1].imshow(middle_images[1, :, :], cmap='gray', vmin=0, vmax=255)
+    axarr[1, 2].imshow(middle_images[2, :, :], cmap='gray', vmin=0, vmax=255)
+    axarr[2, 0].imshow(bottom_images[0, :, :], cmap='gray', vmin=0, vmax=255)
+    axarr[2, 1].imshow(bottom_images[1, :, :], cmap='gray', vmin=0, vmax=255)
+    axarr[2, 2].imshow(bottom_images[2, :, :], cmap='gray', vmin=0, vmax=255)
     plt.suptitle(title)
     plt.show()
 

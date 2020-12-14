@@ -29,7 +29,8 @@ nc_g = 2  # two phases for the generator input
 nc_d = 3  # three phases for the discriminator input
 
 # Width generator channel hyperparameter
-wg = 7
+wd = 8
+wg = 9
 
 # Number of training epochs
 num_epochs = 5
@@ -127,25 +128,32 @@ class Discriminator(nn.Module):
         super(Discriminator, self).__init__()
         self.ngpu = ngpu
         # first convolution, input is 3x128x128
-        self.conv0 = nn.Conv2d(nc_d, 2 ** (wg - 4), 4, 2, 1)
-        # first convolution, input is 8x64x64
-        self.conv1 = nn.Conv2d(2 ** (wg - 4), 2 ** (wg - 3), 4, 2, 1)
-        # second convolution, input is 16x32x32
-        self.conv2 = nn.Conv2d(2 ** (wg - 3), 2 ** (wg - 2), 4, 2, 1)
+        self.conv0 = nn.Conv2d(nc_d, 2 ** (wd - 4), 4, 2, 1)
+        # first convolution, input is 4x64x64
+        self.conv1 = nn.Conv2d(2 ** (wd - 4), 2 ** (wd - 3), 4, 2, 1)
+        # second convolution, input is 8x32x32
+        self.break_conv1 = nn.Conv2d(2 ** (wd - 3), 1, 4, 2, 1)
+        # now it is 1x16x16
+        self.linear = nn.Linear(16*16, 1)
+        self.conv2 = nn.Conv2d(2 ** (wd - 3), 2 ** (wd - 2), 4, 2, 1)
         # third convolution, input is 32x16x16
-        self.conv3 = nn.Conv2d(2 ** (wg - 2), 2 ** (wg - 1), 4, 2, 1)
+        self.conv3 = nn.Conv2d(2 ** (wd - 2), 2 ** (wd - 1), 4, 2, 1)
         # fourth convolution, input is 64x8x8
-        self.conv4 = nn.Conv2d(2 ** (wg - 1), 2 ** wg, 4, 2, 1)
+        self.conv4 = nn.Conv2d(2 ** (wd - 1), 2 ** wd, 4, 2, 1)
         # fifth convolution, input is 128x4x4
-        self.conv5 = nn.Conv2d(2 ** wg, 1, 4, 2, 0)
+        self.conv5 = nn.Conv2d(2 ** wd, 1, 4, 2, 0)
 
     def forward(self, x):
         x = nn.PReLU()(self.conv0(x))
         x = nn.PReLU()(self.conv1(x))
-        x = nn.PReLU()(self.conv2(x))
-        x = nn.PReLU()(self.conv3(x))
-        x = nn.PReLU()(self.conv4(x))
-        return nn.Sigmoid()(self.conv5(x))
+        x = nn.PReLU()(self.break_conv1(x))
+
+        x = x.view(-1, 16*16)
+        return nn.Sigmoid()(self.linear(x))
+        # x = nn.PReLU()(self.conv2(x))
+        # x = nn.PReLU()(self.conv3(x))
+        # x = nn.PReLU()(self.conv4(x))
+        # return nn.Sigmoid()(self.conv5(x))
 
 if __name__ == '__main__':
     # Create the generator
@@ -213,7 +221,7 @@ if __name__ == '__main__':
 
     print("Starting Training Loop...")
     # For each epoch
-    for epoch in range(num_epochs):
+    for epoch in range(5):
         # For each batch in the dataloader
         i = 0
         for d_data, g_data in zip(d_dataloader, g_dataloader):
@@ -282,16 +290,46 @@ if __name__ == '__main__':
             D_losses.append(errD.item())
 
             # Check how the generator is doing by saving G's output on fixed_noise
-            if (iters % 100 == 0) or (
+            if (iters % 20 == 0) or (
                     (epoch == num_epochs - 1) and (i == len(d_dataloader) -
                                                    1)):
-                with torch.no_grad():
-                    fake = netG(low_res).detach().cpu()
-                    fake = ImageTools.fractions_to_ohe(fake)
-                    fake = ImageTools.one_hot_decoding(fake)
-                    ImageTools.show_gray_image(fake[0,:,:])
-                    ImageTools.show_gray_image(fake[1,:,:])
+                # with torch.no_grad():
+                #     fake = netG(low_res).detach().cpu()
+                #     fake = ImageTools.fractions_to_ohe(fake)
+                #     fake = ImageTools.one_hot_decoding(fake)
+                #     ImageTools.show_gray_image(fake[0,:,:])
+                #     ImageTools.show_gray_image(fake[1,:,:])
+            # save the trained model
+                PATH = './g_test.pth'
+                torch.save(netG.state_dict(), PATH)
 
             iters += 1
             i += 1
             print(i)
+
+    print('finished training')
+
+    # # save the trained model
+    PATH = './g_test.pth'
+    # torch.save(netG.state_dict(), PATH)
+
+    netG = Generator(ngpu)
+    netG.load_state_dict(torch.load(PATH))
+    high_res = next(iter(d_dataloader))[0]
+    print(high_res.shape)
+    high_res = ImageTools.one_hot_decoding(high_res)
+    print(high_res.shape)
+    low_res = ImageTools.cbd_to_grey(high_res)
+    low_res = ImageTools.down_sample(low_res)
+    low_res = np.expand_dims(low_res, axis=1)
+    print(low_res.shape)
+    input_to_g = ImageTools.one_hot_encoding(low_res)
+    print(low_res.shape)
+    fake = netG(torch.FloatTensor(input_to_g)).detach().cpu()
+    fake = ImageTools.fractions_to_ohe(fake)
+    fake = ImageTools.one_hot_decoding(fake)
+    ImageTools.show_three_by_two_gray(high_res, low_res.squeeze(), fake,
+                                      'Very vanilla '
+                                                                  'super-res '
+                                                               'results')
+
