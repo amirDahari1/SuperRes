@@ -235,6 +235,7 @@ if __name__ == '__main__':
             # Format batch
             real_cpu = d_data[0].to(device)
             print(real_cpu.device)
+            print(real_cpu.type(torch.FloatTensor))
             b_size = real_cpu.size(0)
 
             label = torch.full((b_size,), real_label, dtype=torch.float,
