@@ -16,6 +16,7 @@ from matplotlib import pyplot as plt
 
 
 # Root directory for dataset
+print(os.getcwd())
 dataroot = "data/"
 
 # Number of workers for dataloader
@@ -29,8 +30,8 @@ nc_g = 2  # two phases for the generator input
 nc_d = 3  # three phases for the discriminator input
 
 # Width generator channel hyperparameter
-wd = 8
-wg = 9
+wd = 7
+wg = 7
 
 # Number of training epochs
 num_epochs = 5
@@ -233,6 +234,7 @@ if __name__ == '__main__':
             netD.zero_grad()
             # Format batch
             real_cpu = d_data[0].to(device)
+            print(real_cpu.device)
             b_size = real_cpu.size(0)
 
             label = torch.full((b_size,), real_label, dtype=torch.float,
