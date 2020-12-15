@@ -17,8 +17,6 @@ from matplotlib import pyplot as plt
 
 # Root directory for dataset
 print(os.getcwd())
-os.chdir('$HOME/SuperRes')
-print(os.getcwd())
 dataroot = "data/"
 
 # Number of workers for dataloader
