@@ -30,8 +30,8 @@ nc_g = 2  # two phases for the generator input
 nc_d = 3  # three phases for the discriminator input
 
 # Width generator channel hyperparameter
-wd = 7
-wg = 7
+wd = 8
+wg = 9
 
 # Number of training epochs
 num_epochs = 5
@@ -292,15 +292,15 @@ if __name__ == '__main__':
             D_losses.append(errD.item())
 
             # Check how the generator is doing by saving G's output on fixed_noise
-            if (iters % 20 == 0) or (
+            if (iters % 100 == 0) or (
                     (epoch == num_epochs - 1) and (i == len(d_dataloader) -
                                                    1)):
-                # with torch.no_grad():
-                #     fake = netG(low_res).detach().cpu()
-                #     fake = ImageTools.fractions_to_ohe(fake)
-                #     fake = ImageTools.one_hot_decoding(fake)
-                #     ImageTools.show_gray_image(fake[0,:,:])
-                #     ImageTools.show_gray_image(fake[1,:,:])
+                with torch.no_grad():
+                    fake = netG(low_res).detach().cpu()
+                    fake = ImageTools.fractions_to_ohe(fake)
+                    fake = ImageTools.one_hot_decoding(fake)
+                    ImageTools.show_gray_image(fake[0,:,:])
+                    ImageTools.show_gray_image(fake[1,:,:])
             # save the trained model
                 PATH = './g_test.pth'
                 torch.save(netG.state_dict(), PATH)
