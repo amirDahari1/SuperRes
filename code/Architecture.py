@@ -17,6 +17,8 @@ from matplotlib import pyplot as plt
 
 # Root directory for dataset
 print(os.getcwd())
+os.chdir('$HOME/SuperRes')
+print(os.getcwd())
 dataroot = "data/"
 
 # Number of workers for dataloader
@@ -30,8 +32,8 @@ nc_g = 2  # two phases for the generator input
 nc_d = 3  # three phases for the discriminator input
 
 # Width generator channel hyperparameter
-wd = 8
-wg = 9
+wd = 7
+wg = 7
 
 # Number of training epochs
 num_epochs = 5
@@ -300,7 +302,6 @@ if __name__ == '__main__':
                     fake = ImageTools.fractions_to_ohe(fake)
                     fake = ImageTools.one_hot_decoding(fake)
                     ImageTools.show_gray_image(fake[0,:,:])
-                    ImageTools.show_gray_image(fake[1,:,:])
             # save the trained model
                 PATH = './g_test.pth'
                 torch.save(netG.state_dict(), PATH)
