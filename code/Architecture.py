@@ -295,14 +295,16 @@ if __name__ == '__main__':
             if (iters % 100 == 0) or (
                     (epoch == num_epochs - 1) and (i == len(d_dataloader) -
                                                    1)):
-                with torch.no_grad():
-                    fake = netG(low_res).detach().cpu()
-                    fake = ImageTools.fractions_to_ohe(fake)
-                    fake = ImageTools.one_hot_decoding(fake)
-                    ImageTools.show_gray_image(fake[0,:,:])
+                # with torch.no_grad():
+                #     fake = netG(low_res).detach().cpu()
+                #     fake = ImageTools.fractions_to_ohe(fake)
+                #     fake = ImageTools.one_hot_decoding(fake)
+                #     ImageTools.show_gray_image(fake[0,:,:])
             # save the trained model
-                PATH = './g_test.pth'
-                torch.save(netG.state_dict(), PATH)
+                PATH_G = './g_test.pth'
+                PATH_D = './d_test.pth'
+                torch.save(netG.state_dict(), PATH_G)
+                torch.save(netG.state_dict(), PATH_D)
 
             iters += 1
             i += 1
@@ -311,26 +313,26 @@ if __name__ == '__main__':
     print('finished training')
 
     # # save the trained model
-    PATH = './g_test.pth'
+    # PATH = './g_test.pth'
     # torch.save(netG.state_dict(), PATH)
 
-    netG = Generator(ngpu)
-    netG.load_state_dict(torch.load(PATH))
-    high_res = next(iter(d_dataloader))[0]
-    print(high_res.shape)
-    high_res = ImageTools.one_hot_decoding(high_res)
-    print(high_res.shape)
-    low_res = ImageTools.cbd_to_grey(high_res)
-    low_res = ImageTools.down_sample(low_res)
-    low_res = np.expand_dims(low_res, axis=1)
-    print(low_res.shape)
-    input_to_g = ImageTools.one_hot_encoding(low_res)
-    print(low_res.shape)
-    fake = netG(torch.FloatTensor(input_to_g)).detach().cpu()
-    fake = ImageTools.fractions_to_ohe(fake)
-    fake = ImageTools.one_hot_decoding(fake)
-    ImageTools.show_three_by_two_gray(high_res, low_res.squeeze(), fake,
-                                      'Very vanilla '
-                                                                  'super-res '
-                                                               'results')
+    # netG = Generator(ngpu)
+    # netG.load_state_dict(torch.load(PATH))
+    # high_res = next(iter(d_dataloader))[0]
+    # print(high_res.shape)
+    # high_res = ImageTools.one_hot_decoding(high_res)
+    # print(high_res.shape)
+    # low_res = ImageTools.cbd_to_grey(high_res)
+    # low_res = ImageTools.down_sample(low_res)
+    # low_res = np.expand_dims(low_res, axis=1)
+    # print(low_res.shape)
+    # input_to_g = ImageTools.one_hot_encoding(low_res)
+    # print(low_res.shape)
+    # fake = netG(torch.FloatTensor(input_to_g)).detach().cpu()
+    # fake = ImageTools.fractions_to_ohe(fake)
+    # fake = ImageTools.one_hot_decoding(fake)
+    # ImageTools.show_three_by_two_gray(high_res, low_res.squeeze(), fake,
+    #                                   'Very vanilla '
+    #                                                               'super-res '
+    #                                                            'results')
 
