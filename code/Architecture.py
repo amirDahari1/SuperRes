@@ -104,10 +104,10 @@ class Generator(nn.Module):
         #  9x9 areas of the image..
         # x after the first block:
         # TODO also instead of conv with 1 make it conv with 0
-        x_first = nn.PReLU()(self.conv_minus_1(x))
-        x_block_0 = nn.PReLU()(self.pixel_shuffling(self.conv0(x_first)))
+        x_first = nn.ReLU()(self.conv_minus_1(x))
+        x_block_0 = nn.ReLU()(self.pixel_shuffling(self.conv0(x_first)))
         # x after two blocks:
-        x_block_1 = nn.PReLU()(self.pixel_shuffling(self.conv1(x_block_0)))
+        x_block_1 = nn.ReLU()(self.pixel_shuffling(self.conv1(x_block_0)))
         # upsampling of x and x_block_0:
         x_up = self.up1(x)
         # the concatenation of x, x_block_0 and x_block_1
@@ -145,9 +145,9 @@ class Discriminator(nn.Module):
         self.conv5 = nn.Conv2d(2 ** wd, 1, 4, 2, 0)
 
     def forward(self, x):
-        x = nn.PReLU()(self.conv0(x))
-        x = nn.PReLU()(self.conv1(x))
-        x = nn.PReLU()(self.break_conv1(x))
+        x = nn.ReLU()(self.conv0(x))
+        x = nn.ReLU()(self.conv1(x))
+        x = nn.ReLU()(self.break_conv1(x))
 
         x = x.view(-1, 16*16)
         return nn.Sigmoid()(self.linear(x))
@@ -234,8 +234,7 @@ if __name__ == '__main__':
             netD.zero_grad()
             # Format batch
             real_cpu = d_data[0].to(device)
-            print(real_cpu.device)
-            print(real_cpu.type(torch.FloatTensor))
+            real_cpu.type(torch.FloatTensor)
             b_size = real_cpu.size(0)
 
             label = torch.full((b_size,), real_label, dtype=torch.float,
