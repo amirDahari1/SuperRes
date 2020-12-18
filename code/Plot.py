@@ -1,4 +1,6 @@
-from Architecture import *
+from Architecture import PATH_G, Generator, ngpu, torch, d_dataloader
+import ImageTools
+import numpy as np
 
 if __name__ == '__main__':
     netG = Generator(ngpu)
