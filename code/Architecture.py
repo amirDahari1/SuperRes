@@ -14,6 +14,8 @@ import torchvision.transforms as transforms
 import torchvision.utils as vutils
 from matplotlib import pyplot as plt
 
+PATH_G = './g_test.pth'
+PATH_D = './d_test.pth'
 
 # Root directory for dataset
 print(os.getcwd())
@@ -62,6 +64,7 @@ g_dataloader = torch.utils.data.DataLoader(g_train_dataset,
 
 # Decide which device we want to run on
 device = torch.device("cuda:0" if (torch.cuda.is_available() and ngpu > 0) else "cpu")
+print('device is ' + str(device))
 
 # Plot one training image of d
 # first_d_batch = next(iter(d_dataloader))
@@ -301,8 +304,7 @@ if __name__ == '__main__':
                 #     fake = ImageTools.one_hot_decoding(fake)
                 #     ImageTools.show_gray_image(fake[0,:,:])
             # save the trained model
-                PATH_G = './g_test.pth'
-                PATH_D = './d_test.pth'
+
                 torch.save(netG.state_dict(), PATH_G)
                 torch.save(netG.state_dict(), PATH_D)
 
