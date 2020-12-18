@@ -32,8 +32,8 @@ nc_g = 2  # two phases for the generator input
 nc_d = 3  # three phases for the discriminator input
 
 # Width generator channel hyperparameter
-wd = 8
-wg = 9
+wd = 6
+wg = 6
 
 # Number of training epochs
 num_epochs = 5
@@ -107,10 +107,10 @@ class Generator(nn.Module):
         #  9x9 areas of the image..
         # x after the first block:
         # TODO also instead of conv with 1 make it conv with 0
-        x_first = nn.ReLU()(self.conv_minus_1(x))
-        x_block_0 = nn.ReLU()(self.pixel_shuffling(self.conv0(x_first)))
+        x_first = nn.PReLU()(self.conv_minus_1(x))
+        x_block_0 = nn.PReLU()(self.pixel_shuffling(self.conv0(x_first)))
         # x after two blocks:
-        x_block_1 = nn.ReLU()(self.pixel_shuffling(self.conv1(x_block_0)))
+        x_block_1 = nn.PReLU()(self.pixel_shuffling(self.conv1(x_block_0)))
         # upsampling of x and x_block_0:
         x_up = self.up1(x)
         # the concatenation of x, x_block_0 and x_block_1
@@ -136,9 +136,9 @@ class Discriminator(nn.Module):
         # first convolution, input is 4x64x64
         self.conv1 = nn.Conv2d(2 ** (wd - 4), 2 ** (wd - 3), 4, 2, 1)
         # second convolution, input is 8x32x32
-        self.break_conv1 = nn.Conv2d(2 ** (wd - 3), 1, 4, 2, 1)
+        # self.break_conv1 = nn.Conv2d(2 ** (wd - 3), 1, 4, 2, 1)
         # now it is 1x16x16
-        self.linear = nn.Linear(16*16, 1)
+        # self.linear = nn.Linear(16*16, 1)
         self.conv2 = nn.Conv2d(2 ** (wd - 3), 2 ** (wd - 2), 4, 2, 1)
         # third convolution, input is 32x16x16
         self.conv3 = nn.Conv2d(2 ** (wd - 2), 2 ** (wd - 1), 4, 2, 1)
@@ -148,16 +148,16 @@ class Discriminator(nn.Module):
         self.conv5 = nn.Conv2d(2 ** wd, 1, 4, 2, 0)
 
     def forward(self, x):
-        x = nn.ReLU()(self.conv0(x))
-        x = nn.ReLU()(self.conv1(x))
-        x = nn.ReLU()(self.break_conv1(x))
+        x = nn.PReLU()(self.conv0(x))
+        x = nn.PReLU()(self.conv1(x))
+        # x = nn.PReLU()(self.break_conv1(x))
 
-        x = x.view(-1, 16*16)
-        return nn.Sigmoid()(self.linear(x))
-        # x = nn.PReLU()(self.conv2(x))
-        # x = nn.PReLU()(self.conv3(x))
-        # x = nn.PReLU()(self.conv4(x))
-        # return nn.Sigmoid()(self.conv5(x))
+        # x = x.view(-1, 16*16)
+        # return nn.Sigmoid()(self.linear(x))
+        x = nn.PReLU()(self.conv2(x))
+        x = nn.PReLU()(self.conv3(x))
+        x = nn.PReLU()(self.conv4(x))
+        return nn.Sigmoid()(self.conv5(x))
 
 if __name__ == '__main__':
     # Create the generator
@@ -298,20 +298,20 @@ if __name__ == '__main__':
             if (iters % 100 == 0) or (
                     (epoch == num_epochs - 1) and (i == len(d_dataloader) -
                                                    1)):
-                # with torch.no_grad():
-                #     fake = netG(low_res).detach().cpu()
-                #     fake = ImageTools.fractions_to_ohe(fake)
-                #     fake = ImageTools.one_hot_decoding(fake)
-                #     ImageTools.show_gray_image(fake[0,:,:])
-            # save the trained model
-
-                torch.save(netG.state_dict(), PATH_G)
-                torch.save(netG.state_dict(), PATH_D)
+                with torch.no_grad():
+                    fake = netG(low_res).detach().cpu()
+                    fake = ImageTools.fractions_to_ohe(fake)
+                    fake = ImageTools.one_hot_decoding(fake)
+                    ImageTools.show_gray_image(fake[0,:,:])
+                    ImageTools.show_gray_image(fake[1, :, :])
 
             iters += 1
             i += 1
             print(i)
 
+    # save the trained model
+    torch.save(netG.state_dict(), PATH_G)
+    torch.save(netG.state_dict(), PATH_D)
     print('finished training')
 
     # # save the trained model
