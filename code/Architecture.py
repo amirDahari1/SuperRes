@@ -229,7 +229,7 @@ if __name__ == '__main__':
 
     print("Starting Training Loop...")
     # For each epoch
-    for epoch in range(5):
+    for epoch in range(10):
         # For each batch in the dataloader
         i = 0
         for d_data, g_data in zip(d_dataloader, g_dataloader):
