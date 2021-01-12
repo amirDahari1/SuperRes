@@ -32,8 +32,8 @@ nc_g = 2  # two phases for the generator input
 nc_d = 3  # three phases for the discriminator input
 
 # Width generator channel hyperparameter
-wd = 6
-wg = 6
+wd = 7
+wg = 7
 
 # Number of training epochs
 num_epochs = 5
@@ -108,7 +108,11 @@ class Generator(nn.Module):
         # x after the first block:
         # TODO also instead of conv with 1 make it conv with 0
         x_first = nn.ReLU()(self.conv_minus_1(x))
-        x_block_0 = nn.ReLU()(self.pixel_shuffling(self.conv0(x_first)))
+        # making two more convolutions to understand the big areas:
+        x_before1 = nn.ReLU()(self.conv0(x_first))
+        x_before2 = nn.ReLU()(self.conv0(x_before1))
+        # then after third time pixel shuffeling:
+        x_block_0 = nn.ReLU()(self.pixel_shuffling(self.conv0(x_before2)))
         # x after two blocks:
         x_block_1 = nn.ReLU()(self.pixel_shuffling(self.conv1(x_block_0)))
         # upsampling of x and x_block_0:
