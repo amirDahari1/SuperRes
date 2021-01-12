@@ -311,7 +311,7 @@ if __name__ == '__main__':
 
             iters += 1
             i += 1
-            print(i)
+            
 
     # save the trained model
     torch.save(netG.state_dict(), PATH_G)
