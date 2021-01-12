@@ -32,8 +32,8 @@ nc_g = 2  # two phases for the generator input
 nc_d = 3  # three phases for the discriminator input
 
 # Width generator channel hyperparameter
-wd = 6
-wg = 9
+wd = 7
+wg = 8
 
 # Number of training epochs
 num_epochs = 5
@@ -110,9 +110,8 @@ class Generator(nn.Module):
         x_first = nn.ReLU()(self.conv_minus_1(x))
         # making two more convolutions to understand the big areas:
         x_before1 = nn.ReLU()(self.conv0(x_first))
-        x_before2 = nn.ReLU()(self.conv0(x_before1))
         # then after third time pixel shuffeling:
-        x_block_0 = nn.ReLU()(self.pixel_shuffling(self.conv0(x_before2)))
+        x_block_0 = nn.ReLU()(self.pixel_shuffling(self.conv0(x_before1)))
         # x after two blocks:
         x_block_1 = nn.ReLU()(self.pixel_shuffling(self.conv1(x_block_0)))
         # upsampling of x and x_block_0:
@@ -125,7 +124,7 @@ class Generator(nn.Module):
         last_zero_channel = torch.zeros(last_zero_size, dtype=x_up.dtype,
                                         device=x_up.device)
         x_up = torch.cat((x_up, last_zero_channel), dim=1)
-        # y = torch.add(y, x_up)
+        y = torch.add(y, x_up)
         # TODO maybe different function in the end?
         return nn.Softmax(dim=1)(y)
 
@@ -299,19 +298,19 @@ if __name__ == '__main__':
             D_losses.append(errD.item())
 
             # Check how the generator is doing by saving G's output on fixed_noise
-            if (iters % 100 == 0) or (
-                    (epoch == num_epochs - 1) and (i == len(d_dataloader) -
-                                                   1)):
-                with torch.no_grad():
-                    fake = netG(low_res).detach().cpu()
-                    fake = ImageTools.fractions_to_ohe(fake)
-                    fake = ImageTools.one_hot_decoding(fake)
-                    ImageTools.show_gray_image(fake[0,:,:])
-                    ImageTools.show_gray_image(fake[1, :, :])
+            # if (iters % 100 == 0) or (
+            #         (epoch == num_epochs - 1) and (i == len(d_dataloader) -
+            #                                        1)):
+            #     with torch.no_grad():
+            #         fake = netG(low_res).detach().cpu()
+            #         fake = ImageTools.fractions_to_ohe(fake)
+            #         fake = ImageTools.one_hot_decoding(fake)
+            #         ImageTools.show_gray_image(fake[0,:,:])
+            #         ImageTools.show_gray_image(fake[1, :, :])
 
             iters += 1
             i += 1
-            
+
 
     # save the trained model
     torch.save(netG.state_dict(), PATH_G)
