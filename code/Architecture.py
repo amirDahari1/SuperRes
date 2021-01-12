@@ -32,8 +32,8 @@ nc_g = 2  # two phases for the generator input
 nc_d = 3  # three phases for the discriminator input
 
 # Width generator channel hyperparameter
-wd = 7
-wg = 10
+wd = 6
+wg = 9
 
 # Number of training epochs
 num_epochs = 5
@@ -229,7 +229,7 @@ if __name__ == '__main__':
 
     print("Starting Training Loop...")
     # For each epoch
-    for epoch in range(10):
+    for epoch in range(num_epochs):
         # For each batch in the dataloader
         i = 0
         for d_data, g_data in zip(d_dataloader, g_dataloader):
