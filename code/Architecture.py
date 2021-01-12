@@ -33,7 +33,7 @@ nc_d = 3  # three phases for the discriminator input
 
 # Width generator channel hyperparameter
 wd = 7
-wg = 7
+wg = 8
 
 # Number of training epochs
 num_epochs = 5
@@ -125,7 +125,7 @@ class Generator(nn.Module):
         last_zero_channel = torch.zeros(last_zero_size, dtype=x_up.dtype,
                                         device=x_up.device)
         x_up = torch.cat((x_up, last_zero_channel), dim=1)
-        y = torch.add(y, x_up)
+        # y = torch.add(y, x_up)
         # TODO maybe different function in the end?
         return nn.Softmax(dim=1)(y)
 
