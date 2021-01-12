@@ -33,10 +33,10 @@ nc_d = 3  # three phases for the discriminator input
 
 # Width generator channel hyperparameter
 wd = 7
-wg = 8
+wg = 9
 
 # Number of training epochs
-num_epochs = 5
+num_epochs = 15
 
 # Learning rate for optimizers
 lr = 0.0002
