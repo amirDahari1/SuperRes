@@ -1,5 +1,7 @@
-from Architecture import *
-os.chdir('SuperRes')
+from Architecture import PATH_G, Generator, ngpu, torch, d_dataloader
+import os
+import ImageTools
+import numpy as np
 
 if __name__ == '__main__':
     netG = Generator(ngpu)
