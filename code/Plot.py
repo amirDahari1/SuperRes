@@ -1,5 +1,5 @@
 from Architecture import *
-
+os.chdir('SuperRes')
 
 if __name__ == '__main__':
     netG = Generator(ngpu)
