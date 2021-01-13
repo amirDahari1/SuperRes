@@ -5,12 +5,13 @@ import os
 import torch
 import torch.utils.data
 import ImageTools
+import LearnTools
 
 LOW_RES = 32
 HIGH_RES = 128
 N_SAMPLES = 10000
 
-# os.chdir('..')  # takes the current directory from /SuperRes/code to SuperRes/
+os.chdir('..')  # takes the current directory from /SuperRes/code to SuperRes/
 TIF_IMAGE = 'data/NMC.tif'
 
 
