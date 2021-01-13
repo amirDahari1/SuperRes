@@ -112,3 +112,19 @@ def fractions_to_ohe(image):
     np.put_along_axis(res, arg_phase_max, 1, axis=1)
     return res
 
+
+def graph_plot(data, labels, pth, name):
+    """
+    simple plotter for all the different graphs
+    :param data: a list of data arrays
+    :param labels: a list of plot labels
+    :param pth: where to save plots
+    :param name: name of the plot figure
+    :return:
+    """
+
+    for datum,lbl in zip(data,labels):
+        plt.plot(datum, label = lbl)
+    plt.legend()
+    plt.savefig(pth + '_' + name)
+    plt.close()
