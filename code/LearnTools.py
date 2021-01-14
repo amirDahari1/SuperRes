@@ -37,3 +37,4 @@ def calc_gradient_penalty(netD, real_data, fake_data, batch_size, l, device,
     gradients = gradients.view(gradients.size(0), -1)
     gradient_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean() * gp_lambda
     return gradient_penalty
+

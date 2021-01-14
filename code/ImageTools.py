@@ -15,6 +15,19 @@ def show_gray_image(image):
     plt.show()
 
 
+def plot_fake_difference(high_res, netG):
+    high_res = one_hot_decoding(high_res)
+    low_res = cbd_to_grey(high_res)
+    low_res = down_sample(low_res)
+    low_res = np.expand_dims(low_res, axis=1)
+    input_to_g = one_hot_encoding(low_res)
+    fake = netG(torch.FloatTensor(input_to_g)).detach().cpu()
+    fake = fractions_to_ohe(fake)
+    fake = one_hot_decoding(fake)
+    show_three_by_two_gray(high_res, low_res.squeeze(), fake,
+                                      'Very vanilla super-res results')
+
+
 def show_three_by_two_gray(top_images, middle_images, bottom_images, title):
 
     f, axarr = plt.subplots(3, 3)
@@ -29,7 +42,8 @@ def show_three_by_two_gray(top_images, middle_images, bottom_images, title):
     axarr[2, 1].imshow(bottom_images[1, :, :], cmap='gray', vmin=0, vmax=255)
     axarr[2, 2].imshow(bottom_images[2, :, :], cmap='gray', vmin=0, vmax=255)
     plt.suptitle(title)
-    plt.show()
+    plt.savefig('fake_slices.png')
+    plt.close()
 
 
 def cbd_to_grey(im_with_cbd):

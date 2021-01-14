@@ -36,7 +36,7 @@ wd = 10
 wg = 9
 
 # Number of training epochs
-num_epochs = 50
+num_epochs = 200
 
 # Learning rate for optimizers
 lr = 0.0002
@@ -155,10 +155,6 @@ class Discriminator(nn.Module):
     def forward(self, x):
         x = nn.ReLU()(self.conv0(x))
         x = nn.ReLU()(self.conv1(x))
-        # x = nn.ReLU()(self.break_conv1(x))
-
-        # x = x.view(-1, 16*16)
-        # return nn.Sigmoid()(self.linear(x))
         x = nn.ReLU()(self.conv2(x))
         x = nn.ReLU()(self.conv3(x))
         x = nn.ReLU()(self.conv4(x))
@@ -191,17 +187,6 @@ if __name__ == '__main__':
     #  to mean=0, stdev=0.2.
     netD.apply(weights_init)
 
-    # Print the model
-    # print(netD)
-
-    # print(netD.forward(test_run))
-
-    # Initialize BCELoss function
-    # criterion = nn.BCELoss()
-
-    # Establish convention for real and fake labels during training
-    # real_label = 1.
-    # fake_label = 0.
 
     # Setup Adam optimizers for both G and D
     optimizerD = optim.Adam(netD.parameters(), lr=lr, betas=(beta1, 0.999))
@@ -211,6 +196,7 @@ if __name__ == '__main__':
 
     # Lists to keep track of progress
     img_list = []
+    wass_outputs = []
     real_outputs = []  # the results of D on real images
     fake_outputs = []  # the results of D on fake images
     gp_outputs = []  # the gradient penalty outputs
@@ -253,8 +239,10 @@ if __name__ == '__main__':
             optimizerD.step()
 
             # save the outputs
+
             real_outputs.append(output_real.item())
             fake_outputs.append(output_fake.item())
+            wass_outputs.append(output_fake.item() - output_real.item())
             gp_outputs.append(gradient_penalty.item())
             ############################
             # (2) Update G network:
@@ -273,10 +261,13 @@ if __name__ == '__main__':
 
             # Output training stats
             if i % 50 == 0:
+                torch.save(netG.state_dict(), PATH_G)
+                torch.save(netG.state_dict(), PATH_D)
                 ImageTools.graph_plot([real_outputs, fake_outputs],
                                 ['real', 'fake'], '', 'LossGraph')
                 ImageTools.graph_plot([gp_outputs], ['Gradient Penalty'], '',
                                       'GpGraph')
+                ImageTools.plot_fake_difference(high_res, netG)
 
                 # print(
                 #     '[%d/%d][%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f\tD(x): %.4f\tD(G(z)): %.4f / %.4f'
@@ -299,8 +290,7 @@ if __name__ == '__main__':
             i += 1
 
     # save the trained model
-    torch.save(netG.state_dict(), PATH_G)
-    torch.save(netG.state_dict(), PATH_D)
+
     print('finished training')
 
     # # save the trained model
