@@ -267,7 +267,8 @@ if __name__ == '__main__':
                                 ['real', 'fake'], '', 'LossGraph')
                 ImageTools.graph_plot([gp_outputs], ['Gradient Penalty'], '',
                                       'GpGraph')
-                ImageTools.plot_fake_difference(high_res.detach().cpu(), netG)
+                ImageTools.plot_fake_difference(high_res.detach().cpu(),
+                                                netG, device)
 
                 # print(
                 #     '[%d/%d][%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f\tD(x): %.4f\tD(G(z)): %.4f / %.4f'
