@@ -11,7 +11,8 @@ LOW_RES = 32
 HIGH_RES = 128
 N_SAMPLES = 10000
 
-os.chdir('..')  # takes the current directory from /SuperRes/code to SuperRes/
+if os.getcwd().endswith('code'):
+    os.chdir('..')  # current directory from /SuperRes/code to SuperRes/
 TIF_IMAGE = 'data/NMC.tif'
 
 
