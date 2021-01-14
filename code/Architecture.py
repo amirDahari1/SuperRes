@@ -36,7 +36,7 @@ wd = 8
 wg = 9
 
 # Number of training epochs
-num_epochs = 30
+num_epochs = 50
 
 # Learning rate for optimizers
 lr = 0.0002
