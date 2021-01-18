@@ -6,6 +6,8 @@ LOW_RES = 32
 HIGH_RES = 128
 N_SAMPLES = 10000
 
+progress_dir = 'progress/'
+
 
 def show_gray_image(image):
     """
@@ -57,7 +59,7 @@ def cbd_to_grey(im_with_cbd):
 
 def down_sample(orig_image_tensor):
     """
-    Average pool twice, then assigns 255 to values closer to 255 and 0 to
+    Average pool twice, then assigns 128 to values closer to 128 and 0 to
     values closer to 0 (Assumes 2 phases!)
     """
     max_im = np.max(orig_image_tensor)
@@ -69,6 +71,18 @@ def down_sample(orig_image_tensor):
     image_array[image_array > max_im/2] = max_im
     image_array[image_array <= max_im/2] = 0
     return torch.FloatTensor(image_array)
+
+
+def down_sample_to_ohe(image):
+    """
+    :param image: A 3-phase high res image with one-hot-encoding
+    :return: a 2-phase low res image with one-hot-encoding with down-sample
+    and cbd removal.
+    """
+    grey_scale_image = one_hot_decoding(image)
+    wo_cbd = cbd_to_grey(grey_scale_image)
+    down_sample_wo_cbd = down_sample(wo_cbd)
+    return torch.FloatTensor(one_hot_encoding(down_sample_wo_cbd))
 
 
 def one_hot_encoding(image):
@@ -140,5 +154,29 @@ def graph_plot(data, labels, pth, name):
     for datum,lbl in zip(data,labels):
         plt.plot(datum, label = lbl)
     plt.legend()
-    plt.savefig(pth + '_' + name)
+    plt.savefig(progress_dir + pth + '_' + name)
     plt.close()
+
+
+def calc_and_save_eta(steps, time, start, i, epoch, num_epochs, filename):
+    """
+    Estimates the time remaining based on the elapsed time and epochs
+    :param steps: number of steps in an epoch
+    :param time: current time
+    :param start: start time
+    :param i: iteration through this epoch
+    :param epoch: epoch number
+    :param num_epochs: total no. of epochs
+    :param filename: the filename to save
+    """
+    elap = time - start
+    progress = epoch * steps + i + 1
+    rem = num_epochs * steps - progress
+    ETA = rem / progress * elap
+    hrs = int(ETA / 3600)
+    minutes = int((ETA / 3600 % 1) * 60)
+    save_res = np.array([epoch, num_epochs, i, steps, hrs, minutes])
+    np.save(progress_dir + filename, save_res)
+    print('[%d/%d][%d/%d]\tETA: %d hrs %d mins'
+          % (epoch, num_epochs, i, steps,
+             hrs, minutes))

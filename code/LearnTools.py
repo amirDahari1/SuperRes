@@ -1,5 +1,7 @@
 import torch
 from torch import autograd
+import numpy as np
+import ImageTools
 
 
 def calc_gradient_penalty(netD, real_data, fake_data, batch_size, l, device,
@@ -21,7 +23,7 @@ def calc_gradient_penalty(netD, real_data, fake_data, batch_size, l, device,
     num_images = real_data.size()[0]
     alpha = alpha.expand(batch_size, int(real_data.numel() /
                                          batch_size)).contiguous()
-    print(alpha.shape)
+    # print(alpha.shape)
     alpha = alpha.view(num_images, nc, l, l)
 
     # create interpolate dataset
@@ -37,4 +39,32 @@ def calc_gradient_penalty(netD, real_data, fake_data, batch_size, l, device,
     gradients = gradients.view(gradients.size(0), -1)
     gradient_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean() * gp_lambda
     return gradient_penalty
+
+
+def down_sample_grey(grey_material):
+    """
+    :return: a down-sample of the grey material.
+    """
+    res = torch.nn.AvgPool2d(2, 2)(grey_material)
+    res = torch.nn.AvgPool2d(2, 2)(res)
+    # threshold at 0.5:
+    return torch.where(res > 0.5, 1., 0.)
+
+
+def pixel_wise_distance(low_res_im, generated_high_res, initial_rand):
+    """
+    calculates and returns the pixel wise distance between the low resolution
+    image and the down sampling of the high resolution generated image.
+    :return: the normalized distance (divided by the number of pixels of the
+    low resolution image
+    """
+    # since cbd turns into pore in the down-sample, we can just down-sample
+    # the grey material
+    down_sample = down_sample_grey(generated_high_res[:, 1, :, :])
+    low_res_num_pixels = torch.numel(low_res_im[0,0,:,:])
+    low_res_grey = low_res_im[:, 1, :, :]
+
+    # distance is the l1 norm
+    dist = torch.sum(torch.abs(down_sample-low_res_grey), dim=[1, 2])/low_res_num_pixels
+    return torch.mean(torch.mul(dist, initial_rand[:, 0, 0, 0]))
 

@@ -1,4 +1,5 @@
 from BatchMaker import *
+import LearnTools
 
 import argparse
 import os
@@ -50,6 +51,9 @@ Lambda = 10
 # Number of GPUs available. Use 0 for CPU mode.
 ngpu = 1
 
+# When to save progress
+saving_num = 50
+
 # Create the datasets for the training of d and g
 d_train_dataset = torch.load(dataroot + 'd_train.pth')
 g_train_dataset = torch.load(dataroot + 'g_train.pth')
@@ -94,7 +98,7 @@ class Generator(nn.Module):
     def __init__(self, ngpu):
         super(Generator, self).__init__()
         self.ngpu = ngpu
-        self.conv_minus_1 = nn.Conv2d(nc_g, 2 ** wg, 3, 1, 1)
+        self.conv_minus_1 = nn.Conv2d(nc_d, 2 ** wg, 3, 1, 1)
         # first convolution, making many channels
         self.conv0 = nn.Conv2d(2 ** wg, 2 ** wg, 3, 1, 1)
         # the number of channels is because of pixel shuffling
@@ -108,8 +112,7 @@ class Generator(nn.Module):
                                align_corners=False)
 
     def forward(self, x):
-        # TODO maybe convolution twice on the 32x32 images to catch bigger
-        #  9x9 areas of the image..
+
         # x after the first block:
         # TODO also instead of conv with 1 make it conv with 0
         x_first = nn.ReLU()(self.conv_minus_1(x))
@@ -122,7 +125,6 @@ class Generator(nn.Module):
         # upsampling of x and x_block_0:
         x_up = self.up1(x)
         # the concatenation of x, x_block_0 and x_block_1
-        # TODO addition instead of concatenation maybe?
         y = self.conv2(x_block_1)
         last_zero_size = list(x_up.size())
         last_zero_size[1] = 1
@@ -200,6 +202,7 @@ if __name__ == '__main__':
     real_outputs = []  # the results of D on real images
     fake_outputs = []  # the results of D on fake images
     gp_outputs = []  # the gradient penalty outputs
+    pixel_outputs = []
 
     iters = 0
 
@@ -208,24 +211,33 @@ if __name__ == '__main__':
     for epoch in range(num_epochs):
         # For each batch in the dataloader
         i = 0
+        j = np.random.randint(saving_num//2)  # to see different slices
         for d_data, g_data in zip(d_dataloader, g_dataloader):
 
             ############################
             # (1) Update D network:
             ###########################
-            ## Train with all-real batch
+            # Train with all-real batch
             netD.zero_grad()
             # Format batch
             high_res = d_data[0].to(device)
-            # high_res.type(torch.FloatTensor)
 
             # Forward pass real batch through D
             output_real = netD(high_res).view(-1).mean()
 
             # Generate batch of latent vectors
             low_res = g_data[0].to(device)
+
+            # create a random similarity channel
+            init_rand = torch.rand(batch_size, 1, 1, 1)
+            rand_sim = init_rand.repeat(1, 1, LOW_RES, LOW_RES)
+
+            # concatenate the low-res image and the similarity scalar matrix
+            low_res_with_sim = torch.cat((low_res, rand_sim), dim=1)
+
             # Generate fake image batch with G
-            fake = netG(low_res)
+            fake = netG(low_res_with_sim)
+
             # Classify all fake batch with D
             output_fake = netD(fake.detach()).view(-1).mean()
             # Calculate gradient penalty
@@ -242,7 +254,8 @@ if __name__ == '__main__':
 
             real_outputs.append(output_real.item())
             fake_outputs.append(output_fake.item())
-            wass_outputs.append(output_fake.item() - output_real.item())
+            wass = output_fake.item() - output_real.item()
+            wass_outputs.append(wass)
             gp_outputs.append(gradient_penalty.item())
             ############################
             # (2) Update G network:
@@ -252,68 +265,38 @@ if __name__ == '__main__':
             # Since we just updated D, perform another forward pass of
             # all-fake batch through D
             fake_output = netD(fake).view(-1)
+            # get the pixel-wise-distance loss
+            pix_loss = LearnTools.pixel_wise_distance(low_res, fake, init_rand)
+
             # Calculate G's loss based on this output
-            g_cost = -fake_output.mean()
+            g_cost = -fake_output.mean() + wass*pix_loss
+            pixel_outputs.append(pix_loss.item())
             # Calculate gradients for G
             g_cost.backward()
             # Update G
             optimizerG.step()
 
             # Output training stats
-            if i % 50 == 0:
+            if (i + j) % saving_num == 0:
                 torch.save(netG.state_dict(), PATH_G)
                 torch.save(netG.state_dict(), PATH_D)
                 ImageTools.graph_plot([real_outputs, fake_outputs],
-                                ['real', 'fake'], '', 'LossGraph')
+                                ['real', 'fake'], '', 'LossesGraph')
+                ImageTools.graph_plot([wass_outputs],
+                                      ['wass'], '', 'WassGraph')
+                ImageTools.graph_plot([pixel_outputs],
+                                      ['pixel'], '', 'PixelLoss')
                 ImageTools.graph_plot([gp_outputs], ['Gradient Penalty'], '',
                                       'GpGraph')
                 ImageTools.plot_fake_difference(high_res.detach().cpu(),
                                                 netG, device)
+                ImageTools.calc_and_save_eta()
 
-                # print(
-                #     '[%d/%d][%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f\tD(x): %.4f\tD(G(z)): %.4f / %.4f'
-                #     % (epoch, num_epochs, i, len(d_dataloader),
-                #        errD.item(), errG.item(), D_x, D_G_z1, D_G_z2))
-
-            print(i)
-            # Check how the generator is doing by saving G's output on fixed_noise
-            # if (iters % 100 == 0) or (
-            #         (epoch == num_epochs - 1) and (i == len(d_dataloader) -
-            #                                        1)):
-            #     with torch.no_grad():
-            #         fake = netG(low_res).detach().cpu()
-            #         fake = ImageTools.fractions_to_ohe(fake)
-            #         fake = ImageTools.one_hot_decoding(fake)
-            #         ImageTools.show_gray_image(fake[0,:,:])
-            #         ImageTools.show_gray_image(fake[1, :, :])
 
             iters += 1
             i += 1
+            print(i)
 
     # save the trained model
 
     print('finished training')
-
-    # # save the trained model
-    # PATH = './g_test.pth'
-    # torch.save(netG.state_dict(), PATH)
-
-    # netG = Generator(ngpu)
-    # netG.load_state_dict(torch.load(PATH))
-    # high_res = next(iter(d_dataloader))[0]
-    # print(high_res.shape)
-    # high_res = ImageTools.one_hot_decoding(high_res)
-    # print(high_res.shape)
-    # low_res = ImageTools.cbd_to_grey(high_res)
-    # low_res = ImageTools.down_sample(low_res)
-    # low_res = np.expand_dims(low_res, axis=1)
-    # print(low_res.shape)
-    # input_to_g = ImageTools.one_hot_encoding(low_res)
-    # print(low_res.shape)
-    # fake = netG(torch.FloatTensor(input_to_g)).detach().cpu()
-    # fake = ImageTools.fractions_to_ohe(fake)
-    # fake = ImageTools.one_hot_decoding(fake)
-    # ImageTools.show_three_by_two_gray(high_res, low_res.squeeze(), fake,
-    #                                   'Very vanilla '
-    #                                                               'super-res '
-    #                                                            'results')

@@ -5,7 +5,7 @@ import os
 import torch
 import torch.utils.data
 import ImageTools
-import LearnTools
+
 
 LOW_RES = 32
 HIGH_RES = 128
