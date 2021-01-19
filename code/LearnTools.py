@@ -1,7 +1,6 @@
 import torch
 from torch import autograd
 import numpy as np
-import ImageTools
 
 
 def calc_gradient_penalty(netD, real_data, fake_data, batch_size, l, device,
@@ -64,7 +63,10 @@ def pixel_wise_distance(low_res_im, generated_high_res, initial_rand):
     low_res_num_pixels = torch.numel(low_res_im[0,0,:,:])
     low_res_grey = low_res_im[:, 1, :, :]
 
-    # distance is the l1 norm
+    # distance is the l1 norm calculating for each image in the batch:
     dist = torch.sum(torch.abs(down_sample-low_res_grey), dim=[1, 2])/low_res_num_pixels
-    return torch.mean(torch.mul(dist, initial_rand[:, 0, 0, 0]))
+    # multiplying each image in the batch with the appropriate random number:
+    res = torch.mul(dist, initial_rand[:, 0, 0, 0])
+    # return the mean:
+    return torch.mean(res)
 

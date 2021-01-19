@@ -1,6 +1,8 @@
 from matplotlib import pyplot as plt
 import numpy as np
 import torch
+import torch.nn.functional as functional
+import LearnTools
 
 LOW_RES = 32
 HIGH_RES = 128
@@ -17,23 +19,28 @@ def show_gray_image(image):
     plt.show()
 
 
-def plot_fake_difference(high_res, netG, device):
-    high_res = one_hot_decoding(high_res)
-    low_res = cbd_to_grey(high_res)
-    low_res = down_sample(low_res)
-    low_res = np.expand_dims(low_res, axis=1)
-    input_to_g = one_hot_encoding(low_res)
-    fake = netG(torch.FloatTensor(input_to_g).to(device)).detach().cpu()
+def plot_fake_difference(high_res, netG, device, batch_size):
+    down_sample = LearnTools.down_sample_grey(high_res[:, 1, :, :])
+    down_sample_ohe = one_hot_encoding(down_sample.long())
+    init_rand = torch.rand(down_sample_ohe.size()[0], 1, 1, 1)
+    rand_sim = init_rand.repeat(1, 1, LOW_RES, LOW_RES)
+    input_to_g = torch.cat((down_sample_ohe, rand_sim), dim=1)
+    fake = netG(input_to_g.to(device)).detach().cpu()
     fake = fractions_to_ohe(fake)
     fake = one_hot_decoding(fake)
-    show_three_by_two_gray(high_res, low_res.squeeze(), fake,
+    high_res = one_hot_decoding(high_res)
+    down_sample_ohe = one_hot_decoding(down_sample_ohe)
+    show_three_by_two_gray(high_res, down_sample_ohe, fake, init_rand,
                                       'Very vanilla super-res results')
 
 
-def show_three_by_two_gray(top_images, middle_images, bottom_images, title):
+def show_three_by_two_gray(top_images, middle_images, bottom_images,
+                           similarity, title):
 
+    top_images, middle_images, bottom_images = np.array(top_images), \
+                                               np.array(middle_images), \
+                                               np.array(bottom_images)
     f, axarr = plt.subplots(3, 3)
-
     axarr[0,0].imshow(top_images[0, :, :], cmap='gray', vmin=0, vmax=255)
     axarr[0,1].imshow(top_images[1, :, :], cmap='gray', vmin=0, vmax=255)
     axarr[0,2].imshow(top_images[2, :, :], cmap='gray', vmin=0, vmax=255)
@@ -41,10 +48,13 @@ def show_three_by_two_gray(top_images, middle_images, bottom_images, title):
     axarr[1, 1].imshow(middle_images[1, :, :], cmap='gray', vmin=0, vmax=255)
     axarr[1, 2].imshow(middle_images[2, :, :], cmap='gray', vmin=0, vmax=255)
     axarr[2, 0].imshow(bottom_images[0, :, :], cmap='gray', vmin=0, vmax=255)
+    axarr[2, 0].set_title(str(round(similarity[0,0,0,0].item(), 2)))
     axarr[2, 1].imshow(bottom_images[1, :, :], cmap='gray', vmin=0, vmax=255)
+    axarr[2, 1].set_title(str(round(similarity[1, 0, 0, 0].item(), 2)))
     axarr[2, 2].imshow(bottom_images[2, :, :], cmap='gray', vmin=0, vmax=255)
+    axarr[2, 2].set_title(str(round(similarity[2, 0, 0, 0].item(), 2)))
     plt.suptitle(title)
-    plt.savefig('fake_slices.png')
+    plt.savefig(progress_dir + 'fake_slices.png')
     plt.close()
 
 
@@ -87,20 +97,18 @@ def down_sample_to_ohe(image):
 
 def one_hot_encoding(image):
     """
-    :param image: a [batch_size, 1, height, width] tensor/numpy array
+    :param image: a [batch_size, height, width] tensor array
     :return: a one-hot encoding of image.
     """
-    phases = np.unique(image)  # the unique values in image
-    im_shape = image.shape
-
-    res = np.zeros([im_shape[0], len(phases), im_shape[2], im_shape[3]])
-    # create one channel per phase for one hot encoding
-    for cnt, phs in enumerate(phases):
-        image_copy = np.zeros(image.shape)  # just an encoding for one
-        # channel
-        image_copy[image == phs] = 1
-        res[:, cnt, :, :] = image_copy.squeeze()
-    return res
+    # phases = torch.unique(image, sorted=True)  # the unique values in image
+    # image = image.unsqueeze(1)  # adds a dimension of phases
+    #
+    # # create one channel per phase for one hot encoding
+    # for cnt, phs in enumerate(phases):
+    #     phase = torch.where(image == phs, 1., 0.)
+    #     res = torch.cat(
+    # one hot output is (N,H,W,C), permute to (N,C,H,W)
+    return functional.one_hot(image).permute(0, 3, 1, 2)
 
 
 def one_hot_decoding(image):

@@ -3,6 +3,7 @@ import LearnTools
 
 import argparse
 import os
+import time
 import random
 import torch.nn as nn
 import torch.nn.functional as F
@@ -17,6 +18,7 @@ from matplotlib import pyplot as plt
 
 PATH_G = './g_test.pth'
 PATH_D = './d_test.pth'
+eta_file = 'eta.npy'
 
 # Root directory for dataset
 print(os.getcwd())
@@ -207,11 +209,13 @@ if __name__ == '__main__':
     iters = 0
 
     print("Starting Training Loop...")
+    start = time.time()
     # For each epoch
     for epoch in range(num_epochs):
         # For each batch in the dataloader
         i = 0
         j = np.random.randint(saving_num//2)  # to see different slices
+        steps = len(d_dataloader)
         for d_data, g_data in zip(d_dataloader, g_dataloader):
 
             ############################
@@ -229,7 +233,7 @@ if __name__ == '__main__':
             low_res = g_data[0].to(device)
 
             # create a random similarity channel
-            init_rand = torch.rand(batch_size, 1, 1, 1)
+            init_rand = torch.rand(low_res.size()[0], 1, 1, 1)
             rand_sim = init_rand.repeat(1, 1, LOW_RES, LOW_RES)
 
             # concatenate the low-res image and the similarity scalar matrix
@@ -289,8 +293,9 @@ if __name__ == '__main__':
                 ImageTools.graph_plot([gp_outputs], ['Gradient Penalty'], '',
                                       'GpGraph')
                 ImageTools.plot_fake_difference(high_res.detach().cpu(),
-                                                netG, device)
-                ImageTools.calc_and_save_eta()
+                                                netG, device, batch_size)
+                ImageTools.calc_and_save_eta(steps, time.time(), start, i,
+                                             epoch, num_epochs, eta_file)
 
 
             iters += 1
