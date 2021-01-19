@@ -2,7 +2,7 @@ from matplotlib import pyplot as plt
 import numpy as np
 import torch
 import torch.nn.functional as functional
-import LearnTools
+# import LearnTools
 
 LOW_RES = 32
 HIGH_RES = 128
@@ -20,12 +20,17 @@ def show_gray_image(image):
 
 
 def plot_fake_difference(high_res, netG, device):
-    down_sample = LearnTools.down_sample_grey(high_res[:, 1, :, :])
-    down_sample_ohe = one_hot_encoding(down_sample.long())
+    _down_sample = down_sample(high_res[:, 1, :, :])
+    print(_down_sample[0, :, :])
+    down_sample_ohe = one_hot_encoding(_down_sample)
+    down_sample_ohe = torch.FloatTensor(down_sample_ohe)
+    print(down_sample_ohe[0, :, :])
+    print(down_sample_ohe.size())
     init_rand = torch.rand(down_sample_ohe.size()[0], 1, 1, 1)
     rand_sim = init_rand.repeat(1, 1, LOW_RES, LOW_RES)
     input_to_g = torch.cat((down_sample_ohe, rand_sim), dim=1)
-    fake = netG(input_to_g.to(device)).detach().cpu()
+    print(input_to_g.dtype)
+    fake = netG(torch.FloatTensor(input_to_g.to(device))).detach().cpu()
     fake = fractions_to_ohe(fake)
     fake = one_hot_decoding(fake)
     high_res = one_hot_decoding(high_res)
@@ -58,7 +63,7 @@ def show_three_by_two_gray(top_images, middle_images, bottom_images,
     plt.close()
 
 
-def cbd_to_grey(im_with_cbd):
+def cbd_to_pore(im_with_cbd):
     """
     :return: the image without cbd. cbd -> pore.
     """
@@ -72,7 +77,7 @@ def down_sample(orig_image_tensor):
     Average pool twice, then assigns 128 to values closer to 128 and 0 to
     values closer to 0 (Assumes 2 phases!)
     """
-    max_im = np.max(orig_image_tensor)
+    max_im = np.max(np.array(orig_image_tensor))
     image_tensor = torch.FloatTensor(np.copy(orig_image_tensor))
     image_tensor = torch.nn.AvgPool2d(2, 2)(image_tensor)
     image_tensor = torch.nn.AvgPool2d(2, 2)(image_tensor)
@@ -90,7 +95,7 @@ def down_sample_to_ohe(image):
     and cbd removal.
     """
     grey_scale_image = one_hot_decoding(image)
-    wo_cbd = cbd_to_grey(grey_scale_image)
+    wo_cbd = cbd_to_pore(grey_scale_image)
     down_sample_wo_cbd = down_sample(wo_cbd)
     return torch.FloatTensor(one_hot_encoding(down_sample_wo_cbd))
 
@@ -100,15 +105,17 @@ def one_hot_encoding(image):
     :param image: a [batch_size, height, width] tensor array
     :return: a one-hot encoding of image.
     """
-    # phases = torch.unique(image, sorted=True)  # the unique values in image
-    # image = image.unsqueeze(1)  # adds a dimension of phases
-    #
-    # # create one channel per phase for one hot encoding
-    # for cnt, phs in enumerate(phases):
-    #     phase = torch.where(image == phs, 1., 0.)
-    #     res = torch.cat(
-    # one hot output is (N,H,W,C), permute to (N,C,H,W)
-    return functional.one_hot(image).permute(0, 3, 1, 2)
+    phases = np.unique(image)  # the unique values in image
+    im_shape = image.shape
+
+    res = np.zeros([im_shape[0], len(phases), im_shape[1], im_shape[2]])
+    # create one channel per phase for one hot encoding
+    for cnt, phs in enumerate(phases):
+        image_copy = np.zeros(image.shape)  # just an encoding for one
+        # channel
+        image_copy[image == phs] = 1
+        res[:, cnt, :, :] = image_copy.squeeze()
+    return res
 
 
 def one_hot_decoding(image):

@@ -35,8 +35,8 @@ nc_g = 2  # two phases for the generator input
 nc_d = 3  # three phases for the discriminator input
 
 # Width generator channel hyperparameter
-wd = 7
-wg = 8
+wd = 5
+wg = 5
 
 # Number of training epochs
 num_epochs = 400
@@ -225,7 +225,9 @@ if __name__ == '__main__':
             netD.zero_grad()
             # Format batch
             high_res = d_data[0].to(device)
-
+            # ImageTools.show_gray_image(
+            #     np.array(high_res.detach()[:, 1, :,
+            #              :])[0, :, :] * 128)
             # Forward pass real batch through D
             output_real = netD(high_res).view(-1).mean()
 
@@ -273,7 +275,7 @@ if __name__ == '__main__':
             pix_loss = LearnTools.pixel_wise_distance(low_res, fake, init_rand)
 
             # Calculate G's loss based on this output
-            g_cost = -fake_output.mean() + wass*pix_loss
+            g_cost = -fake_output.mean() - wass*pix_loss
             pixel_outputs.append(pix_loss.item())
             # Calculate gradients for G
             g_cost.backward()

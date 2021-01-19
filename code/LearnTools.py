@@ -1,6 +1,7 @@
 import torch
 from torch import autograd
 import numpy as np
+import ImageTools
 
 
 def calc_gradient_penalty(netD, real_data, fake_data, batch_size, l, device,
@@ -60,10 +61,13 @@ def pixel_wise_distance(low_res_im, generated_high_res, initial_rand):
     """
     # since cbd turns into pore in the down-sample, we can just down-sample
     # the grey material
+    # ImageTools.show_gray_image(np.array(generated_high_res.detach()[:, 1, :,
+    #                                     :])[0, :, :] * 128)
     down_sample = down_sample_grey(generated_high_res[:, 1, :, :])
     low_res_num_pixels = torch.numel(low_res_im[0, 0, :, :])
+    # ImageTools.show_gray_image(ImageTools.one_hot_decoding(low_res_im)[0,:,:])
     low_res_grey = low_res_im[:, 1, :, :]
-
+    # ImageTools.show_gray_image(np.array(low_res_grey)[0,:,:]*128)
     # distance is the l2 norm calculating for each image in the batch:
     dist = torch.sum((down_sample-low_res_grey)**2, dim=[1,
                                                          2])/low_res_num_pixels
