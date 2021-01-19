@@ -35,8 +35,8 @@ nc_g = 2  # two phases for the generator input
 nc_d = 3  # three phases for the discriminator input
 
 # Width generator channel hyperparameter
-wd = 8
-wg = 8
+wd = 5
+wg = 5
 
 # Number of training epochs
 num_epochs = 200
@@ -234,7 +234,7 @@ if __name__ == '__main__':
 
             # create a random similarity channel
             init_rand = torch.rand(low_res.size()[0], 1, 1, 1)
-            rand_sim = init_rand.repeat(1, 1, LOW_RES, LOW_RES)
+            rand_sim = init_rand.repeat(1, 1, LOW_RES, LOW_RES).to(device)
 
             # concatenate the low-res image and the similarity scalar matrix
             low_res_with_sim = torch.cat((low_res, rand_sim), dim=1)
@@ -293,7 +293,7 @@ if __name__ == '__main__':
                 ImageTools.graph_plot([gp_outputs], ['Gradient Penalty'], '',
                                       'GpGraph')
                 ImageTools.plot_fake_difference(high_res.detach().cpu(),
-                                                netG, device, batch_size)
+                                                netG, device)
                 ImageTools.calc_and_save_eta(steps, time.time(), start, i,
                                              epoch, num_epochs, eta_file)
 

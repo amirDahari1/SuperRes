@@ -19,7 +19,7 @@ def show_gray_image(image):
     plt.show()
 
 
-def plot_fake_difference(high_res, netG, device, batch_size):
+def plot_fake_difference(high_res, netG, device):
     down_sample = LearnTools.down_sample_grey(high_res[:, 1, :, :])
     down_sample_ohe = one_hot_encoding(down_sample.long())
     init_rand = torch.rand(down_sample_ohe.size()[0], 1, 1, 1)
