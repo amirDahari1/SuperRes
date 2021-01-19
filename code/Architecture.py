@@ -233,8 +233,8 @@ if __name__ == '__main__':
             low_res = g_data[0].to(device)
 
             # create a random similarity channel
-            init_rand = torch.rand(low_res.size()[0], 1, 1, 1)
-            rand_sim = init_rand.repeat(1, 1, LOW_RES, LOW_RES).to(device)
+            init_rand = torch.rand(low_res.size()[0], 1, 1, 1).to(device)
+            rand_sim = init_rand.repeat(1, 1, LOW_RES, LOW_RES)
 
             # concatenate the low-res image and the similarity scalar matrix
             low_res_with_sim = torch.cat((low_res, rand_sim), dim=1)
