@@ -20,7 +20,7 @@ def show_gray_image(image):
 
 
 def plot_fake_difference(high_res, netG, device):
-    _down_sample = down_sample(high_res[:, 1, :, :])
+    _down_sample = down_sample(high_res[:, 1, :, :].unsqueeze(dim=1)).squeeze()
     print(_down_sample[0, :, :])
     down_sample_ohe = one_hot_encoding(_down_sample)
     down_sample_ohe = torch.FloatTensor(down_sample_ohe)

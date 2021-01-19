@@ -63,7 +63,8 @@ def pixel_wise_distance(low_res_im, generated_high_res, initial_rand):
     # the grey material
     # ImageTools.show_gray_image(np.array(generated_high_res.detach()[:, 1, :,
     #                                     :])[0, :, :] * 128)
-    down_sample = down_sample_grey(generated_high_res[:, 1, :, :])
+    down_sample = down_sample_grey(generated_high_res[:, 1, :, :].unsqueeze(dim=1))
+    down_sample = down_sample.squeeze()
     low_res_num_pixels = torch.numel(low_res_im[0, 0, :, :])
     # ImageTools.show_gray_image(ImageTools.one_hot_decoding(low_res_im)[0,:,:])
     low_res_grey = low_res_im[:, 1, :, :]
@@ -73,6 +74,7 @@ def pixel_wise_distance(low_res_im, generated_high_res, initial_rand):
                                                          2])/low_res_num_pixels
     # multiplying each image in the batch with the appropriate random number:
     res = torch.mul(dist, initial_rand[:, 0, 0, 0])
+    print(res.mean().item())
     # return the mean:
     return torch.mean(res)
 
