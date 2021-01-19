@@ -47,7 +47,8 @@ def down_sample_grey(grey_material):
     res = torch.nn.AvgPool2d(2, 2)(grey_material)
     res = torch.nn.AvgPool2d(2, 2)(res)
     # threshold at 0.5:
-    return torch.where(res > 0.5, 1., 0.)
+    # return torch.where(res > 0.5, 1., 0.)
+    return res
 
 
 def pixel_wise_distance(low_res_im, generated_high_res, initial_rand):
@@ -60,11 +61,12 @@ def pixel_wise_distance(low_res_im, generated_high_res, initial_rand):
     # since cbd turns into pore in the down-sample, we can just down-sample
     # the grey material
     down_sample = down_sample_grey(generated_high_res[:, 1, :, :])
-    low_res_num_pixels = torch.numel(low_res_im[0,0,:,:])
+    low_res_num_pixels = torch.numel(low_res_im[0, 0, :, :])
     low_res_grey = low_res_im[:, 1, :, :]
 
-    # distance is the l1 norm calculating for each image in the batch:
-    dist = torch.sum(torch.abs(down_sample-low_res_grey), dim=[1, 2])/low_res_num_pixels
+    # distance is the l2 norm calculating for each image in the batch:
+    dist = torch.sum((down_sample-low_res_grey)**2, dim=[1,
+                                                         2])/low_res_num_pixels
     # multiplying each image in the batch with the appropriate random number:
     res = torch.mul(dist, initial_rand[:, 0, 0, 0])
     # return the mean:
