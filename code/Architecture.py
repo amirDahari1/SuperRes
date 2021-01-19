@@ -35,8 +35,8 @@ nc_g = 2  # two phases for the generator input
 nc_d = 3  # three phases for the discriminator input
 
 # Width generator channel hyperparameter
-wd = 5
-wg = 5
+wd = 8
+wg = 8
 
 # Number of training epochs
 num_epochs = 200
