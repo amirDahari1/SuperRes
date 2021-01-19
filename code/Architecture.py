@@ -39,7 +39,7 @@ wd = 8
 wg = 8
 
 # Number of training epochs
-num_epochs = 200
+num_epochs = 400
 
 # Learning rate for optimizers
 lr = 0.0002
@@ -258,7 +258,7 @@ if __name__ == '__main__':
 
             real_outputs.append(output_real.item())
             fake_outputs.append(output_fake.item())
-            wass = output_fake.item() - output_real.item()
+            wass = abs(output_fake.item() - output_real.item())
             wass_outputs.append(wass)
             gp_outputs.append(gradient_penalty.item())
             ############################
