@@ -1,7 +1,5 @@
 import torch
 from torch import autograd
-import numpy as np
-import ImageTools
 
 
 up_sample_factor = 4
@@ -44,7 +42,7 @@ def calc_gradient_penalty(netD, real_data, fake_data, batch_size, l, device,
     return gradient_penalty
 
 
-def down_sample_for_g_input(high_res_3_phase, grey_idx):
+def down_sample_for_g_input(high_res_3_phase, grey_idx, device):
     """
     :return: a down-sample of the grey material.
     """
@@ -55,7 +53,7 @@ def down_sample_for_g_input(high_res_3_phase, grey_idx):
     res = torch.nn.AvgPool2d(2, 2)(res)
     # threshold at 0.5:
     res = torch.where(res > 0.5, 1., 0.)
-    zeros_channel = torch.ones(size=res.size()) - res
+    zeros_channel = torch.ones(size=res.size()).to(device) - res
     return torch.cat((zeros_channel, res), dim=1)
 
 

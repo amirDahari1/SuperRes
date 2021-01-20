@@ -1,8 +1,7 @@
 from matplotlib import pyplot as plt
 import numpy as np
 import torch
-import torch.nn.functional as functional
-# import LearnTools
+
 
 LOW_RES = 32
 HIGH_RES = 128
