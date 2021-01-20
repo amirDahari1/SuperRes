@@ -165,12 +165,14 @@ class Discriminator(nn.Module):
         return self.conv5(x)
 
 
-def save_differences(network_g, high_res_im, rand_similarity, grey_idx):
+def save_differences(network_g, high_res_im, rand_similarity, grey_idx,
+                     device):
     """
     Saves the image of the differences between the high-res real and the
     generated images that are supposed to be similar.
     """
-    low_res_input = LearnTools.down_sample_for_g_input(high_res_im, grey_idx)
+    low_res_input = LearnTools.down_sample_for_g_input(high_res_im,
+                                                       grey_idx, device)
     g_input = torch.cat((low_res_input, rand_similarity), dim=1)
     g_output = network_g(g_input).detach().cpu()
     ImageTools.plot_fake_difference(high_res_im.detach().cpu(),
@@ -311,7 +313,8 @@ if __name__ == '__main__':
                 ImageTools.calc_and_save_eta(steps, time.time(), start, i,
                                              epoch, num_epochs, eta_file)
                 with torch.no_grad():  # only for plotting
-                    save_differences(netG, high_res.detach(), rand_sim, grey_index)
+                    save_differences(netG, high_res.detach(), rand_sim,
+                                     grey_index, device)
 
             iters += 1
             i += 1
