@@ -165,12 +165,12 @@ class Discriminator(nn.Module):
         return self.conv5(x)
 
 
-def save_differences(network_g, high_res_im, rand_similarity):
+def save_differences(network_g, high_res_im, rand_similarity, grey_idx):
     """
     Saves the image of the differences between the high-res real and the
     generated images that are supposed to be similar.
     """
-    low_res_input = LearnTools.down_sample_for_g_input(high_res_im)
+    low_res_input = LearnTools.down_sample_for_g_input(high_res_im, grey_idx)
     g_input = torch.cat((low_res_input, rand_similarity), dim=1)
     g_output = network_g(g_input).detach().cpu()
     ImageTools.plot_fake_difference(high_res_im.detach().cpu(),
@@ -219,6 +219,8 @@ if __name__ == '__main__':
     pixel_outputs = []
 
     iters = 0
+    # the grey channel in the images:
+    grey_index = torch.LongTensor([1]).to(device)
 
     print("Starting Training Loop...")
     start = time.time()
@@ -283,7 +285,8 @@ if __name__ == '__main__':
             # all-fake batch through D
             fake_output = netD(fake).view(-1)
             # get the pixel-wise-distance loss
-            pix_loss = LearnTools.pixel_wise_distance(low_res_with_sim, fake)
+            pix_loss = LearnTools.pixel_wise_distance(low_res_with_sim,
+                                                      fake, grey_index)
 
             # Calculate G's loss based on this output
             g_cost = -fake_output.mean() + wass*pix_loss
