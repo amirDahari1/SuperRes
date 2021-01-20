@@ -291,7 +291,7 @@ if __name__ == '__main__':
                                                       fake, grey_index)
 
             # Calculate G's loss based on this output
-            g_cost = -fake_output.mean() + wass*pix_loss
+            g_cost = -fake_output.mean() - wass*pix_loss
             pixel_outputs.append(pix_loss.item())
             # Calculate gradients for G
             g_cost.backward()
