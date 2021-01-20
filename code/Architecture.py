@@ -35,8 +35,8 @@ nc_g = 2  # two phases for the generator input
 nc_d = 3  # three phases for the discriminator input
 
 # Width generator channel hyperparameter
-wd = 7
-wg = 7
+wd = 5
+wg = 5
 
 # Number of training epochs
 num_epochs = 400
@@ -165,6 +165,18 @@ class Discriminator(nn.Module):
         return self.conv5(x)
 
 
+def save_differences(network_g, high_res_im, rand_similarity):
+    """
+    Saves the image of the differences between the high-res real and the
+    generated images that are supposed to be similar.
+    """
+    low_res_input = LearnTools.down_sample_for_g_input(high_res_im)
+    g_input = torch.cat((low_res_input, rand_similarity), dim=1)
+    g_output = network_g(g_input).detach().cpu()
+    ImageTools.plot_fake_difference(high_res_im.detach().cpu(),
+                                    g_input.detach().cpu(), g_output)
+
+
 if __name__ == '__main__':
     # Create the generator
     netG = Generator(ngpu).to(device)
@@ -225,9 +237,7 @@ if __name__ == '__main__':
             netD.zero_grad()
             # Format batch
             high_res = d_data[0].to(device)
-            # ImageTools.show_gray_image(
-            #     np.array(high_res.detach()[:, 1, :,
-            #              :])[0, :, :] * 128)
+
             # Forward pass real batch through D
             output_real = netD(high_res).view(-1).mean()
 
@@ -246,6 +256,7 @@ if __name__ == '__main__':
 
             # Classify all fake batch with D
             output_fake = netD(fake.detach()).view(-1).mean()
+
             # Calculate gradient penalty
             gradient_penalty = LearnTools.calc_gradient_penalty(netD,
                                high_res, fake.detach(), batch_size, HIGH_RES,
@@ -272,10 +283,10 @@ if __name__ == '__main__':
             # all-fake batch through D
             fake_output = netD(fake).view(-1)
             # get the pixel-wise-distance loss
-            pix_loss = LearnTools.pixel_wise_distance(low_res, fake, init_rand)
+            pix_loss = LearnTools.pixel_wise_distance(low_res_with_sim, fake)
 
             # Calculate G's loss based on this output
-            g_cost = -fake_output.mean() - wass*pix_loss
+            g_cost = -fake_output.mean() + wass*pix_loss
             pixel_outputs.append(pix_loss.item())
             # Calculate gradients for G
             g_cost.backward()
@@ -294,11 +305,10 @@ if __name__ == '__main__':
                                       ['pixel'], '', 'PixelLoss')
                 ImageTools.graph_plot([gp_outputs], ['Gradient Penalty'], '',
                                       'GpGraph')
-                ImageTools.plot_fake_difference(high_res.detach().cpu(),
-                                                netG, device)
                 ImageTools.calc_and_save_eta(steps, time.time(), start, i,
                                              epoch, num_epochs, eta_file)
-
+                with torch.no_grad():  # only for plotting
+                    save_differences(netG, high_res.detach(), rand_sim)
 
             iters += 1
             i += 1

@@ -19,32 +19,19 @@ def show_gray_image(image):
     plt.show()
 
 
-def plot_fake_difference(high_res, netG, device):
-    _down_sample = down_sample(high_res[:, 1, :, :].unsqueeze(dim=1)).squeeze()
-    print(_down_sample[0, :, :])
-    down_sample_ohe = one_hot_encoding(_down_sample)
-    down_sample_ohe = torch.FloatTensor(down_sample_ohe).to(device)
-    print(down_sample_ohe[0, :, :])
-    print(down_sample_ohe.size())
-    init_rand = torch.rand(down_sample_ohe.size()[0], 1, 1, 1).to(device)
-    rand_sim = init_rand.repeat(1, 1, LOW_RES, LOW_RES)
-    input_to_g = torch.cat((down_sample_ohe, rand_sim), dim=1)
-    print(input_to_g.dtype)
-    fake = netG(input_to_g).detach().cpu()
-    fake = fractions_to_ohe(fake)
-    fake = one_hot_decoding(fake)
-    high_res = one_hot_decoding(high_res)
-    down_sample_ohe = one_hot_decoding(down_sample_ohe)
-    show_three_by_two_gray(high_res, down_sample_ohe, fake, init_rand,
+def plot_fake_difference(high_res, input_to_g, output_from_g):
+    # first move everything to numpy
+    rand_sim = np.array(input_to_g[:, 2, :, :])
+    images = [high_res, input_to_g[:, :2, :, :], output_from_g]
+    images = [np.array(image) for image in images]
+    images[2] = fractions_to_ohe(images[2])  # the output from g needs to ohe
+    images = [one_hot_decoding(image) for image in images]
+    show_three_by_two_gray(images[0], images[1], images[2], rand_sim,
                                       'Very vanilla super-res results')
 
 
 def show_three_by_two_gray(top_images, middle_images, bottom_images,
                            similarity, title):
-
-    top_images, middle_images, bottom_images = np.array(top_images), \
-                                               np.array(middle_images), \
-                                               np.array(bottom_images)
     f, axarr = plt.subplots(3, 3)
     axarr[0,0].imshow(top_images[0, :, :], cmap='gray', vmin=0, vmax=255)
     axarr[0,1].imshow(top_images[1, :, :], cmap='gray', vmin=0, vmax=255)
@@ -53,11 +40,11 @@ def show_three_by_two_gray(top_images, middle_images, bottom_images,
     axarr[1, 1].imshow(middle_images[1, :, :], cmap='gray', vmin=0, vmax=255)
     axarr[1, 2].imshow(middle_images[2, :, :], cmap='gray', vmin=0, vmax=255)
     axarr[2, 0].imshow(bottom_images[0, :, :], cmap='gray', vmin=0, vmax=255)
-    axarr[2, 0].set_title(str(round(similarity[0,0,0,0].item(), 2)))
+    axarr[2, 0].set_title(str(round(similarity[0, 0, 0].item(), 2)))
     axarr[2, 1].imshow(bottom_images[1, :, :], cmap='gray', vmin=0, vmax=255)
-    axarr[2, 1].set_title(str(round(similarity[1, 0, 0, 0].item(), 2)))
+    axarr[2, 1].set_title(str(round(similarity[1, 0, 0].item(), 2)))
     axarr[2, 2].imshow(bottom_images[2, :, :], cmap='gray', vmin=0, vmax=255)
-    axarr[2, 2].set_title(str(round(similarity[2, 0, 0, 0].item(), 2)))
+    axarr[2, 2].set_title(str(round(similarity[2, 0, 0].item(), 2)))
     plt.suptitle(title)
     plt.savefig(progress_dir + 'fake_slices.png')
     plt.close()
@@ -143,7 +130,7 @@ def one_hot_decoding(image):
 
 def fractions_to_ohe(image):
     """
-    :param image: a [n,3,w,h] image (generated) with fractions in the phases.
+    :param image: a [n,c,w,h] image (generated) with fractions in the phases.
     :return: a one-hot-encoding of the image with the maximum rule, i.e. the
     phase which has the highest number will be 1 and all else 0.
     """
