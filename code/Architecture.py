@@ -294,7 +294,7 @@ if __name__ == '__main__':
                                       ['pixel'], '', 'PixelLoss')
                 ImageTools.graph_plot([gp_outputs], ['Gradient Penalty'], '',
                                       'GpGraph')
-                ImageTools.plot_fake_difference(high_res.detach().cpu(),
+                ImageTools.plot_fake_difference(high_res.detach(),
                                                 netG, device)
                 ImageTools.calc_and_save_eta(steps, time.time(), start, i,
                                              epoch, num_epochs, eta_file)
