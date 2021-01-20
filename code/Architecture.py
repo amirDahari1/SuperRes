@@ -311,7 +311,7 @@ if __name__ == '__main__':
                 ImageTools.calc_and_save_eta(steps, time.time(), start, i,
                                              epoch, num_epochs, eta_file)
                 with torch.no_grad():  # only for plotting
-                    save_differences(netG, high_res.detach(), rand_sim)
+                    save_differences(netG, high_res.detach(), rand_sim, grey_index)
 
             iters += 1
             i += 1
