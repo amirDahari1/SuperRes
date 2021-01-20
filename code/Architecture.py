@@ -242,6 +242,9 @@ if __name__ == '__main__':
             # Format batch
             high_res = d_data[0].to(device)
 
+            # ImageTools.show_gray_image(ImageTools.one_hot_decoding(
+            #     high_res.detach().cpu())[0, :, :])
+            # ImageTools.show_gray_image(high_res[0, 1, :, :].detach().cpu()*128)
             # Forward pass real batch through D
             output_real = netD(high_res).view(-1).mean()
 
@@ -291,7 +294,8 @@ if __name__ == '__main__':
                                                       fake, grey_index)
 
             # Calculate G's loss based on this output
-            g_cost = -fake_output.mean() - wass*pix_loss
+            # g_cost = -fake_output.mean() + wass*pix_loss
+            g_cost = -fake_output.mean() + 10 * pix_loss
             pixel_outputs.append(pix_loss.item())
             # Calculate gradients for G
             g_cost.backward()
