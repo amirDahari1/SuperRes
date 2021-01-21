@@ -294,8 +294,8 @@ if __name__ == '__main__':
                                                       fake, grey_index)
 
             # Calculate G's loss based on this output
-            g_cost = -fake_output.mean()
-            # g_cost = -fake_output.mean() + 10 * pix_loss
+            # g_cost = -fake_output.mean()
+            g_cost = -fake_output.mean() + 100 * pix_loss
             pixel_outputs.append(pix_loss.item())
             # Calculate gradients for G
             g_cost.backward()
@@ -307,13 +307,13 @@ if __name__ == '__main__':
                 torch.save(netG.state_dict(), PATH_G)
                 torch.save(netG.state_dict(), PATH_D)
                 ImageTools.graph_plot([real_outputs, fake_outputs],
-                                ['real', 'fake'], '', 'LossesGraph')
+                                ['real', 'fake'], '', 'LossesGraph100')
                 ImageTools.graph_plot([wass_outputs],
-                                      ['wass'], '', 'WassGraph')
+                                      ['wass'], '', 'WassGraph100')
                 ImageTools.graph_plot([pixel_outputs],
-                                      ['pixel'], '', 'PixelLoss')
+                                      ['pixel'], '', 'PixelLoss100')
                 ImageTools.graph_plot([gp_outputs], ['Gradient Penalty'], '',
-                                      'GpGraph')
+                                      'GpGraph100')
                 ImageTools.calc_and_save_eta(steps, time.time(), start, i,
                                              epoch, num_epochs, eta_file)
                 with torch.no_grad():  # only for plotting
