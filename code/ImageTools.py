@@ -45,7 +45,7 @@ def show_three_by_two_gray(top_images, middle_images, bottom_images,
     axarr[2, 2].imshow(bottom_images[2, :, :], cmap='gray', vmin=0, vmax=255)
     axarr[2, 2].set_title(str(round(similarity[2, 0, 0].item(), 2)))
     plt.suptitle(title)
-    plt.savefig(progress_dir + 'fake_slices100.png')
+    plt.savefig(progress_dir + 'fake_slicesG10.png')
     plt.close()
 
 
