@@ -35,8 +35,8 @@ nc_g = 2  # two phases for the generator input
 nc_d = 3  # three phases for the discriminator input
 
 # Width generator channel hyperparameter
-wd = 7
-wg = 8
+wd = 8
+wg = 9
 
 # Number of training epochs
 num_epochs = 400
@@ -307,13 +307,13 @@ if __name__ == '__main__':
                 torch.save(netG.state_dict(), PATH_G)
                 torch.save(netG.state_dict(), PATH_D)
                 ImageTools.graph_plot([real_outputs, fake_outputs],
-                                ['real', 'fake'], '', 'LossesGraphG8D7')
+                                ['real', 'fake'], '', 'LossesGraphG9D8')
                 ImageTools.graph_plot([wass_outputs],
-                                      ['wass'], '', 'WassGraphG8D7')
+                                      ['wass'], '', 'WassGraphG9D8')
                 ImageTools.graph_plot([pixel_outputs],
-                                      ['pixel'], '', 'PixelLossG8D7')
+                                      ['pixel'], '', 'PixelLossG9D8')
                 ImageTools.graph_plot([gp_outputs], ['Gradient Penalty'], '',
-                                      'GpGraphG8D7')
+                                      'GpGraphG9D8')
                 ImageTools.calc_and_save_eta(steps, time.time(), start, i,
                                              epoch, num_epochs, eta_file)
                 with torch.no_grad():  # only for plotting
