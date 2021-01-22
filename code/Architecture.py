@@ -307,13 +307,13 @@ if __name__ == '__main__':
                 torch.save(netG.state_dict(), PATH_G)
                 torch.save(netG.state_dict(), PATH_D)
                 ImageTools.graph_plot([real_outputs, fake_outputs],
-                                ['real', 'fake'], '', 'LossesGraphG10')
+                                ['real', 'fake'], '', 'LossesGraphG8D7')
                 ImageTools.graph_plot([wass_outputs],
-                                      ['wass'], '', 'WassGraphG10')
+                                      ['wass'], '', 'WassGraphG8D7')
                 ImageTools.graph_plot([pixel_outputs],
-                                      ['pixel'], '', 'PixelLossG10')
+                                      ['pixel'], '', 'PixelLossG8D7')
                 ImageTools.graph_plot([gp_outputs], ['Gradient Penalty'], '',
-                                      'GpGraphG10')
+                                      'GpGraphG8D7')
                 ImageTools.calc_and_save_eta(steps, time.time(), start, i,
                                              epoch, num_epochs, eta_file)
                 with torch.no_grad():  # only for plotting
