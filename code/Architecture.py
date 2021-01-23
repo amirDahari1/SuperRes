@@ -18,7 +18,7 @@ from matplotlib import pyplot as plt
 
 PATH_G = './g_test.pth'
 PATH_D = './d_test.pth'
-eta_file = 'eta.npy'
+eta_file = 'etaBN.npy'
 
 # Root directory for dataset
 print(os.getcwd())
@@ -36,10 +36,10 @@ nc_d = 3  # three phases for the discriminator input
 
 # Width generator channel hyperparameter
 wd = 8
-wg = 9
+wg = 8
 
 # Number of training epochs
-num_epochs = 400
+num_epochs = 500
 
 # Learning rate for optimizers
 lr = 0.0002
@@ -100,11 +100,14 @@ class Generator(nn.Module):
     def __init__(self, ngpu):
         super(Generator, self).__init__()
         self.ngpu = ngpu
-        self.conv_minus_1 = nn.Conv2d(nc_d, 2 ** wg, 3, 1, 1)
+        self.conv_minus_1 = nn.Conv2d(nc_g, 2 ** wg, 3, 1, 1)
+        self.bn_minus_1 = nn.BatchNorm2d(2**wg)
         # first convolution, making many channels
         self.conv0 = nn.Conv2d(2 ** wg, 2 ** wg, 3, 1, 1)
+        self.bn0 = nn.BatchNorm2d(2 ** wg)
         # the number of channels is because of pixel shuffling
         self.conv1 = nn.Conv2d(2 ** (wg - 2), 2 ** (wg - 2), 3, 1, 1)
+        self.bn1 = nn.BatchNorm2d(2 ** (wg - 2))
         # last convolution, squashing all of the channels to 3 phases:
         self.conv2 = nn.Conv2d(2 ** (wg - 4), nc_d, 3, 1, 1)
         # use twice pixel shuffling:
@@ -117,13 +120,15 @@ class Generator(nn.Module):
 
         # x after the first block:
         # TODO also instead of conv with 1 make it conv with 0
-        x_first = nn.ReLU()(self.conv_minus_1(x))
+        x_first = nn.ReLU()(self.bn_minus_1(self.conv_minus_1(x)))
         # making two more convolutions to understand the big areas:
-        x_before1 = nn.ReLU()(self.conv0(x_first))
+        x_before1 = nn.ReLU()(self.bn0(self.conv0(x_first)))
         # then after third time pixel shuffeling:
-        x_block_0 = nn.ReLU()(self.pixel_shuffling(self.conv0(x_before1)))
+        x_block_0 = nn.ReLU()(self.pixel_shuffling(self.bn0(self.conv0(
+            x_before1))))
         # x after two blocks:
-        x_block_1 = nn.ReLU()(self.pixel_shuffling(self.conv1(x_block_0)))
+        x_block_1 = nn.ReLU()(self.pixel_shuffling(self.bn1(self.conv1(
+            x_block_0))))
         # upsampling of x and x_block_0:
         x_up = self.up1(x)
         # the concatenation of x, x_block_0 and x_block_1
@@ -165,7 +170,7 @@ class Discriminator(nn.Module):
         return self.conv5(x)
 
 
-def save_differences(network_g, high_res_im, rand_similarity, grey_idx,
+def save_differences(network_g, high_res_im, grey_idx,
                      device):
     """
     Saves the image of the differences between the high-res real and the
@@ -173,10 +178,10 @@ def save_differences(network_g, high_res_im, rand_similarity, grey_idx,
     """
     low_res_input = LearnTools.down_sample_for_g_input(high_res_im,
                                                        grey_idx, device)
-    g_input = torch.cat((low_res_input, rand_similarity), dim=1)
-    g_output = network_g(g_input).detach().cpu()
+    # g_input = torch.cat((low_res_input, rand_similarity), dim=1)
+    g_output = network_g(low_res_input).detach().cpu()
     ImageTools.plot_fake_difference(high_res_im.detach().cpu(),
-                                    g_input.detach().cpu(), g_output)
+                                    low_res_input.detach().cpu(), g_output)
 
 
 if __name__ == '__main__':
@@ -252,14 +257,15 @@ if __name__ == '__main__':
             low_res = g_data[0].to(device)
 
             # create a random similarity channel
-            init_rand = torch.rand(low_res.size()[0], 1, 1, 1).to(device)
-            rand_sim = init_rand.repeat(1, 1, LOW_RES, LOW_RES)
+            # init_rand = torch.rand(low_res.size()[0], 1, 1, 1).to(device)
+            # rand_sim = init_rand.repeat(1, 1, LOW_RES, LOW_RES)
 
             # concatenate the low-res image and the similarity scalar matrix
-            low_res_with_sim = torch.cat((low_res, rand_sim), dim=1)
+            # low_res_with_sim = torch.cat((low_res, rand_sim), dim=1)
 
             # Generate fake image batch with G
-            fake = netG(low_res_with_sim)
+            # fake = netG(low_res_with_sim)
+            fake = netG(low_res)
 
             # Classify all fake batch with D
             output_fake = netD(fake.detach()).view(-1).mean()
@@ -290,7 +296,7 @@ if __name__ == '__main__':
             # all-fake batch through D
             fake_output = netD(fake).view(-1)
             # get the pixel-wise-distance loss
-            pix_loss = LearnTools.pixel_wise_distance(low_res_with_sim,
+            pix_loss = LearnTools.pixel_wise_distance(low_res,
                                                       fake, grey_index)
 
             # Calculate G's loss based on this output
@@ -307,17 +313,17 @@ if __name__ == '__main__':
                 torch.save(netG.state_dict(), PATH_G)
                 torch.save(netG.state_dict(), PATH_D)
                 ImageTools.graph_plot([real_outputs, fake_outputs],
-                                ['real', 'fake'], '', 'LossesGraphG9D8')
+                                ['real', 'fake'], '', 'LossesGraphBN')
                 ImageTools.graph_plot([wass_outputs],
-                                      ['wass'], '', 'WassGraphG9D8')
+                                      ['wass'], '', 'WassGraphBN')
                 ImageTools.graph_plot([pixel_outputs],
-                                      ['pixel'], '', 'PixelLossG9D8')
+                                      ['pixel'], '', 'PixelLossBN')
                 ImageTools.graph_plot([gp_outputs], ['Gradient Penalty'], '',
-                                      'GpGraphG9D8')
+                                      'GpGraphBN')
                 ImageTools.calc_and_save_eta(steps, time.time(), start, i,
                                              epoch, num_epochs, eta_file)
                 with torch.no_grad():  # only for plotting
-                    save_differences(netG, high_res.detach(), rand_sim,
+                    save_differences(netG, high_res.detach(),
                                      grey_index, device)
 
             iters += 1

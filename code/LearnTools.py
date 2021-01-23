@@ -80,13 +80,12 @@ def pixel_wise_distance(low_res_im, generated_high_res, grey_idx):
     """
     generated_grey = torch.index_select(generated_high_res, 1, grey_idx)
     up_sample = up_sample_for_similarity_check(low_res_im, grey_idx)
-
-    h_r_n_pixels = torch.numel(up_sample[0, 0, :, :])
+    # h_r_n_pixels = torch.numel(up_sample[0, 0, :, :])
     # distance is the l2 norm calculating for each image in the batch:
-    dist = torch.sum((generated_grey-up_sample)**2, dim=[2, 3])/h_r_n_pixels
+    # dist = torch.sum((generated_grey-up_sample)**2, dim=[2, 3])/h_r_n_pixels
     # multiplying each image in the batch with the appropriate random number:
-    res = dist * low_res_im[:, 2, 0, 0]
-    print(res.mean().item())
+    # res = dist * low_res_im[:, 2, 0, 0]
+    # print(dist.mean().item())
     # return the mean:
-    return torch.mean(res)
+    return torch.nn.MSELoss()(generated_grey, up_sample)
 

@@ -24,9 +24,9 @@ def plot_img(file_name):
 
 
 if __name__ == '__main__':
-    print_eta('eta.npy')
-    plot_img('_LossesGraph.png')
-    plot_img('_WassGraph.png')
-    plot_img('_PixelLoss.png')
-    plot_img('_GpGraph.png')
-    plot_img('fake_slices.png')
+    print_eta('etaBN.npy')
+    plot_img('_LossesGraphBN.png')
+    plot_img('_WassGraphBN.png')
+    plot_img('_PixelLossBN.png')
+    plot_img('_GpGraphBN.png')
+    plot_img('fake_slicesBN.png')
