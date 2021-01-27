@@ -18,18 +18,20 @@ def show_gray_image(image):
     plt.show()
 
 
-def plot_fake_difference(high_res, input_to_g, output_from_g):
+def plot_fake_difference(high_res, input_to_g, output_from_g, save_dir,
+                         filename):
     # first move everything to numpy
     # rand_sim = np.array(input_to_g[:, 2, :, :])
     images = [high_res, input_to_g, output_from_g]
     images = [np.array(image) for image in images]
     images[2] = fractions_to_ohe(images[2])  # the output from g needs to ohe
     images = [one_hot_decoding(image) for image in images]
-    show_three_by_two_gray(images[0], images[1], images[2],
-                                      'Very vanilla super-res results')
+    save_three_by_two_gray(images[0], images[1], images[2],
+                           save_dir + ' ' + filename, save_dir, filename)
 
 
-def show_three_by_two_gray(top_images, middle_images, bottom_images, title):
+def save_three_by_two_gray(top_images, middle_images, bottom_images, title,
+                           save_dir, filename):
     f, axarr = plt.subplots(3, 3)
     axarr[0,0].imshow(top_images[0, :, :], cmap='gray', vmin=0, vmax=255)
     axarr[0,1].imshow(top_images[1, :, :], cmap='gray', vmin=0, vmax=255)
@@ -38,13 +40,10 @@ def show_three_by_two_gray(top_images, middle_images, bottom_images, title):
     axarr[1, 1].imshow(middle_images[1, :, :], cmap='gray', vmin=0, vmax=255)
     axarr[1, 2].imshow(middle_images[2, :, :], cmap='gray', vmin=0, vmax=255)
     axarr[2, 0].imshow(bottom_images[0, :, :], cmap='gray', vmin=0, vmax=255)
-    # axarr[2, 0].set_title(str(round(similarity[0, 0, 0].item(), 2)))
     axarr[2, 1].imshow(bottom_images[1, :, :], cmap='gray', vmin=0, vmax=255)
-    # axarr[2, 1].set_title(str(round(similarity[1, 0, 0].item(), 2)))
     axarr[2, 2].imshow(bottom_images[2, :, :], cmap='gray', vmin=0, vmax=255)
-    # axarr[2, 2].set_title(str(round(similarity[2, 0, 0].item(), 2)))
     plt.suptitle(title)
-    plt.savefig(progress_dir + 'fake_slicesBN.png')
+    plt.savefig(progress_dir + save_dir + '/' + filename + '.png')
     plt.close()
 
 
@@ -141,20 +140,20 @@ def fractions_to_ohe(image):
     return res
 
 
-def graph_plot(data, labels, pth, name):
+def graph_plot(data, labels, pth, filename):
     """
     simple plotter for all the different graphs
     :param data: a list of data arrays
     :param labels: a list of plot labels
     :param pth: where to save plots
-    :param name: name of the plot figure
+    :param filename: the directory name to save the plot.
     :return:
     """
 
     for datum,lbl in zip(data,labels):
         plt.plot(datum, label = lbl)
     plt.legend()
-    plt.savefig(progress_dir + pth + '_' + name)
+    plt.savefig(progress_dir + pth + '/' + filename)
     plt.close()
 
 

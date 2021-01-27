@@ -15,13 +15,30 @@ import torchvision.datasets as dset
 import torchvision.transforms as transforms
 import torchvision.utils as vutils
 from matplotlib import pyplot as plt
+import argparse
+
+# Parsing arguments:
+parser = argparse.ArgumentParser()
+parser.add_argument('-d', '--directory', type=str, default='default',
+                    help='Stores the progress output in the \
+                    directory name given')
+parser.add_argument('-wd', '--widthD', type=int,
+                    default=8, help='Hyper-parameter for \
+                    the width of the Discriminator network')
+parser.add_argument('-wg', '--widthG', type=int, default=8,
+                    help='Hyper-parameter for the \
+                    width of the Generator network')
+args = parser.parse_args()
+
+progress_dir, wd, wg = args.directory, args.widthD, args.widthG
+if not os.path.exists(ImageTools.progress_dir + progress_dir):
+    os.mkdir(ImageTools.progress_dir + progress_dir)
 
 PATH_G = './g_test.pth'
 PATH_D = './d_test.pth'
-eta_file = 'etaBN.npy'
+eta_file = 'eta.npy'
 
 # Root directory for dataset
-print(os.getcwd())
 dataroot = "data/"
 
 # Number of workers for dataloader
@@ -33,10 +50,6 @@ batch_size = 64
 # Number of channels in the training images. For color images this is 3
 nc_g = 2  # two phases for the generator input
 nc_d = 3  # three phases for the discriminator input
-
-# Width generator channel hyperparameter
-wd = 8
-wg = 8
 
 # Number of training epochs
 num_epochs = 500
@@ -63,11 +76,11 @@ g_train_dataset = torch.load(dataroot + 'g_train.pth')
 # Create the dataloader
 d_dataloader = torch.utils.data.DataLoader(d_train_dataset,
                                            batch_size=batch_size,
-                                           shuffle=False, num_workers=workers)
+                                           shuffle=True, num_workers=workers)
 
 g_dataloader = torch.utils.data.DataLoader(g_train_dataset,
                                            batch_size=batch_size,
-                                           shuffle=False, num_workers=workers)
+                                           shuffle=True, num_workers=workers)
 # TODO see maybe change to shuffle=true and normalize the data to have 0
 #  mean and 1 std.
 
@@ -79,11 +92,6 @@ print('device is ' + str(device))
 
 # Plot one training image of d
 # first_d_batch = next(iter(d_dataloader))
-
-# np_d_decode = BatchMaker.one_hot_decoding(first_d_batch[0])
-# print(np_d_decode.shape)
-# BatchMaker.show_image(np_d_decode[10, :, :])
-
 
 # custom weights initialization called on netG and netD
 def weights_init(m):
@@ -130,14 +138,14 @@ class Generator(nn.Module):
         x_block_1 = nn.ReLU()(self.pixel_shuffling(self.bn1(self.conv1(
             x_block_0))))
         # upsampling of x and x_block_0:
-        x_up = self.up1(x)
+        # x_up = self.up1(x)
         # the concatenation of x, x_block_0 and x_block_1
         y = self.conv2(x_block_1)
-        last_zero_size = list(x_up.size())
-        last_zero_size[1] = 1
-        last_zero_channel = torch.zeros(last_zero_size, dtype=x_up.dtype,
-                                        device=x_up.device)
-        x_up = torch.cat((x_up, last_zero_channel), dim=1)
+        # last_zero_size = list(x_up.size())
+        # last_zero_size[1] = 1
+        # last_zero_channel = torch.zeros(last_zero_size, dtype=x_up.dtype,
+        #                                 device=x_up.device)
+        # x_up = torch.cat((x_up, last_zero_channel), dim=1)
         # y = torch.add(y, x_up)
         # TODO maybe different function in the end?
         return nn.Softmax(dim=1)(y)
@@ -171,7 +179,7 @@ class Discriminator(nn.Module):
 
 
 def save_differences(network_g, high_res_im, grey_idx,
-                     device):
+                     device, save_dir, filename):
     """
     Saves the image of the differences between the high-res real and the
     generated images that are supposed to be similar.
@@ -181,7 +189,8 @@ def save_differences(network_g, high_res_im, grey_idx,
     # g_input = torch.cat((low_res_input, rand_similarity), dim=1)
     g_output = network_g(low_res_input).detach().cpu()
     ImageTools.plot_fake_difference(high_res_im.detach().cpu(),
-                                    low_res_input.detach().cpu(), g_output)
+                                    low_res_input.detach().cpu(), g_output,
+                                    save_dir, filename)
 
 
 if __name__ == '__main__':
@@ -228,6 +237,7 @@ if __name__ == '__main__':
     iters = 0
     # the grey channel in the images:
     grey_index = torch.LongTensor([1]).to(device)
+    steps = len(d_dataloader)
 
     print("Starting Training Loop...")
     start = time.time()
@@ -235,8 +245,8 @@ if __name__ == '__main__':
     for epoch in range(num_epochs):
         # For each batch in the dataloader
         i = 0
-        j = np.random.randint(saving_num//2)  # to see different slices
-        steps = len(d_dataloader)
+
+        j = np.random.randint(steps)  # to see different slices
         for d_data, g_data in zip(d_dataloader, g_dataloader):
 
             ############################
@@ -247,9 +257,6 @@ if __name__ == '__main__':
             # Format batch
             high_res = d_data[0].to(device)
 
-            # ImageTools.show_gray_image(ImageTools.one_hot_decoding(
-            #     high_res.detach().cpu())[0, :, :])
-            # ImageTools.show_gray_image(high_res[0, 1, :, :].detach().cpu()*128)
             # Forward pass real batch through D
             output_real = netD(high_res).view(-1).mean()
 
@@ -274,6 +281,7 @@ if __name__ == '__main__':
             gradient_penalty = LearnTools.calc_gradient_penalty(netD,
                                high_res, fake.detach(), batch_size, HIGH_RES,
                                device, Lambda, nc_d)
+
             # discriminator is trying to minimize:
             d_cost = output_fake - output_real + gradient_penalty
             # Calculate gradients for D in backward pass
@@ -309,22 +317,28 @@ if __name__ == '__main__':
             optimizerG.step()
 
             # Output training stats
-            if (i + j) % saving_num == 0:
+            if i == j:
                 torch.save(netG.state_dict(), PATH_G)
                 torch.save(netG.state_dict(), PATH_D)
                 ImageTools.graph_plot([real_outputs, fake_outputs],
-                                ['real', 'fake'], '', 'LossesGraphBN')
+                                      ['real', 'fake'], progress_dir,
+                                      'LossesGraphBN')
                 ImageTools.graph_plot([wass_outputs],
-                                      ['wass'], '', 'WassGraphBN')
+                                      ['wass'], progress_dir, 'WassGraphBN')
                 ImageTools.graph_plot([pixel_outputs],
-                                      ['pixel'], '', 'PixelLossBN')
-                ImageTools.graph_plot([gp_outputs], ['Gradient Penalty'], '',
-                                      'GpGraphBN')
+                                      ['pixel'], progress_dir, 'PixelLossBN')
+                ImageTools.graph_plot([gp_outputs], ['Gradient Penalty'],
+                                      progress_dir, 'GpGraphBN')
                 ImageTools.calc_and_save_eta(steps, time.time(), start, i,
                                              epoch, num_epochs, eta_file)
                 with torch.no_grad():  # only for plotting
                     save_differences(netG, high_res.detach(),
-                                     grey_index, device)
+                                     grey_index, device, progress_dir,
+                                     'running_slices')
+                # save eight images during the run
+                if epoch % (num_epochs//11) == 0 and epoch > 0:
+                    save_differences(netG, high_res.detach(), grey_index,
+                                     device, progress_dir, str(iters))
 
             iters += 1
             i += 1
