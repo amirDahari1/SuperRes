@@ -31,12 +31,16 @@ parser.add_argument('-wg', '--widthG', type=int, default=8,
 args = parser.parse_args()
 
 progress_dir, wd, wg = args.directory, args.widthD, args.widthG
+
 if not os.path.exists(ImageTools.progress_dir + progress_dir):
     os.mkdir(ImageTools.progress_dir + progress_dir)
 
 PATH_G = './g_test.pth'
 PATH_D = './d_test.pth'
 eta_file = 'eta.npy'
+
+# pixel loss average
+pix_loss_average = 0.0434
 
 # Root directory for dataset
 dataroot = "data/"
@@ -308,8 +312,9 @@ if __name__ == '__main__':
                                                       fake, grey_index)
 
             # Calculate G's loss based on this output
-            g_cost = -fake_output.mean()
-            # g_cost = -fake_output.mean() + 100 * pix_loss
+            # g_cost = -fake_output.mean()
+            g_cost = -fake_output.mean() + 1000 * (pix_loss -
+                                                   pix_loss_average)**2
             pixel_outputs.append(pix_loss.item())
             # Calculate gradients for G
             g_cost.backward()
@@ -334,11 +339,12 @@ if __name__ == '__main__':
                 with torch.no_grad():  # only for plotting
                     save_differences(netG, high_res.detach(),
                                      grey_index, device, progress_dir,
-                                     'running_slices')
+                                     'running slices')
                 # save eight images during the run
                 if epoch % (num_epochs//11) == 0 and epoch > 0:
                     save_differences(netG, high_res.detach(), grey_index,
-                                     device, progress_dir, str(iters))
+                                     device, progress_dir, 'Iteration_'
+                                     + str(iters))
 
             iters += 1
             i += 1
