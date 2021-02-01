@@ -138,7 +138,7 @@ class Generator(nn.Module):
         x_before2 = nn.ReLU()(self.bn0(self.conv0(x_before1)))
         # then after third time pixel shuffeling:
         x_block_0 = nn.ReLU()(self.pixel_shuffling(self.bn0(self.conv0(
-            x_before2))))
+            x_before1))))
         # x after two blocks:
         x_block_1 = nn.ReLU()(self.pixel_shuffling(self.bn1(self.conv1(
             x_block_0))))
@@ -316,6 +316,7 @@ if __name__ == '__main__':
             # g_cost = -fake_output.mean()
             g_cost = -fake_output.mean() + 10 * pix_loss
             pixel_outputs.append(pix_loss.item())
+            print(pixel_outputs)
             # Calculate gradients for G
             g_cost.backward()
             # Update G

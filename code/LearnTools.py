@@ -1,7 +1,7 @@
 import torch
 from torch import autograd
 
-k_logistic = 1000  # the logistic function coefficient
+k_logistic = 300  # the logistic function coefficient
 up_sample_factor = 4
 threshold = 0.5
 
@@ -98,8 +98,12 @@ def pixel_wise_distance(low_res_im, generated_high_res, grey_idx):
     :return: the normalized distance (divided by the number of pixels of the
     low resolution image
     """
+
     low_res_grey = torch.index_select(low_res_im, 1, grey_idx)
     down_sample = down_sample_for_similarity_check(generated_high_res,
                                                    grey_idx)
+    # print(low_res_grey[0, 0, :, :])
+    # print(down_sample[0, 0, :, :])
+    # print(low_res_grey.size())
     return torch.nn.MSELoss()(low_res_grey, down_sample)
 
