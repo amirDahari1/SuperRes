@@ -22,8 +22,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-d', '--directory', type=str, default='default',
                     help='Stores the progress output in the \
                     directory name given')
-parser.add_argument('-wd', '--widthD', type=int,
-                    default=8, help='Hyper-parameter for \
+parser.add_argument('-wd', '--widthD', type=int, default=8,
+                    help='Hyper-parameter for \
                     the width of the Discriminator network')
 parser.add_argument('-wg', '--widthG', type=int, default=8,
                     help='Hyper-parameter for the \
@@ -135,9 +135,10 @@ class Generator(nn.Module):
         x_first = nn.ReLU()(self.bn_minus_1(self.conv_minus_1(x)))
         # making two more convolutions to understand the big areas:
         x_before1 = nn.ReLU()(self.bn0(self.conv0(x_first)))
+        x_before2 = nn.ReLU()(self.bn0(self.conv0(x_before1)))
         # then after third time pixel shuffeling:
         x_block_0 = nn.ReLU()(self.pixel_shuffling(self.bn0(self.conv0(
-            x_before1))))
+            x_before2))))
         # x after two blocks:
         x_block_1 = nn.ReLU()(self.pixel_shuffling(self.bn1(self.conv1(
             x_block_0))))
@@ -313,8 +314,7 @@ if __name__ == '__main__':
 
             # Calculate G's loss based on this output
             # g_cost = -fake_output.mean()
-            g_cost = -fake_output.mean() + 1000 * (pix_loss -
-                                                   pix_loss_average)**2
+            g_cost = -fake_output.mean() + 10 * pix_loss
             pixel_outputs.append(pix_loss.item())
             # Calculate gradients for G
             g_cost.backward()
@@ -340,8 +340,8 @@ if __name__ == '__main__':
                     save_differences(netG, high_res.detach(),
                                      grey_index, device, progress_dir,
                                      'running slices')
-                # save eight images during the run
-                if epoch % (num_epochs//11) == 0 and epoch > 0:
+                # save fifteen images during the run
+                if epoch % (num_epochs//21) == 0 and epoch > 0:
                     save_differences(netG, high_res.detach(), grey_index,
                                      device, progress_dir, 'Iteration_'
                                      + str(iters))

@@ -1,8 +1,9 @@
 import torch
 from torch import autograd
 
-
+k_logistic = 1000  # the logistic function coefficient
 up_sample_factor = 4
+threshold = 0.5
 
 
 def calc_gradient_penalty(netD, real_data, fake_data, batch_size, l, device,
@@ -57,6 +58,25 @@ def down_sample_for_g_input(high_res_3_phase, grey_idx, device):
     return torch.cat((zeros_channel, res), dim=1)
 
 
+def logistic_function(x, k, x0):
+    """
+    :param x: The input
+    :param k: The logistic coefficient
+    :param x0: the middle input
+    :return: the logistic value of x
+    """
+    return 1/(1+torch.exp(-k*(x-x0)))
+
+
+def down_sample_for_similarity_check(generated_im, grey_idx):
+    # first choose the grey phase in the image:
+    grey_material = torch.index_select(generated_im, 1, grey_idx)
+    # down sample:
+    downscale = torch.nn.AvgPool2d(2, 2)
+    res = downscale(downscale(grey_material))
+    return logistic_function(res, k_logistic, threshold)
+
+
 def up_sample_for_similarity_check(low_res_im, grey_idx):
     """
     Up-sample the low resolution image G gets as an input for pixel-wise
@@ -78,7 +98,8 @@ def pixel_wise_distance(low_res_im, generated_high_res, grey_idx):
     :return: the normalized distance (divided by the number of pixels of the
     low resolution image
     """
-    generated_grey = torch.index_select(generated_high_res, 1, grey_idx)
-    up_sample = up_sample_for_similarity_check(low_res_im, grey_idx)
-    return torch.nn.MSELoss()(generated_grey, up_sample)
+    low_res_grey = torch.index_select(low_res_im, 1, grey_idx)
+    down_sample = down_sample_for_similarity_check(generated_high_res,
+                                                   grey_idx)
+    return torch.nn.MSELoss()(low_res_grey, down_sample)
 
