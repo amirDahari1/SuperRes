@@ -1,7 +1,7 @@
 import torch
 from torch import autograd
 
-k_logistic = 300  # the logistic function coefficient
+k_logistic = 30  # the logistic function coefficient
 up_sample_factor = 4
 threshold = 0.5
 
