@@ -138,7 +138,7 @@ class Generator(nn.Module):
         x_before2 = nn.ReLU()(self.bn0(self.conv0(x_before1)))
         # then after third time pixel shuffeling:
         x_block_0 = nn.ReLU()(self.pixel_shuffling(self.bn0(self.conv0(
-            x_before1))))
+            x_before2))))
         # x after two blocks:
         x_block_1 = nn.ReLU()(self.pixel_shuffling(self.bn1(self.conv1(
             x_block_0))))
