@@ -28,9 +28,12 @@ parser.add_argument('-wd', '--widthD', type=int, default=8,
 parser.add_argument('-wg', '--widthG', type=int, default=8,
                     help='Hyper-parameter for the \
                     width of the Generator network')
+parser.add_argument('-n_res', '--n_res_blocks', type=int, default=3,
+                    help='Number of residual blocks in the network.')
 args = parser.parse_args()
 
 progress_dir, wd, wg = args.directory, args.widthD, args.widthG
+n_res_blocks = args.n_res_blocks
 
 if not os.path.exists(ImageTools.progress_dir + progress_dir):
     os.mkdir(ImageTools.progress_dir + progress_dir)
@@ -123,35 +126,56 @@ class Generator(nn.Module):
         # last convolution, squashing all of the channels to 3 phases:
         self.conv2 = nn.Conv2d(2 ** (wg - 4), nc_d, 3, 1, 1)
         # use twice pixel shuffling:
-        self.pixel_shuffling = torch.nn.PixelShuffle(2)
+        self.pixel = torch.nn.PixelShuffle(2)
         # up samples
         self.up1 = nn.Upsample(scale_factor=4, mode='bilinear',
                                align_corners=False)
 
-    def forward(self, x):
+    @staticmethod
+    def res_block(x, conv, bn):
+        """
+        A forward pass of a residual block (from the original paper)
+        :param x: the input
+        :param conv: the convolution function, should return the same number
+        of channels, and the same width and height of the image. For example,
+        kernel size 3, padding 1 stride 1.
+        :param bn: batch norm function
+        :return: the result after the residual block.
+        """
+        # the residual side
+        x_side = bn(conv(nn.ReLU()(bn(conv(x)))))
+        return nn.ReLU()(x + x_side)
 
-        # x after the first block:
-        # TODO also instead of conv with 1 make it conv with 0
+    @staticmethod
+    def up_sample(x, pix_shuffling, conv, bn):
+        """
+        Up sampling with pixel shuffling block.
+        """
+        return nn.ReLU()(pix_shuffling(bn(conv(x))))
+
+    def forward(self, x):
+        """
+        forward pass of x
+        :param x: input
+        :return: the output of the forward pass.
+        """
+        # x after the first run for many channels:
+        # TODO also instead of conv with 1 padding to conv with 0 padding
         x_first = nn.ReLU()(self.bn_minus_1(self.conv_minus_1(x)))
-        # making two more convolutions to understand the big areas:
-        x_before1 = nn.ReLU()(self.bn0(self.conv0(x_first)))
-        x_before2 = nn.ReLU()(self.bn0(self.conv0(x_before1)))
-        # then after third time pixel shuffeling:
-        x_block_0 = nn.ReLU()(self.pixel_shuffling(self.bn0(self.conv0(
-            x_before2))))
-        # x after two blocks:
-        x_block_1 = nn.ReLU()(self.pixel_shuffling(self.bn1(self.conv1(
-            x_block_0))))
-        # upsampling of x and x_block_0:
-        # x_up = self.up1(x)
-        # the concatenation of x, x_block_0 and x_block_1
-        y = self.conv2(x_block_1)
-        # last_zero_size = list(x_up.size())
-        # last_zero_size[1] = 1
-        # last_zero_channel = torch.zeros(last_zero_size, dtype=x_up.dtype,
-        #                                 device=x_up.device)
-        # x_up = torch.cat((x_up, last_zero_channel), dim=1)
-        # y = torch.add(y, x_up)
+        # first residual block:
+        after_block = self.res_block(x_first, self.conv0, self.bn0)
+        # more residual blocks:
+        for i in range(n_res_blocks - 1):
+            after_block = self.res_block(after_block, self.conv0, self.bn0)
+        # skip connection to the end after all the blocks:
+        after_res = x_first + after_block
+        # up sampling with pixel shuffling (0):
+        up_0 = self.up_sample(after_res, self.pixel, self.bn0, self.conv0)
+        # up sampling with pixel shuffling (1):
+        up_1 = self.up_sample(up_0, self.pixel, self.bn1, self.conv1)
+
+        y = self.conv2(up_1)
+        
         # TODO maybe different function in the end?
         return nn.Softmax(dim=1)(y)
 
