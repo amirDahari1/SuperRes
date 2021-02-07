@@ -300,7 +300,8 @@ if __name__ == '__main__':
 
             # Generate batch of g input
             g_slice = random.choice(g_slices)
-            before_down_sampling = BM.random_batch(batch_size, g_slice)
+            before_down_sampling = BM.random_batch(batch_size, g_slice).to(
+                device)
             # down sample:
             low_res = LearnTools.down_sample_for_g_input(
                 before_down_sampling, grey_index, device)
