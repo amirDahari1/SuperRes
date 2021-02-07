@@ -86,16 +86,16 @@ def down_sample_to_ohe(image):
 
 def one_hot_encoding(image):
     """
-    :param image: a [batch_size, height, width] tensor array
+    :param image: a [batch_size, 1, height, width] tensor array
     :return: a one-hot encoding of image.
     """
     phases = np.unique(image)  # the unique values in image
     im_shape = image.shape
 
-    res = np.zeros([im_shape[0], len(phases), im_shape[1], im_shape[2]])
+    res = np.zeros([im_shape[0], len(phases), im_shape[2], im_shape[3]])
     # create one channel per phase for one hot encoding
     for cnt, phs in enumerate(phases):
-        image_copy = np.zeros(image.shape)  # just an encoding for one
+        image_copy = np.zeros(im_shape)  # just an encoding for one
         # channel
         image_copy[image == phs] = 1
         res[:, cnt, :, :] = image_copy.squeeze()

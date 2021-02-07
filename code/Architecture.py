@@ -28,7 +28,7 @@ parser.add_argument('-wd', '--widthD', type=int, default=8,
 parser.add_argument('-wg', '--widthG', type=int, default=8,
                     help='Hyper-parameter for the \
                     width of the Generator network')
-parser.add_argument('-n_res', '--n_res_blocks', type=int, default=3,
+parser.add_argument('-n_res', '--n_res_blocks', type=int, default=2,
                     help='Number of residual blocks in the network.')
 args = parser.parse_args()
 
@@ -41,6 +41,10 @@ if not os.path.exists(ImageTools.progress_dir + progress_dir):
 PATH_G = './g_test.pth'
 PATH_D = './d_test.pth'
 eta_file = 'eta.npy'
+
+# G and D slices to choose from
+g_slices = [0, 1]
+d_slices = [0, 1]
 
 # pixel loss average
 pix_loss_average = 0.0434
@@ -175,7 +179,7 @@ class Generator(nn.Module):
         up_1 = self.up_sample(up_0, self.pixel, self.bn1, self.conv1)
 
         y = self.conv2(up_1)
-        
+
         # TODO maybe different function in the end?
         return nn.Softmax(dim=1)(y)
 
@@ -223,6 +227,9 @@ def save_differences(network_g, high_res_im, grey_idx,
 
 
 if __name__ == '__main__':
+    # The batch maker:
+    BM = BatchMaker()
+
     # Create the generator
     netG = Generator(ngpu).to(device)
 
@@ -284,13 +291,19 @@ if __name__ == '__main__':
             # Train with all-real batch
             netD.zero_grad()
             # Format batch
-            high_res = d_data[0].to(device)
+            # high_res = d_data[0].to(device)
+            d_slice = random.choice(d_slices)
+            high_res = BM.random_batch(batch_size, d_slice).to(device)
 
             # Forward pass real batch through D
             output_real = netD(high_res).view(-1).mean()
 
-            # Generate batch of latent vectors
-            low_res = g_data[0].to(device)
+            # Generate batch of g input
+            g_slice = random.choice(g_slices)
+            before_down_sampling = BM.random_batch(batch_size, g_slice)
+            # down sample:
+            low_res = LearnTools.down_sample_for_g_input(
+                before_down_sampling, grey_index, device)
 
             # create a random similarity channel
             # init_rand = torch.rand(low_res.size()[0], 1, 1, 1).to(device)
@@ -374,6 +387,11 @@ if __name__ == '__main__':
             iters += 1
             i += 1
             print(i)
+
+            for name, param in netG.named_parameters():
+                # print(name, param)
+                if name.endswith('weight'):
+                    print(param.grad)
 
     # save the trained model
 

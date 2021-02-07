@@ -36,17 +36,17 @@ class BatchMaker:
         self.n_samples = n_samples
         self.low_res = low_res
         self.high_res = high_res
-        self.d_train = self.generate_a_random_batch(1)  # test is y slices
-        self.g_train_hr = self.generate_a_random_batch(0)  # train
+        # self.d_train = self.generate_a_random_batch(1)  # test is y slices
+        # self.g_train_hr = self.generate_a_random_batch(0)  # train
         # is x slices
-        ImageTools.show_gray_image(self.g_train_hr[0, 0, :, :])
-        self.g_train_no_cbd = ImageTools.cbd_to_grey(self.g_train_hr)
-        self.g_train = ImageTools.down_sample(self.g_train_no_cbd)
-        ImageTools.show_gray_image(self.g_train[0, 0, :, :])
+        # ImageTools.show_gray_image(self.g_train_hr[0, 0, :, :])
+        # self.g_train_no_cbd = ImageTools.cbd_to_grey(self.g_train_hr)
+        # self.g_train = ImageTools.down_sample(self.g_train_no_cbd)
+        # ImageTools.show_gray_image(self.g_train[0, 0, :, :])
         # change both test and train to one hot encoding:
-        self.ohe_d_train = ImageTools.one_hot_encoding(self.d_train)
-        self.ohe_g_train = ImageTools.one_hot_encoding(self.g_train)
-        self.save_batches()
+        # self.ohe_d_train = ImageTools.one_hot_encoding(self.d_train)
+        # self.ohe_g_train = ImageTools.one_hot_encoding(self.g_train)
+        # self.save_batches()
 
     def save_batches(self):
         self.ohe_d_train = torch.FloatTensor(self.ohe_d_train)
@@ -56,12 +56,18 @@ class BatchMaker:
         dataset = torch.utils.data.TensorDataset(self.ohe_g_train)
         torch.save(dataset, 'data/g_train.pth')
 
-    def generate_a_random_batch(self, dim_chosen):
-        res = np.zeros(
-            (self.n_samples, 1, self.high_res, self.high_res))
-        for i in range(self.n_samples):
+    def random_batch(self, batch_size, dim_chosen):
+        """
+        :return: A batch of high resolution images,
+        along the dimension chosen (0->x,1->y,2->z) in the 3d tif image.
+        """
+        res = np.zeros((batch_size, 1, self.high_res, self.high_res))
+        for i in range(batch_size):
             res[i, 0, :, :] = self.generate_a_random_image(dim_chosen)
-        return res
+        # one hot encoding:
+        res = ImageTools.one_hot_encoding(res)
+        # return a torch tensor:
+        return torch.from_numpy(res.copy()).type(torch.FloatTensor)
 
     def generate_a_random_image(self, dim_chosen):
         """
