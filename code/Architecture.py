@@ -36,7 +36,7 @@ progress_dir, wd, wg = args.directory, args.widthD, args.widthG
 n_res_blocks = args.n_res_blocks
 
 if not os.path.exists(ImageTools.progress_dir + progress_dir):
-    os.mkdir(ImageTools.progress_dir + progress_dir)
+    os.makedirs(ImageTools.progress_dir + progress_dir)
 
 PATH_G = './g_test.pth'
 PATH_D = './d_test.pth'
