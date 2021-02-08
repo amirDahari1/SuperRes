@@ -30,7 +30,7 @@ parser.add_argument('-wg', '--widthG', type=int, default=8,
                     width of the Generator network')
 parser.add_argument('-n_res', '--n_res_blocks', type=int, default=2,
                     help='Number of residual blocks in the network.')
-args = parser.parse_args()
+args, unknown = parser.parse_known_args()
 
 progress_dir, wd, wg = args.directory, args.widthD, args.widthG
 n_res_blocks = args.n_res_blocks
