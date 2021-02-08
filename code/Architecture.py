@@ -103,6 +103,8 @@ device = torch.device(
     "cuda:0" if (torch.cuda.is_available() and ngpu > 0) else "cpu")
 print('device is ' + str(device))
 
+# the grey channel in the images:
+grey_index = torch.LongTensor([1]).to(device)
 
 # Plot one training image of d
 # first_d_batch = next(iter(d_dataloader))
@@ -274,8 +276,7 @@ if __name__ == '__main__':
     pixel_outputs = []
 
     iters = 0
-    # the grey channel in the images:
-    grey_index = torch.LongTensor([1]).to(device)
+
     steps = len(d_dataloader)
 
     print("Starting Training Loop...")
