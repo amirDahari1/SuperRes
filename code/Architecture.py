@@ -1,5 +1,5 @@
-from BatchMaker import *
 import LearnTools
+from BatchMaker import *
 
 import argparse
 import os
