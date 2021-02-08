@@ -17,6 +17,9 @@ import torchvision.utils as vutils
 from matplotlib import pyplot as plt
 import argparse
 
+if os.getcwd().endswith('code'):
+    os.chdir('..')  # current directory from /SuperRes/code to SuperRes/
+
 # Parsing arguments:
 parser = argparse.ArgumentParser()
 parser.add_argument('-d', '--directory', type=str, default='default',
@@ -81,17 +84,17 @@ ngpu = 1
 saving_num = 50
 
 # Create the datasets for the training of d and g
-d_train_dataset = torch.load(dataroot + 'd_train.pth')
-g_train_dataset = torch.load(dataroot + 'g_train.pth')
+# d_train_dataset = torch.load(dataroot + 'd_train.pth')
+# g_train_dataset = torch.load(dataroot + 'g_train.pth')
 
 # Create the dataloader
-d_dataloader = torch.utils.data.DataLoader(d_train_dataset,
-                                           batch_size=batch_size,
-                                           shuffle=True, num_workers=workers)
+# d_dataloader = torch.utils.data.DataLoader(d_train_dataset,
+#                                            batch_size=batch_size,
+#                                            shuffle=True, num_workers=workers)
 
-g_dataloader = torch.utils.data.DataLoader(g_train_dataset,
-                                           batch_size=batch_size,
-                                           shuffle=True, num_workers=workers)
+# g_dataloader = torch.utils.data.DataLoader(g_train_dataset,
+#                                            batch_size=batch_size,
+#                                            shuffle=True, num_workers=workers)
 # TODO see maybe change to shuffle=true and normalize the data to have 0
 #  mean and 1 std.
 
