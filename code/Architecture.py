@@ -286,7 +286,7 @@ if __name__ == '__main__':
         i = 0
 
         j = np.random.randint(steps)  # to see different slices
-        for _ in range(epoch_iterations):
+        for _ in range(steps):
 
             ############################
             # (1) Update D network:
