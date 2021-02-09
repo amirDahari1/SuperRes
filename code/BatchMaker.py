@@ -32,10 +32,13 @@ class BatchMaker:
         self.path = path
         self.device = device
         self.im_3d = imread(path)
+        self.phases = np.unique(self.im_3d)  # the unique values in image
         self.min_d = min(self.im_3d.shape)  # the minimal dimension
         # crop the image in the edges:
         self.im_3d = self.im_3d[CROP:self.min_d-CROP, CROP:self.min_d-CROP,
                                 CROP:self.min_d-CROP]
+        self.min_d = self.min_d - 2*CROP  # update the min dimension
+        self.im_ohe = ImageTools.one_hot_encoding(self.im_3d, self.phases)
         self.low_res = low_res
         self.high_res = high_res
 
@@ -52,11 +55,10 @@ class BatchMaker:
         :return: A batch of high resolution images,
         along the dimension chosen (0->x,1->y,2->z) in the 3d tif image.
         """
-        res = np.zeros((batch_size, 1, self.high_res, self.high_res))
+        res = np.zeros((batch_size, len(self.phases), self.high_res,
+                        self.high_res))
         for i in range(batch_size):
-            res[i, 0, :, :] = self.generate_a_random_image(dim_chosen)
-        # one hot encoding:
-        res = ImageTools.one_hot_encoding(res)
+            res[i, :, :, :] = self.generate_a_random_image(dim_chosen)
         # return a torch tensor:
         return torch.FloatTensor(res, device=self.device)
 
@@ -73,20 +75,21 @@ class BatchMaker:
         pix1 = random.randint(0, lim_pix)
         pix2 = random.randint(0, lim_pix)
         if dim_chosen == 0:
-            res_image = self.im_3d[slice_chosen, pix1:pix1 + self.high_res,
+            res_image = self.im_ohe[:, slice_chosen, pix1:pix1 + self.high_res,
                                    pix2:pix2 + self.high_res]
         elif dim_chosen == 1:
-            res_image = self.im_3d[pix1:pix1 + self.high_res, slice_chosen,
+            res_image = self.im_ohe[:, pix1:pix1 + self.high_res, slice_chosen,
                                    pix2:pix2 + self.high_res]
         else:  # dim_chosen == 2
-            res_image = self.im_3d[pix1:pix1 + self.high_res, pix2:pix2 +
+            res_image = self.im_ohe[:, pix1:pix1 + self.high_res, pix2:pix2 +
                                    self.high_res, slice_chosen]
         return res_image
 
 
 def main():
-    BM = BatchMaker()
-    print(BM.im_3d.shape)
+    BM = BatchMaker('cpu')
+    z_slices = BM.random_batch(64, 1)
+    print(BM.im_ohe.shape)
 
 
 if __name__ == '__main__':

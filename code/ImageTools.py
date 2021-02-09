@@ -10,7 +10,7 @@ N_SAMPLES = 10000
 progress_dir = 'progress/'
 
 
-def show_gray_image(image):
+def show_grey_image(image):
     """
     Plots the image in grey scale, assuming the image is 1 channel of 0-255
     """
@@ -26,11 +26,11 @@ def plot_fake_difference(high_res, input_to_g, output_from_g, save_dir,
     images = [np.array(image) for image in images]
     images[2] = fractions_to_ohe(images[2])  # the output from g needs to ohe
     images = [one_hot_decoding(image) for image in images]
-    save_three_by_two_gray(images[0], images[1], images[2],
+    save_three_by_two_grey(images[0], images[1], images[2],
                            save_dir + ' ' + filename, save_dir, filename)
 
 
-def save_three_by_two_gray(top_images, middle_images, bottom_images, title,
+def save_three_by_two_grey(top_images, middle_images, bottom_images, title,
                            save_dir, filename):
     f, axarr = plt.subplots(3, 3)
     axarr[0,0].imshow(top_images[0, :, :], cmap='gray', vmin=0, vmax=255)
@@ -72,33 +72,20 @@ def down_sample(orig_image_tensor):
     return torch.FloatTensor(image_array)
 
 
-def down_sample_to_ohe(image):
+def one_hot_encoding(image, phases):
     """
-    :param image: A 3-phase high res image with one-hot-encoding
-    :return: a 2-phase low res image with one-hot-encoding with down-sample
-    and cbd removal.
-    """
-    grey_scale_image = one_hot_decoding(image)
-    wo_cbd = cbd_to_pore(grey_scale_image)
-    down_sample_wo_cbd = down_sample(wo_cbd)
-    return torch.FloatTensor(one_hot_encoding(down_sample_wo_cbd))
-
-
-def one_hot_encoding(image):
-    """
-    :param image: a [batch_size, 1, height, width] tensor array
+    :param image: a [depth, height, width] 3d image
+    :param phases: the unique phases in the image
     :return: a one-hot encoding of image.
     """
-    phases = np.unique(image)  # the unique values in image
     im_shape = image.shape
-
-    res = np.zeros([im_shape[0], len(phases), im_shape[2], im_shape[3]])
+    res = np.zeros((len(phases), ) + im_shape)
     # create one channel per phase for one hot encoding
-    for cnt, phs in enumerate(phases):
+    for count, phase in enumerate(phases):
         image_copy = np.zeros(im_shape)  # just an encoding for one
         # channel
-        image_copy[image == phs] = 1
-        res[:, cnt, :, :] = image_copy.squeeze()
+        image_copy[image == phase] = 1
+        res[count, :, :, :] = image_copy
     return res
 
 
