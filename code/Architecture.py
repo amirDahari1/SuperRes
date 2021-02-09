@@ -69,7 +69,7 @@ nc_d = 3  # three phases for the discriminator input
 num_epochs = 500
 
 # number of iterations in each epoch
-epoch_iterations = 10000
+epoch_iterations = 10000//batch_size
 
 # Learning rate for optimizers
 lr = 0.0002
