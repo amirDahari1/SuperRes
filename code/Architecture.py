@@ -356,7 +356,6 @@ if __name__ == '__main__':
             # g_cost = -fake_output.mean()
             g_cost = -fake_output.mean() + 10 * pix_loss
             pixel_outputs.append(pix_loss.item())
-            print(pixel_outputs)
             # Calculate gradients for G
             g_cost.backward()
             # Update G
@@ -391,10 +390,6 @@ if __name__ == '__main__':
             i += 1
             print(i)
 
-            for name, param in netG.named_parameters():
-                # print(name, param)
-                if name.endswith('weight'):
-                    print(param.grad)
 
     # save the trained model
 
