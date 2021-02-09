@@ -68,6 +68,9 @@ nc_d = 3  # three phases for the discriminator input
 # Number of training epochs
 num_epochs = 500
 
+# number of iterations in each epoch
+epoch_iterations = 10000
+
 # Learning rate for optimizers
 lr = 0.0002
 
@@ -233,7 +236,7 @@ def save_differences(network_g, high_res_im, grey_idx,
 
 if __name__ == '__main__':
     # The batch maker:
-    BM = BatchMaker()
+    BM = BatchMaker(device)
 
     # Create the generator
     netG = Generator(ngpu).to(device)
@@ -246,9 +249,6 @@ if __name__ == '__main__':
     #  to mean=0, stdev=0.2.
     netG.apply(weights_init)
 
-    # Print the model
-    # print(netG)
-
     # Create the Discriminator
     netD = Discriminator(ngpu).to(device)
 
@@ -259,7 +259,6 @@ if __name__ == '__main__':
     # Apply the weights_init function to randomly initialize all weights
     #  to mean=0, stdev=0.2.
     netD.apply(weights_init)
-
 
     # Setup Adam optimizers for both G and D
     optimizerD = optim.Adam(netD.parameters(), lr=lr, betas=(beta1, 0.999))
@@ -287,7 +286,7 @@ if __name__ == '__main__':
         i = 0
 
         j = np.random.randint(steps)  # to see different slices
-        for d_data, g_data in zip(d_dataloader, g_dataloader):
+        for _ in range(epoch_iterations):
 
             ############################
             # (1) Update D network:
@@ -297,15 +296,14 @@ if __name__ == '__main__':
             # Format batch
             # high_res = d_data[0].to(device)
             d_slice = random.choice(d_slices)
-            high_res = BM.random_batch(batch_size, d_slice).to(device)
+            high_res = BM.random_batch(batch_size, d_slice)
 
             # Forward pass real batch through D
             output_real = netD(high_res).view(-1).mean()
 
             # Generate batch of g input
             g_slice = random.choice(g_slices)
-            before_down_sampling = BM.random_batch(batch_size, g_slice).to(
-                device)
+            before_down_sampling = BM.random_batch(batch_size, g_slice)
             # down sample:
             low_res = LearnTools.down_sample_for_g_input(
                 before_down_sampling, grey_index, device)

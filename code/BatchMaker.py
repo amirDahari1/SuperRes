@@ -21,40 +21,29 @@ class BatchMaker:
     Makes and saves training and test batch images.
     """
 
-    def __init__(self, path=TIF_IMAGE, n_samples=N_SAMPLES,
+    def __init__(self, device, path=TIF_IMAGE,
                  low_res=LOW_RES, high_res=HIGH_RES):
         """
         :param path: the path of the tif file (TODO make it more general)
-        :param n_samples: the number of wanted samples in the batch.
+        :param device: the device that the image is on.
         :param low_res: the low resolution of the 2d image.
         :param high_res: the high resolution of the 2d image.
         """
         self.path = path
+        self.device = device
         self.im_3d = imread(path)
         self.min_d = min(self.im_3d.shape)  # the minimal dimension of the 3d
         # image
-        self.n_samples = n_samples
         self.low_res = low_res
         self.high_res = high_res
-        # self.d_train = self.generate_a_random_batch(1)  # test is y slices
-        # self.g_train_hr = self.generate_a_random_batch(0)  # train
-        # is x slices
-        # ImageTools.show_gray_image(self.g_train_hr[0, 0, :, :])
-        # self.g_train_no_cbd = ImageTools.cbd_to_grey(self.g_train_hr)
-        # self.g_train = ImageTools.down_sample(self.g_train_no_cbd)
-        # ImageTools.show_gray_image(self.g_train[0, 0, :, :])
-        # change both test and train to one hot encoding:
-        # self.ohe_d_train = ImageTools.one_hot_encoding(self.d_train)
-        # self.ohe_g_train = ImageTools.one_hot_encoding(self.g_train)
-        # self.save_batches()
 
-    def save_batches(self):
-        self.ohe_d_train = torch.FloatTensor(self.ohe_d_train)
-        dataset = torch.utils.data.TensorDataset(self.ohe_d_train)
-        torch.save(dataset, 'data/d_train.pth')
-        self.ohe_g_train = torch.FloatTensor(self.ohe_g_train)
-        dataset = torch.utils.data.TensorDataset(self.ohe_g_train)
-        torch.save(dataset, 'data/g_train.pth')
+    # def save_batches(self):
+    #     self.ohe_d_train = torch.FloatTensor(self.ohe_d_train)
+    #     dataset = torch.utils.data.TensorDataset(self.ohe_d_train)
+    #     torch.save(dataset, 'data/d_train.pth')
+    #     self.ohe_g_train = torch.FloatTensor(self.ohe_g_train)
+    #     dataset = torch.utils.data.TensorDataset(self.ohe_g_train)
+    #     torch.save(dataset, 'data/g_train.pth')
 
     def random_batch(self, batch_size, dim_chosen):
         """
@@ -67,7 +56,7 @@ class BatchMaker:
         # one hot encoding:
         res = ImageTools.one_hot_encoding(res)
         # return a torch tensor:
-        return torch.from_numpy(res.copy()).type(torch.FloatTensor)
+        return torch.FloatTensor(res, device=self.device)
 
     def generate_a_random_image(self, dim_chosen):
         """
@@ -93,37 +82,8 @@ class BatchMaker:
 
 
 def main():
-    BatchMaker()
-    # image_3d, min_dim = initialize(tif_images)
-    # images = np.zeros((num_samples, 1, IMAGE_2D_HIGH_RES, IMAGE_2D_HIGH_RES),
-    #                   dtype=np.uint8)
-    # for i in range(num_samples):
-    #     images[i, 0, :, :] = generate_a_random_image(image_3d, min_dim, 0)
-    #
-    # original_tensor = torch.Tensor(images)  # moving the numpy to pytorch
-    # # tensors
-    # wo_cbd = cbd_to_grey(images)
-    # wo_cbd_tensor = torch.Tensor(wo_cbd)
-    # small_tensor = down_sample(wo_cbd_tensor)
-    # small_numpy = small_tensor.numpy()
-    #
-    # f, axarr = plt.subplots(3, 3)
-    #
-    # # use the created array to output your multiple images. In this case I have stacked 4 images vertically
-    # pic1, pic2, pic3 = 78, 79, 80
-    # # just for the picture:
-    #
-    # axarr[0,0].imshow(images[pic1,0,:,:], cmap='gray', vmin=0, vmax=255)
-    # axarr[1,0].imshow(wo_cbd[pic1,0,:,:], cmap='gray', vmin=0, vmax=255)
-    # axarr[2,0].imshow(small_numpy[pic1,0,:,:], cmap='gray', vmin=0, vmax=255)
-    # axarr[0, 1].imshow(images[pic2, 0, :, :], cmap='gray', vmin=0, vmax=255)
-    # axarr[1, 1].imshow(wo_cbd[pic2, 0, :, :], cmap='gray', vmin=0, vmax=255)
-    # axarr[2, 1].imshow(small_numpy[pic2, 0, :, :], cmap='gray', vmin=0, vmax=255)
-    # axarr[0,2].imshow(images[pic3,0,:,:], cmap='gray', vmin=0, vmax=255)
-    # axarr[1,2].imshow(wo_cbd[pic3,0,:,:], cmap='gray', vmin=0, vmax=255)
-    # axarr[2,2].imshow(small_numpy[pic3,0,:,:], cmap='gray', vmin=0, vmax=255)
-    # plt.show()
-    print('hi')
+    BM = BatchMaker()
+    print(BM.im_3d.shape)
 
 
 if __name__ == '__main__':
