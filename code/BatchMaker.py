@@ -32,8 +32,10 @@ class BatchMaker:
         self.path = path
         self.device = device
         self.im_3d = imread(path)
-        self.min_d = min(self.im_3d.shape)  # the minimal dimension of the 3d
-        # image
+        self.min_d = min(self.im_3d.shape)  # the minimal dimension
+        # crop the image in the edges:
+        self.im_3d = self.im_3d[CROP:self.min_d-CROP, CROP:self.min_d-CROP,
+                                CROP:self.min_d-CROP]
         self.low_res = low_res
         self.high_res = high_res
 
@@ -64,12 +66,12 @@ class BatchMaker:
         :return: A random image of size res from the dimension chosen of the
         image.
         """
-        slice_chosen = random.randint(CROP, self.min_d - 1 - CROP)  # the
+        slice_chosen = random.randint(0, self.min_d - 1)  # the
         # slice chosen
         lim_pix = self.min_d - self.high_res  # the maximum pixel to start with
         # the starting pixels of the other dimensions:
-        pix1 = random.randint(CROP, lim_pix - CROP)
-        pix2 = random.randint(CROP, lim_pix - CROP)
+        pix1 = random.randint(0, lim_pix)
+        pix2 = random.randint(0, lim_pix)
         if dim_chosen == 0:
             res_image = self.im_3d[slice_chosen, pix1:pix1 + self.high_res,
                                    pix2:pix2 + self.high_res]
