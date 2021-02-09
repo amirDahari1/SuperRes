@@ -33,16 +33,20 @@ parser.add_argument('-wg', '--widthG', type=int, default=8,
                     width of the Generator network')
 parser.add_argument('-n_res', '--n_res_blocks', type=int, default=2,
                     help='Number of residual blocks in the network.')
+parser.add_argument('-pix_d', '--pixel_coefficient_distance', type=int,
+                    default=10,
+                    help='The coefficient of the pixel distance loss added '
+                         'to the cost of G')
 args, unknown = parser.parse_known_args()
 
 progress_dir, wd, wg = args.directory, args.widthD, args.widthG
-n_res_blocks = args.n_res_blocks
+n_res_blocks, pix_distance = args.n_res_blocks, args.pixel_coefficient_distance
 
 if not os.path.exists(ImageTools.progress_dir + progress_dir):
     os.makedirs(ImageTools.progress_dir + progress_dir)
 
-PATH_G = './g_test.pth'
-PATH_D = './d_test.pth'
+PATH_G = 'progress/' + progress_dir + '/g_weights.pth'
+PATH_D = 'progress/' + progress_dir + '/d_weights.pth'
 eta_file = 'eta.npy'
 
 # G and D slices to choose from
@@ -354,7 +358,7 @@ if __name__ == '__main__':
 
             # Calculate G's loss based on this output
             # g_cost = -fake_output.mean()
-            g_cost = -fake_output.mean() + 10 * pix_loss
+            g_cost = -fake_output.mean() + pix_distance * pix_loss
             pixel_outputs.append(pix_loss.item())
             # Calculate gradients for G
             g_cost.backward()
