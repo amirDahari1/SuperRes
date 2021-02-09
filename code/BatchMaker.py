@@ -60,7 +60,7 @@ class BatchMaker:
         for i in range(batch_size):
             res[i, :, :, :] = self.generate_a_random_image(dim_chosen)
         # return a torch tensor:
-        return torch.FloatTensor(res, device=self.device)
+        return torch.FloatTensor(res).to(self.device)
 
     def generate_a_random_image(self, dim_chosen):
         """
