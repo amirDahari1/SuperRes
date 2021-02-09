@@ -87,17 +87,17 @@ ngpu = 1
 saving_num = 50
 
 # Create the datasets for the training of d and g
-d_train_dataset = torch.load(dataroot + 'd_train.pth')
-g_train_dataset = torch.load(dataroot + 'g_train.pth')
+# d_train_dataset = torch.load(dataroot + 'd_train.pth')
+# g_train_dataset = torch.load(dataroot + 'g_train.pth')
 
 # Create the dataloader
-d_dataloader = torch.utils.data.DataLoader(d_train_dataset,
-                                           batch_size=batch_size,
-                                           shuffle=True, num_workers=workers)
+# d_dataloader = torch.utils.data.DataLoader(d_train_dataset,
+#                                            batch_size=batch_size,
+#                                            shuffle=True, num_workers=workers)
 
-g_dataloader = torch.utils.data.DataLoader(g_train_dataset,
-                                           batch_size=batch_size,
-                                           shuffle=True, num_workers=workers)
+# g_dataloader = torch.utils.data.DataLoader(g_train_dataset,
+#                                            batch_size=batch_size,
+#                                            shuffle=True, num_workers=workers)
 # TODO see maybe change to shuffle=true and normalize the data to have 0
 #  mean and 1 std.
 
@@ -276,7 +276,7 @@ if __name__ == '__main__':
 
     iters = 0
 
-    steps = len(d_dataloader)
+    steps = epoch_iterations
 
     print("Starting Training Loop...")
     start = time.time()
