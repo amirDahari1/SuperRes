@@ -390,7 +390,4 @@ if __name__ == '__main__':
             i += 1
             print(i)
 
-
-    # save the trained model
-
     print('finished training')
