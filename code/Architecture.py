@@ -231,8 +231,21 @@ def save_differences(network_g, high_res_im, grey_idx,
     """
     low_res_input = LearnTools.down_sample_for_g_input(high_res_im,
                                                        grey_idx, device)
-    # g_input = torch.cat((low_res_input, rand_similarity), dim=1)
     g_output = network_g(low_res_input).detach().cpu()
+    ImageTools.plot_fake_difference(high_res_im.detach().cpu(),
+                                    low_res_input.detach().cpu(), g_output,
+                                    save_dir, filename)
+
+
+def save_tif_3d(network_g, high_res_im, grey_idx, device, save_dir, filename):
+    """
+        Saves a tif image of the output of G on all of the 3d image high_res_im
+    """
+    low_res_input = LearnTools.down_sample_for_g_input(high_res_im,
+                                                       grey_idx, device)
+    g_output = network_g(low_res_input).detach().cpu()
+    g_output_grey = ImageTools.one_hot_decoding(g_output)
+    imsave('try_tif', g_output_grey)
     ImageTools.plot_fake_difference(high_res_im.detach().cpu(),
                                     low_res_input.detach().cpu(), g_output,
                                     save_dir, filename)
