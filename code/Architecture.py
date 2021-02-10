@@ -237,18 +237,17 @@ def save_differences(network_g, high_res_im, grey_idx,
                                     save_dir, filename)
 
 
-def save_tif_3d(network_g, high_res_im, grey_idx, device, save_dir, filename):
+def save_tif_3d(network_g, high_res_im, grey_idx, device, filename):
     """
         Saves a tif image of the output of G on all of the 3d image high_res_im
     """
     low_res_input = LearnTools.down_sample_for_g_input(high_res_im,
                                                        grey_idx, device)
     g_output = network_g(low_res_input).detach().cpu()
-    g_output_grey = ImageTools.one_hot_decoding(g_output)
-    imsave('try_tif', g_output_grey)
-    ImageTools.plot_fake_difference(high_res_im.detach().cpu(),
-                                    low_res_input.detach().cpu(), g_output,
-                                    save_dir, filename)
+    g_output_grey = ImageTools.one_hot_decoding(g_output).astype('uint8')
+    imsave('progress' + progress_dir + filename, g_output_grey)
+    low_res_grey = ImageTools.one_hot_decoding(low_res_input).astype('uint8')
+    imsave('progress' + progress_dir + filename + 'low_res', low_res_grey)
 
 
 if __name__ == '__main__':
