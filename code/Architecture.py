@@ -33,14 +33,17 @@ parser.add_argument('-wg', '--widthG', type=int, default=8,
                     width of the Generator network')
 parser.add_argument('-n_res', '--n_res_blocks', type=int, default=2,
                     help='Number of residual blocks in the network.')
+parser.add_argument('-e', '--num_epochs', type=int, default=500,
+                    help='Number of epochs.')
 parser.add_argument('-pix_d', '--pixel_coefficient_distance', type=int,
                     default=10,
                     help='The coefficient of the pixel distance loss added '
-                         'to the cost of G')
+                         'to the cost of G.')
 args, unknown = parser.parse_known_args()
 
 progress_dir, wd, wg = args.directory, args.widthD, args.widthG
 n_res_blocks, pix_distance = args.n_res_blocks, args.pixel_coefficient_distance
+num_epochs = args.num_epochs
 
 if not os.path.exists(ImageTools.progress_dir + progress_dir):
     os.makedirs(ImageTools.progress_dir + progress_dir)
@@ -68,9 +71,6 @@ batch_size = 64
 # Number of channels in the training images. For color images this is 3
 nc_g = 2  # two phases for the generator input
 nc_d = 3  # three phases for the discriminator input
-
-# Number of training epochs
-num_epochs = 500
 
 # number of iterations in each epoch
 epoch_iterations = 10000//batch_size
