@@ -25,10 +25,10 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-d', '--directory', type=str, default='default',
                     help='Stores the progress output in the \
                     directory name given')
-parser.add_argument('-wd', '--widthD', type=int, default=9,
+parser.add_argument('-wd', '--widthD', type=int, default=8,
                     help='Hyper-parameter for \
                     the width of the Discriminator network')
-parser.add_argument('-wg', '--widthG', type=int, default=9,
+parser.add_argument('-wg', '--widthG', type=int, default=8,
                     help='Hyper-parameter for the \
                     width of the Generator network')
 parser.add_argument('-n_res', '--n_res_blocks', type=int, default=2,
@@ -55,6 +55,9 @@ eta_file = 'eta.npy'
 # G and D slices to choose from
 g_slices = [0, 1]
 d_slices = [0, 1]
+
+# how much to update G
+g_update = 5
 
 # pixel loss average
 pix_loss_average = 0.0434
@@ -362,23 +365,29 @@ if __name__ == '__main__':
             ############################
             # (2) Update G network:
             ###########################
-            netG.zero_grad()
 
-            # Since we just updated D, perform another forward pass of
-            # all-fake batch through D
-            fake_output = netD(fake).view(-1)
-            # get the pixel-wise-distance loss
-            pix_loss = LearnTools.pixel_wise_distance(low_res,
-                                                      fake, grey_index)
+            if (i % g_update) == 0:
+                netG.zero_grad()
 
-            # Calculate G's loss based on this output
-            # g_cost = -fake_output.mean()
-            g_cost = -fake_output.mean() + pix_distance * pix_loss
-            pixel_outputs.append(pix_loss.item())
-            # Calculate gradients for G
-            g_cost.backward()
-            # Update G
-            optimizerG.step()
+                # Since we just updated D, perform another forward pass of
+                # all-fake batch through D
+                fake_output = netD(fake).view(-1)
+                # get the pixel-wise-distance loss
+                pix_loss = LearnTools.pixel_wise_distance(low_res,
+                                                          fake, grey_index)
+
+                # Calculate G's loss based on this output
+                # g_cost = -fake_output.mean()
+                g_cost = -fake_output.mean() + pix_distance * pix_loss
+                pixel_outputs.append(pix_loss.item())
+                # Calculate gradients for G
+                g_cost.backward()
+                # Update G
+                optimizerG.step()
+            else:  # not a g update iteration
+                pix_loss = LearnTools.pixel_wise_distance(low_res,
+                                                          fake, grey_index)
+                pixel_outputs.append(pix_loss.item())
 
             # Output training stats
             if i == j:
