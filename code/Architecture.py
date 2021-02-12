@@ -245,9 +245,12 @@ def save_tif_3d(network_g, high_res_im, grey_idx, device, filename):
                                                        grey_idx, device)
     g_output = network_g(low_res_input).detach().cpu()
     g_output_grey = ImageTools.one_hot_decoding(g_output).astype('uint8')
-    imsave('progress' + progress_dir + filename, g_output_grey)
+    imsave('progress/' + progress_dir + '/' + filename, g_output_grey)
     low_res_grey = ImageTools.one_hot_decoding(low_res_input).astype('uint8')
-    imsave('progress' + progress_dir + 'low_res' + filename , low_res_grey)
+    imsave('progress/' + progress_dir + '/low_res' + filename , low_res_grey)
+    high_res_im = ImageTools.one_hot_decoding(high_res_im).astype('uint8')
+    imsave('progress/' + progress_dir + '/' + filename + '_original',
+           high_res_im)
 
 
 if __name__ == '__main__':
