@@ -25,10 +25,10 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-d', '--directory', type=str, default='default',
                     help='Stores the progress output in the \
                     directory name given')
-parser.add_argument('-wd', '--widthD', type=int, default=8,
+parser.add_argument('-wd', '--widthD', type=int, default=9,
                     help='Hyper-parameter for \
                     the width of the Discriminator network')
-parser.add_argument('-wg', '--widthG', type=int, default=8,
+parser.add_argument('-wg', '--widthG', type=int, default=9,
                     help='Hyper-parameter for the \
                     width of the Generator network')
 parser.add_argument('-n_res', '--n_res_blocks', type=int, default=2,
@@ -383,7 +383,7 @@ if __name__ == '__main__':
             # Output training stats
             if i == j:
                 torch.save(netG.state_dict(), PATH_G)
-                torch.save(netG.state_dict(), PATH_D)
+                torch.save(netD.state_dict(), PATH_D)
                 ImageTools.graph_plot([real_outputs, fake_outputs],
                                       ['real', 'fake'], progress_dir,
                                       'LossesGraphBN')
