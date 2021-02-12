@@ -22,12 +22,13 @@ class BatchMaker:
     """
 
     def __init__(self, device, path=TIF_IMAGE,
-                 low_res=LOW_RES, high_res=HIGH_RES):
+                 low_res=LOW_RES, high_res=HIGH_RES, crop=True):
         """
         :param path: the path of the tif file (TODO make it more general)
         :param device: the device that the image is on.
         :param low_res: the low resolution of the 2d image.
         :param high_res: the high resolution of the 2d image.
+        :param crop: if to crop the image at the edges
         """
         self.path = path
         self.device = device
