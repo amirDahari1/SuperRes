@@ -82,7 +82,7 @@ epoch_iterations = 10000//batch_size
 lr = 0.0002
 
 # Beta1 hyperparam for Adam optimizers
-beta1 = 0.9
+beta1 = 0.5
 
 # Learning parameter for gradient penalty
 Lambda = 10
