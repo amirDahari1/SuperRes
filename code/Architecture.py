@@ -59,9 +59,6 @@ d_slices = [0, 1]
 # how much to update G
 g_update = 5
 
-# pixel loss average
-pix_loss_average = 0.0434
-
 # Root directory for dataset
 dataroot = "data/"
 
@@ -79,7 +76,7 @@ nc_d = 3  # three phases for the discriminator input
 epoch_iterations = 10000//batch_size
 
 # Learning rate for optimizers
-lr = 0.0002
+lr = 0.0001
 
 # Beta1 hyperparam for Adam optimizers
 beta1 = 0.5
