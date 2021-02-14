@@ -22,34 +22,15 @@ if os.getcwd().endswith('code'):
 
 # Parsing arguments:
 parser = argparse.ArgumentParser()
-parser.add_argument('-d', '--directory', type=str, default='default',
-                    help='Stores the progress output in the \
-                    directory name given')
-parser.add_argument('-wd', '--widthD', type=int, default=8,
-                    help='Hyper-parameter for \
-                    the width of the Discriminator network')
-parser.add_argument('-wg', '--widthG', type=int, default=8,
-                    help='Hyper-parameter for the \
-                    width of the Generator network')
-parser.add_argument('-n_res', '--n_res_blocks', type=int, default=2,
-                    help='Number of residual blocks in the network.')
-parser.add_argument('-gu', '--g_update', type=int, default=5,
-                    help='Number of iterations the generator waits before '
-                         'being updated')
-parser.add_argument('-e', '--num_epochs', type=int, default=500,
-                    help='Number of epochs.')
-parser.add_argument('-pix_d', '--pixel_coefficient_distance', type=int,
-                    default=10,
-                    help='The coefficient of the pixel distance loss added '
-                         'to the cost of G.')
-args, unknown = parser.parse_known_args()
+
+args = LearnTools.return_args(parser)
 
 progress_dir, wd, wg = args.directory, args.widthD, args.widthG
 n_res_blocks, pix_distance = args.n_res_blocks, args.pixel_coefficient_distance
 num_epochs, g_update = args.num_epochs, args.g_update
 
 # 1. Start a new run
-wandb.init(project=progress_dir)
+wandb.init(project=progress_dir, config=args)
 
 if not os.path.exists(ImageTools.progress_dir + progress_dir):
     os.makedirs(ImageTools.progress_dir + progress_dir)
@@ -392,7 +373,7 @@ if __name__ == '__main__':
 
             # Output training stats
             if i == j:
-                wandb.log({"loss": wass})
+                wandb.log({"wass": wass})
                 torch.save(netG.state_dict(), PATH_G)
                 torch.save(netD.state_dict(), PATH_D)
                 ImageTools.graph_plot([real_outputs, fake_outputs],
@@ -418,6 +399,6 @@ if __name__ == '__main__':
 
             iters += 1
             i += 1
-            print(i)
+            # print(i)
 
     print('finished training')
