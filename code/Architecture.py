@@ -1,6 +1,6 @@
 import LearnTools
 from BatchMaker import *
-
+import wandb
 import argparse
 import os
 import time
@@ -33,6 +33,9 @@ parser.add_argument('-wg', '--widthG', type=int, default=8,
                     width of the Generator network')
 parser.add_argument('-n_res', '--n_res_blocks', type=int, default=2,
                     help='Number of residual blocks in the network.')
+parser.add_argument('-gu', '--g_update', type=int, default=5,
+                    help='Number of iterations the generator waits before '
+                         'being updated')
 parser.add_argument('-e', '--num_epochs', type=int, default=500,
                     help='Number of epochs.')
 parser.add_argument('-pix_d', '--pixel_coefficient_distance', type=int,
@@ -43,7 +46,10 @@ args, unknown = parser.parse_known_args()
 
 progress_dir, wd, wg = args.directory, args.widthD, args.widthG
 n_res_blocks, pix_distance = args.n_res_blocks, args.pixel_coefficient_distance
-num_epochs = args.num_epochs
+num_epochs, g_update = args.num_epochs, args.g_update
+
+# 1. Start a new run
+wandb.init(project=progress_dir)
 
 if not os.path.exists(ImageTools.progress_dir + progress_dir):
     os.makedirs(ImageTools.progress_dir + progress_dir)
@@ -55,9 +61,6 @@ eta_file = 'eta.npy'
 # G and D slices to choose from
 g_slices = [0, 1]
 d_slices = [0, 1]
-
-# how much to update G
-g_update = 5
 
 # Root directory for dataset
 dataroot = "data/"
@@ -259,6 +262,7 @@ if __name__ == '__main__':
 
     # Create the generator
     netG = Generator(ngpu).to(device)
+    wandb.watch(netG)
 
     # Handle multi-gpu if desired
     if (device.type == 'cuda') and (ngpu > 1):
@@ -388,6 +392,7 @@ if __name__ == '__main__':
 
             # Output training stats
             if i == j:
+                wandb.log({"loss": wass})
                 torch.save(netG.state_dict(), PATH_G)
                 torch.save(netD.state_dict(), PATH_D)
                 ImageTools.graph_plot([real_outputs, fake_outputs],
