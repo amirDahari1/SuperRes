@@ -1,4 +1,4 @@
-from tifffile import imread
+from tifffile import imread, imsave
 import numpy as np
 import random
 import os
@@ -22,12 +22,13 @@ class BatchMaker:
     """
 
     def __init__(self, device, path=TIF_IMAGE,
-                 low_res=LOW_RES, high_res=HIGH_RES):
+                 low_res=LOW_RES, high_res=HIGH_RES, crop=True):
         """
         :param path: the path of the tif file (TODO make it more general)
         :param device: the device that the image is on.
         :param low_res: the low resolution of the 2d image.
         :param high_res: the high resolution of the 2d image.
+        :param crop: if to crop the image at the edges
         """
         self.path = path
         self.device = device
@@ -60,7 +61,7 @@ class BatchMaker:
         for i in range(batch_size):
             res[i, :, :, :] = self.generate_a_random_image(dim_chosen)
         # return a torch tensor:
-        return torch.FloatTensor(res, device=self.device)
+        return torch.FloatTensor(res).to(self.device)
 
     def generate_a_random_image(self, dim_chosen):
         """
@@ -76,14 +77,43 @@ class BatchMaker:
         pix2 = random.randint(0, lim_pix)
         if dim_chosen == 0:
             res_image = self.im_ohe[:, slice_chosen, pix1:pix1 + self.high_res,
-                                   pix2:pix2 + self.high_res]
+                                    pix2:pix2 + self.high_res]
         elif dim_chosen == 1:
             res_image = self.im_ohe[:, pix1:pix1 + self.high_res, slice_chosen,
-                                   pix2:pix2 + self.high_res]
+                                    pix2:pix2 + self.high_res]
         else:  # dim_chosen == 2
             res_image = self.im_ohe[:, pix1:pix1 + self.high_res, pix2:pix2 +
-                                   self.high_res, slice_chosen]
+                                    self.high_res, slice_chosen]
         return res_image
+
+    def all_image_batch(self, dim, device, all_image=False):
+        """
+        :param dim: the dimension to slice the images.
+        :param all_image: if True, all image is chosen, if False,
+        only middle part of the image at given dimension is chosen with high
+        resolution
+        :param device: the device that G is on.
+        :return: a 3d image with dimension Depthx3xWidthxHeight
+        """
+        start = 0  # the start pixel
+        resolution = self.min_d
+        if not all_image:
+            # s.t. the image will be in the middle
+            start = (self.min_d - self.high_res) // 2
+            resolution = self.high_res
+        if dim == 0:
+            res = self.im_ohe[:, :, start:start + resolution, start:start +
+                              resolution]
+            res = res.transpose(1, 0, 2, 3)
+        if dim == 1:
+            res = self.im_ohe[:,start:start + resolution, :, start:start +
+                              resolution]
+            res = res.transpose(2, 0, 1, 3)
+        else:  # dim == 2:
+            res = self.im_ohe[:, start:start + resolution, start:start +
+                              resolution, :]
+            res = res.transpose(3, 0, 1, 2)
+        return torch.FloatTensor(res).to(self.device)
 
 
 def main():

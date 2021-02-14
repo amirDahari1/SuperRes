@@ -1,6 +1,6 @@
 import LearnTools
 from BatchMaker import *
-
+import wandb
 import argparse
 import os
 import time
@@ -22,35 +22,26 @@ if os.getcwd().endswith('code'):
 
 # Parsing arguments:
 parser = argparse.ArgumentParser()
-parser.add_argument('-d', '--directory', type=str, default='default',
-                    help='Stores the progress output in the \
-                    directory name given')
-parser.add_argument('-wd', '--widthD', type=int, default=8,
-                    help='Hyper-parameter for \
-                    the width of the Discriminator network')
-parser.add_argument('-wg', '--widthG', type=int, default=8,
-                    help='Hyper-parameter for the \
-                    width of the Generator network')
-parser.add_argument('-n_res', '--n_res_blocks', type=int, default=2,
-                    help='Number of residual blocks in the network.')
-args, unknown = parser.parse_known_args()
+
+args = LearnTools.return_args(parser)
 
 progress_dir, wd, wg = args.directory, args.widthD, args.widthG
-n_res_blocks = args.n_res_blocks
+n_res_blocks, pix_distance = args.n_res_blocks, args.pixel_coefficient_distance
+num_epochs, g_update = args.num_epochs, args.g_update
+
+# 1. Start a new run
+wandb.init(project=progress_dir, config=args)
 
 if not os.path.exists(ImageTools.progress_dir + progress_dir):
     os.makedirs(ImageTools.progress_dir + progress_dir)
 
-PATH_G = './g_test.pth'
-PATH_D = './d_test.pth'
+PATH_G = 'progress/' + progress_dir + '/g_weights.pth'
+PATH_D = 'progress/' + progress_dir + '/d_weights.pth'
 eta_file = 'eta.npy'
 
 # G and D slices to choose from
 g_slices = [0, 1]
 d_slices = [0, 1]
-
-# pixel loss average
-pix_loss_average = 0.0434
 
 # Root directory for dataset
 dataroot = "data/"
@@ -65,17 +56,14 @@ batch_size = 64
 nc_g = 2  # two phases for the generator input
 nc_d = 3  # three phases for the discriminator input
 
-# Number of training epochs
-num_epochs = 500
-
 # number of iterations in each epoch
-epoch_iterations = 10000
+epoch_iterations = 10000//batch_size
 
 # Learning rate for optimizers
-lr = 0.0002
+lr = 0.0001
 
 # Beta1 hyperparam for Adam optimizers
-beta1 = 0.9
+beta1 = 0.5
 
 # Learning parameter for gradient penalty
 Lambda = 10
@@ -227,11 +215,26 @@ def save_differences(network_g, high_res_im, grey_idx,
     """
     low_res_input = LearnTools.down_sample_for_g_input(high_res_im,
                                                        grey_idx, device)
-    # g_input = torch.cat((low_res_input, rand_similarity), dim=1)
     g_output = network_g(low_res_input).detach().cpu()
     ImageTools.plot_fake_difference(high_res_im.detach().cpu(),
                                     low_res_input.detach().cpu(), g_output,
                                     save_dir, filename)
+
+
+def save_tif_3d(network_g, high_res_im, grey_idx, device, filename):
+    """
+        Saves a tif image of the output of G on all of the 3d image high_res_im
+    """
+    low_res_input = LearnTools.down_sample_for_g_input(high_res_im,
+                                                       grey_idx, device)
+    g_output = network_g(low_res_input).detach().cpu()
+    g_output_grey = ImageTools.one_hot_decoding(g_output).astype('uint8')
+    imsave('progress/' + progress_dir + '/' + filename, g_output_grey)
+    low_res_grey = ImageTools.one_hot_decoding(low_res_input).astype('uint8')
+    imsave('progress/' + progress_dir + '/low_res' + filename , low_res_grey)
+    high_res_im = ImageTools.one_hot_decoding(high_res_im).astype('uint8')
+    imsave('progress/' + progress_dir + '/' + filename + '-original',
+           high_res_im)
 
 
 if __name__ == '__main__':
@@ -240,6 +243,7 @@ if __name__ == '__main__':
 
     # Create the generator
     netG = Generator(ngpu).to(device)
+    wandb.watch(netG)
 
     # Handle multi-gpu if desired
     if (device.type == 'cuda') and (ngpu > 1):
@@ -286,7 +290,7 @@ if __name__ == '__main__':
         i = 0
 
         j = np.random.randint(steps)  # to see different slices
-        for _ in range(epoch_iterations):
+        for _ in range(steps):
 
             ############################
             # (1) Update D network:
@@ -343,28 +347,35 @@ if __name__ == '__main__':
             ############################
             # (2) Update G network:
             ###########################
-            netG.zero_grad()
 
-            # Since we just updated D, perform another forward pass of
-            # all-fake batch through D
-            fake_output = netD(fake).view(-1)
-            # get the pixel-wise-distance loss
-            pix_loss = LearnTools.pixel_wise_distance(low_res,
-                                                      fake, grey_index)
+            if (i % g_update) == 0:
+                netG.zero_grad()
 
-            # Calculate G's loss based on this output
-            # g_cost = -fake_output.mean()
-            g_cost = -fake_output.mean() + 10 * pix_loss
-            pixel_outputs.append(pix_loss.item())
-            # Calculate gradients for G
-            g_cost.backward()
-            # Update G
-            optimizerG.step()
+                # Since we just updated D, perform another forward pass of
+                # all-fake batch through D
+                fake_output = netD(fake).view(-1)
+                # get the pixel-wise-distance loss
+                pix_loss = LearnTools.pixel_wise_distance(low_res,
+                                                          fake, grey_index)
+
+                # Calculate G's loss based on this output
+                # g_cost = -fake_output.mean()
+                g_cost = -fake_output.mean() + pix_distance * pix_loss
+                pixel_outputs.append(pix_loss.item())
+                # Calculate gradients for G
+                g_cost.backward()
+                # Update G
+                optimizerG.step()
+            else:  # not a g update iteration
+                pix_loss = LearnTools.pixel_wise_distance(low_res,
+                                                          fake, grey_index)
+                pixel_outputs.append(pix_loss.item())
 
             # Output training stats
             if i == j:
+                wandb.log({"wass": wass})
                 torch.save(netG.state_dict(), PATH_G)
-                torch.save(netG.state_dict(), PATH_D)
+                torch.save(netD.state_dict(), PATH_D)
                 ImageTools.graph_plot([real_outputs, fake_outputs],
                                       ['real', 'fake'], progress_dir,
                                       'LossesGraphBN')
@@ -388,6 +399,6 @@ if __name__ == '__main__':
 
             iters += 1
             i += 1
-            print(i)
+            # print(i)
 
     print('finished training')

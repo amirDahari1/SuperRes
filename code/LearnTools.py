@@ -6,6 +6,31 @@ up_sample_factor = 4
 threshold = 0.5
 
 
+def return_args(parser):
+    parser.add_argument('-d', '--directory', type=str, default='default',
+                        help='Stores the progress output in the \
+                        directory name given')
+    parser.add_argument('-wd', '--widthD', type=int, default=8,
+                        help='Hyper-parameter for \
+                        the width of the Discriminator network')
+    parser.add_argument('-wg', '--widthG', type=int, default=8,
+                        help='Hyper-parameter for the \
+                        width of the Generator network')
+    parser.add_argument('-n_res', '--n_res_blocks', type=int, default=2,
+                        help='Number of residual blocks in the network.')
+    parser.add_argument('-gu', '--g_update', type=int, default=5,
+                        help='Number of iterations the generator waits before '
+                             'being updated')
+    parser.add_argument('-e', '--num_epochs', type=int, default=500,
+                        help='Number of epochs.')
+    parser.add_argument('-pix_d', '--pixel_coefficient_distance', type=int,
+                        default=10,
+                        help='The coefficient of the pixel distance loss added '
+                             'to the cost of G.')
+    args, unknown = parser.parse_known_args()
+    return args
+
+
 def calc_gradient_penalty(netD, real_data, fake_data, batch_size, l, device,
                           gp_lambda, nc):
     """
