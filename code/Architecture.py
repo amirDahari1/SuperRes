@@ -30,7 +30,7 @@ n_res_blocks, pix_distance = args.n_res_blocks, args.pixel_coefficient_distance
 num_epochs, g_update = args.num_epochs, args.g_update
 
 # 1. Start a new run
-wandb.init(project=progress_dir, config=args)
+# wandb.init(project='wandb test', config=args, name=progress_dir)
 
 if not os.path.exists(ImageTools.progress_dir + progress_dir):
     os.makedirs(ImageTools.progress_dir + progress_dir)
@@ -208,7 +208,7 @@ class Discriminator(nn.Module):
 
 
 def save_differences(network_g, high_res_im, grey_idx,
-                     device, save_dir, filename):
+                     device, save_dir, filename, wandb):
     """
     Saves the image of the differences between the high-res real and the
     generated images that are supposed to be similar.
@@ -218,7 +218,7 @@ def save_differences(network_g, high_res_im, grey_idx,
     g_output = network_g(low_res_input).detach().cpu()
     ImageTools.plot_fake_difference(high_res_im.detach().cpu(),
                                     low_res_input.detach().cpu(), g_output,
-                                    save_dir, filename)
+                                    save_dir, filename, wandb)
 
 
 def save_tif_3d(network_g, high_res_im, grey_idx, device, filename):
@@ -374,6 +374,8 @@ if __name__ == '__main__':
             # Output training stats
             if i == j:
                 wandb.log({"wass": wass})
+                wandb.log({"real": output_real, "fake": output_fake})
+                wandb.log({"pixel distance": pix_loss})
                 torch.save(netG.state_dict(), PATH_G)
                 torch.save(netD.state_dict(), PATH_D)
                 ImageTools.graph_plot([real_outputs, fake_outputs],
@@ -390,12 +392,12 @@ if __name__ == '__main__':
                 with torch.no_grad():  # only for plotting
                     save_differences(netG, high_res.detach(),
                                      grey_index, device, progress_dir,
-                                     'running slices')
+                                     'running slices', wandb)
                 # save fifteen images during the run
                 if epoch % (num_epochs//21) == 0 and epoch > 0:
                     save_differences(netG, high_res.detach(), grey_index,
                                      device, progress_dir, 'Iteration_'
-                                     + str(iters))
+                                     + str(iters), wandb)
 
             iters += 1
             i += 1

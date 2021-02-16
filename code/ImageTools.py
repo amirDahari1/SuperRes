@@ -10,16 +10,17 @@ N_SAMPLES = 10000
 progress_dir = 'progress/'
 
 
-def show_grey_image(image):
+def show_grey_image(image, title, wandb):
     """
     Plots the image in grey scale, assuming the image is 1 channel of 0-255
     """
     plt.imshow(image, cmap='gray', vmin=0, vmax=255)
-    plt.show()
+    wandb.log({title: [wandb.Image(plt)]})
+    # plt.show()
 
 
 def plot_fake_difference(high_res, input_to_g, output_from_g, save_dir,
-                         filename):
+                         filename, wandb):
     # first move everything to numpy
     # rand_sim = np.array(input_to_g[:, 2, :, :])
     images = [high_res, input_to_g, output_from_g]
@@ -27,11 +28,12 @@ def plot_fake_difference(high_res, input_to_g, output_from_g, save_dir,
     images[2] = fractions_to_ohe(images[2])  # the output from g needs to ohe
     images = [one_hot_decoding(image) for image in images]
     save_three_by_two_grey(images[0], images[1], images[2],
-                           save_dir + ' ' + filename, save_dir, filename)
+                           save_dir + ' ' + filename, save_dir, filename,
+                           wandb)
 
 
 def save_three_by_two_grey(top_images, middle_images, bottom_images, title,
-                           save_dir, filename):
+                           save_dir, filename, wandb):
     f, axarr = plt.subplots(3, 3)
     axarr[0,0].imshow(top_images[0, :, :], cmap='gray', vmin=0, vmax=255)
     axarr[0,1].imshow(top_images[1, :, :], cmap='gray', vmin=0, vmax=255)
@@ -43,6 +45,7 @@ def save_three_by_two_grey(top_images, middle_images, bottom_images, title,
     axarr[2, 1].imshow(bottom_images[1, :, :], cmap='gray', vmin=0, vmax=255)
     axarr[2, 2].imshow(bottom_images[2, :, :], cmap='gray', vmin=0, vmax=255)
     plt.suptitle(title)
+    wandb.log({"examples": [wandb.Image(plt, caption="Running Examples")]})
     plt.savefig(progress_dir + save_dir + '/' + filename + '.png')
     plt.close()
 
