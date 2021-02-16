@@ -36,9 +36,10 @@ class BatchMaker:
         self.phases = np.unique(self.im_3d)  # the unique values in image
         self.min_d = min(self.im_3d.shape)  # the minimal dimension
         # crop the image in the edges:
-        self.im_3d = self.im_3d[CROP:self.min_d-CROP, CROP:self.min_d-CROP,
-                                CROP:self.min_d-CROP]
-        self.min_d = self.min_d - 2*CROP  # update the min dimension
+        if crop:
+            self.im_3d = self.im_3d[CROP:self.min_d-CROP, CROP:self.min_d-CROP,
+                                    CROP:self.min_d-CROP]
+            self.min_d = self.min_d - 2*CROP  # update the min dimension
         self.im_ohe = ImageTools.one_hot_encoding(self.im_3d, self.phases)
         self.low_res = low_res
         self.high_res = high_res
@@ -86,7 +87,7 @@ class BatchMaker:
                                     self.high_res, slice_chosen]
         return res_image
 
-    def all_image_batch(self, dim, device, all_image=False):
+    def all_image_batch(self, dim, all_image=False):
         """
         :param dim: the dimension to slice the images.
         :param all_image: if True, all image is chosen, if False,

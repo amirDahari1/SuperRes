@@ -30,7 +30,7 @@ n_res_blocks, pix_distance = args.n_res_blocks, args.pixel_coefficient_distance
 num_epochs, g_update = args.num_epochs, args.g_update
 
 # 1. Start a new run
-wandb.init(project='wandb test', config=args, name=progress_dir)
+# wandb.init(project='wandb test', config=args, name=progress_dir)
 
 if not os.path.exists(ImageTools.progress_dir + progress_dir):
     os.makedirs(ImageTools.progress_dir + progress_dir)

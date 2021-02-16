@@ -10,12 +10,13 @@ N_SAMPLES = 10000
 progress_dir = 'progress/'
 
 
-def show_grey_image(image):
+def show_grey_image(image, title, wandb):
     """
     Plots the image in grey scale, assuming the image is 1 channel of 0-255
     """
     plt.imshow(image, cmap='gray', vmin=0, vmax=255)
-    plt.show()
+    wandb.log({title: [wandb.Image(plt)]})
+    # plt.show()
 
 
 def plot_fake_difference(high_res, input_to_g, output_from_g, save_dir,
