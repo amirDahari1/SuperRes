@@ -1,4 +1,5 @@
 import LearnTools
+import Networks
 from BatchMaker import *
 import wandb
 import argparse
@@ -6,14 +7,14 @@ import os
 import time
 import random
 import torch.nn as nn
-import torch.nn.functional as F
-import torch.nn.parallel
-import torch.backends.cudnn as cudnn
+# import torch.nn.functional as F
+# import torch.nn.parallel
+# import torch.backends.cudnn as cudnn
 import torch.optim as optim
 import torch.utils.data
-import torchvision.datasets as dset
-import torchvision.transforms as transforms
-import torchvision.utils as vutils
+# import torchvision.datasets as dset
+# import torchvision.transforms as transforms
+# import torchvision.utils as vutils
 from matplotlib import pyplot as plt
 import argparse
 
@@ -100,6 +101,7 @@ grey_index = torch.LongTensor([1]).to(device)
 # Plot one training image of d
 # first_d_batch = next(iter(d_dataloader))
 
+
 # custom weights initialization called on netG and netD
 def weights_init(m):
     classname = m.__class__.__name__
@@ -108,103 +110,6 @@ def weights_init(m):
     elif classname.find('BatchNorm') != -1:
         nn.init.normal_(m.weight.data, 1.0, 0.02)
         nn.init.constant_(m.bias.data, 0)
-
-
-# Generator Code
-class Generator(nn.Module):
-    def __init__(self, ngpu):
-        super(Generator, self).__init__()
-        self.ngpu = ngpu
-        self.conv_minus_1 = nn.Conv2d(nc_g, 2 ** wg, 3, 1, 1)
-        self.bn_minus_1 = nn.BatchNorm2d(2**wg)
-        # first convolution, making many channels
-        self.conv0 = nn.Conv2d(2 ** wg, 2 ** wg, 3, 1, 1)
-        self.bn0 = nn.BatchNorm2d(2 ** wg)
-        # the number of channels is because of pixel shuffling
-        self.conv1 = nn.Conv2d(2 ** (wg - 2), 2 ** (wg - 2), 3, 1, 1)
-        self.bn1 = nn.BatchNorm2d(2 ** (wg - 2))
-        # last convolution, squashing all of the channels to 3 phases:
-        self.conv2 = nn.Conv2d(2 ** (wg - 4), nc_d, 3, 1, 1)
-        # use twice pixel shuffling:
-        self.pixel = torch.nn.PixelShuffle(2)
-        # up samples
-        self.up1 = nn.Upsample(scale_factor=4, mode='bilinear',
-                               align_corners=False)
-
-    @staticmethod
-    def res_block(x, conv, bn):
-        """
-        A forward pass of a residual block (from the original paper)
-        :param x: the input
-        :param conv: the convolution function, should return the same number
-        of channels, and the same width and height of the image. For example,
-        kernel size 3, padding 1 stride 1.
-        :param bn: batch norm function
-        :return: the result after the residual block.
-        """
-        # the residual side
-        x_side = bn(conv(nn.ReLU()(bn(conv(x)))))
-        return nn.ReLU()(x + x_side)
-
-    @staticmethod
-    def up_sample(x, pix_shuffling, conv, bn):
-        """
-        Up sampling with pixel shuffling block.
-        """
-        return nn.ReLU()(pix_shuffling(bn(conv(x))))
-
-    def forward(self, x):
-        """
-        forward pass of x
-        :param x: input
-        :return: the output of the forward pass.
-        """
-        # x after the first run for many channels:
-        # TODO also instead of conv with 1 padding to conv with 0 padding
-        x_first = nn.ReLU()(self.bn_minus_1(self.conv_minus_1(x)))
-        # first residual block:
-        after_block = self.res_block(x_first, self.conv0, self.bn0)
-        # more residual blocks:
-        for i in range(n_res_blocks - 1):
-            after_block = self.res_block(after_block, self.conv0, self.bn0)
-        # skip connection to the end after all the blocks:
-        after_res = x_first + after_block
-        # up sampling with pixel shuffling (0):
-        up_0 = self.up_sample(after_res, self.pixel, self.bn0, self.conv0)
-        # up sampling with pixel shuffling (1):
-        up_1 = self.up_sample(up_0, self.pixel, self.bn1, self.conv1)
-
-        y = self.conv2(up_1)
-
-        # TODO maybe different function in the end?
-        return nn.Softmax(dim=1)(y)
-
-
-# Discriminator code
-class Discriminator(nn.Module):
-    def __init__(self, ngpu):
-        super(Discriminator, self).__init__()
-        self.ngpu = ngpu
-        # first convolution, input is 3x128x128
-        self.conv0 = nn.Conv2d(nc_d, 2 ** (wd - 4), 4, 2, 1)
-        # first convolution, input is 4x64x64
-        self.conv1 = nn.Conv2d(2 ** (wd - 4), 2 ** (wd - 3), 4, 2, 1)
-        # second convolution, input is 8x32x32
-        self.conv2 = nn.Conv2d(2 ** (wd - 3), 2 ** (wd - 2), 4, 2, 1)
-        # third convolution, input is 32x16x16
-        self.conv3 = nn.Conv2d(2 ** (wd - 2), 2 ** (wd - 1), 4, 2, 1)
-        # fourth convolution, input is 64x8x8
-        self.conv4 = nn.Conv2d(2 ** (wd - 1), 2 ** wd, 4, 2, 1)
-        # fifth convolution, input is 128x4x4
-        self.conv5 = nn.Conv2d(2 ** wd, 1, 4, 2, 0)
-
-    def forward(self, x):
-        x = nn.ReLU()(self.conv0(x))
-        x = nn.ReLU()(self.conv1(x))
-        x = nn.ReLU()(self.conv2(x))
-        x = nn.ReLU()(self.conv3(x))
-        x = nn.ReLU()(self.conv4(x))
-        return self.conv5(x)
 
 
 def save_differences(network_g, high_res_im, grey_idx,
@@ -242,8 +147,8 @@ if __name__ == '__main__':
     BM = BatchMaker(device)
 
     # Create the generator
-    netG = Generator(ngpu).to(device)
-    wandb.watch(netG)
+    netG = Networks.Generator2D(ngpu, wg, nc_g, nc_d, n_res_blocks).to(device)
+    # wandb.watch(netG)
 
     # Handle multi-gpu if desired
     if (device.type == 'cuda') and (ngpu > 1):
@@ -254,7 +159,7 @@ if __name__ == '__main__':
     netG.apply(weights_init)
 
     # Create the Discriminator
-    netD = Discriminator(ngpu).to(device)
+    netD = Networks.Discriminator(ngpu, wd, nc_d).to(device)
 
     # Handle multi-gpu if desired
     if (device.type == 'cuda') and (ngpu > 1):

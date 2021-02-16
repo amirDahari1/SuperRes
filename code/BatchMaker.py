@@ -6,8 +6,8 @@ import torch
 import torch.utils.data
 import ImageTools
 
-LOW_RES = 32  # the low resolution number of pixels LOW_RESxLOW_RES
-HIGH_RES = 128  # the high resolution number of pixels HIGH_RESxHIGH_RES
+LOW_RES = 16  # the low resolution number of pixels LOW_RESxLOW_RES
+HIGH_RES = 64  # the high resolution number of pixels HIGH_RESxHIGH_RES
 N_SAMPLES = 10000
 CROP = 4  # crop pixels in each dimension when choosing train slices
 

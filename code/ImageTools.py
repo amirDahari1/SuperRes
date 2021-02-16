@@ -3,8 +3,8 @@ import numpy as np
 import torch
 
 
-LOW_RES = 32
-HIGH_RES = 128
+LOW_RES = 16
+HIGH_RES = 64
 N_SAMPLES = 10000
 
 progress_dir = 'progress/'
