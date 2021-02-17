@@ -5,6 +5,9 @@ import os
 import torch
 import torch.utils.data
 import ImageTools
+import cv2
+
+
 
 LOW_RES = 16  # the low resolution number of pixels LOW_RESxLOW_RES
 HIGH_RES = 64  # the high resolution number of pixels HIGH_RESxHIGH_RES

@@ -1,5 +1,7 @@
 import torch
+from torch.nn.functional import interpolate
 from torch import autograd
+
 
 k_logistic = 30  # the logistic function coefficient
 up_sample_factor = 4
@@ -77,6 +79,22 @@ def down_sample_for_g_input(high_res_3_phase, grey_idx, device):
     # down sample:
     res = torch.nn.AvgPool2d(2, 2)(grey_material)
     res = torch.nn.AvgPool2d(2, 2)(res)
+    # threshold at 0.5:
+    res = torch.where(res > 0.5, 1., 0.)
+    zeros_channel = torch.ones(size=res.size()).to(device) - res
+    return torch.cat((zeros_channel, res), dim=1)
+
+
+def down_sample_for_g_input3d(high_res_3_phase, grey_idx, scale_factor,
+                              device):
+    """
+    :return: a down-sample of the grey material.
+    """
+    # first choose the grey phase in the image:
+    grey_material = torch.index_select(high_res_3_phase, 1, grey_idx)
+    # down sample:
+    res = interpolate(grey_material, scale_factor=scale_factor,
+                      mode='trilinear')  # TODO: maybe different mode?
     # threshold at 0.5:
     res = torch.where(res > 0.5, 1., 0.)
     zeros_channel = torch.ones(size=res.size()).to(device) - res
