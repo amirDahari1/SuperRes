@@ -24,16 +24,18 @@ class BatchMaker:
     Makes and saves training and test batch images.
     """
 
-    def __init__(self, device, path=TIF_IMAGE,
+    def __init__(self, device, path=TIF_IMAGE, dims=3,
                  low_res=LOW_RES, high_res=HIGH_RES, crop=True):
         """
         :param path: the path of the tif file (TODO make it more general)
+        :param dims: number of dimensions for the batches (2 or 3)
         :param device: the device that the image is on.
         :param low_res: the low resolution of the 2d image.
         :param high_res: the high resolution of the 2d image.
         :param crop: if to crop the image at the edges
         """
         self.path = path
+        self.dims = dims
         self.device = device
         self.im_3d = imread(path)
         self.phases = np.unique(self.im_3d)  # the unique values in image
@@ -46,14 +48,7 @@ class BatchMaker:
         self.im_ohe = ImageTools.one_hot_encoding(self.im_3d, self.phases)
         self.low_res = low_res
         self.high_res = high_res
-
-    # def save_batches(self):
-    #     self.ohe_d_train = torch.FloatTensor(self.ohe_d_train)
-    #     dataset = torch.utils.data.TensorDataset(self.ohe_d_train)
-    #     torch.save(dataset, 'data/d_train.pth')
-    #     self.ohe_g_train = torch.FloatTensor(self.ohe_g_train)
-    #     dataset = torch.utils.data.TensorDataset(self.ohe_g_train)
-    #     torch.save(dataset, 'data/g_train.pth')
+        # TODO right now, high_res = 4*low_res -6, make it more general
 
     def random_batch(self, batch_size, dim_chosen):
         """
@@ -67,6 +62,18 @@ class BatchMaker:
         # return a torch tensor:
         return torch.FloatTensor(res).to(self.device)
 
+    def random_batch3d(self, batch_size, dim_chosen):
+        """
+        :return: A batch of high resolution images,
+        along the dimension chosen (0->x,1->y,2->z) in the 3d tif image.
+        """
+        res = np.zeros((batch_size, len(self.phases),
+                        *self.high_res * np.ones(self.dims, dtype=int)))
+        for i in range(batch_size):
+            res[i, :, :, :] = self.generate_a_random_image(dim_chosen)
+        # return a torch tensor:
+        return torch.FloatTensor(res).to(self.device)
+
     def generate_a_random_image(self, dim_chosen):
         """
         :param dim_chosen: the dimension chosen for the slice
@@ -75,6 +82,28 @@ class BatchMaker:
         """
         slice_chosen = random.randint(0, self.min_d - 1)  # the
         # slice chosen
+        lim_pix = self.min_d - self.high_res  # the maximum pixel to start with
+        # the starting pixels of the other dimensions:
+        pix1 = random.randint(0, lim_pix)
+        pix2 = random.randint(0, lim_pix)
+        if dim_chosen == 0:
+            res_image = self.im_ohe[:, slice_chosen, pix1:pix1 + self.high_res,
+                                    pix2:pix2 + self.high_res]
+        elif dim_chosen == 1:
+            res_image = self.im_ohe[:, pix1:pix1 + self.high_res, slice_chosen,
+                                    pix2:pix2 + self.high_res]
+        else:  # dim_chosen == 2
+            res_image = self.im_ohe[:, pix1:pix1 + self.high_res, pix2:pix2 +
+                                    self.high_res, slice_chosen]
+        return res_image
+
+    def generate_a_random_image3d(self, dim_chosen):
+        """
+        :param dim_chosen: the dimension chosen for the slice
+        :return: A random image of size res from the dimension chosen of the
+        image. TODO I don't think we can separate between 2d and 3d here
+        TODO because of slice
+        """
         lim_pix = self.min_d - self.high_res  # the maximum pixel to start with
         # the starting pixels of the other dimensions:
         pix1 = random.randint(0, lim_pix)
