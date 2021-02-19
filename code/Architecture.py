@@ -51,14 +51,17 @@ dataroot = "data/"
 workers = 2
 
 # Batch size during training
-batch_size = 64
+batch_size2d = 64
+batch_size_G = 32
+
+batch_size_D = 4*64  # the coefficient
 
 # Number of channels in the training images. For color images this is 3
 nc_g = 2  # two phases for the generator input
 nc_d = 3  # three phases for the discriminator input
 
 # number of iterations in each epoch
-epoch_iterations = 10000//batch_size
+epoch_iterations = 10000//batch_size2d
 
 # Learning rate for optimizers
 lr = 0.0001
@@ -159,7 +162,7 @@ if __name__ == '__main__':
     netG.apply(weights_init)
 
     # Create the Discriminator
-    netD = Networks.Discriminator(ngpu, wd, nc_d).to(device)
+    netD = Networks.Discriminator2d(ngpu, wd, nc_d).to(device)
 
     # Handle multi-gpu if desired
     if (device.type == 'cuda') and (ngpu > 1):
@@ -205,14 +208,14 @@ if __name__ == '__main__':
             # Format batch
             # high_res = d_data[0].to(device)
             d_slice = random.choice(d_slices)
-            high_res = BM.random_batch(batch_size, d_slice)
+            high_res = BM.random_batch2d(batch_size2d, d_slice)
 
             # Forward pass real batch through D
             output_real = netD(high_res).view(-1).mean()
 
             # Generate batch of g input
             g_slice = random.choice(g_slices)
-            before_down_sampling = BM.random_batch(batch_size, g_slice)
+            before_down_sampling = BM.random_batch2d(batch_size2d, g_slice)
             # down sample:
             low_res = LearnTools.down_sample_for_g_input(
                 before_down_sampling, grey_index, device)
@@ -233,7 +236,7 @@ if __name__ == '__main__':
 
             # Calculate gradient penalty
             gradient_penalty = LearnTools.calc_gradient_penalty(netD,
-                               high_res, fake.detach(), batch_size, HIGH_RES,
+                               high_res, fake.detach(), batch_size2d, HIGH_RES,
                                device, Lambda, nc_d)
 
             # discriminator is trying to minimize:

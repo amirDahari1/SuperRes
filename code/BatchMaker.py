@@ -8,8 +8,8 @@ import ImageTools
 import cv2
 
 
-
-LOW_RES = 16  # the low resolution number of pixels LOW_RESxLOW_RES
+perms = [[1, 2, 3], [2, 1, 3], [3, 1, 2]]  # permutations for a 4d array.
+LOW_RES = 18  # the low resolution number of pixels LOW_RESxLOW_RES
 HIGH_RES = 64  # the high resolution number of pixels HIGH_RESxHIGH_RES
 N_SAMPLES = 10000
 CROP = 4  # crop pixels in each dimension when choosing train slices
@@ -50,18 +50,6 @@ class BatchMaker:
         self.high_res = high_res
         # TODO right now, high_res = 4*low_res -6, make it more general
 
-    def random_batch(self, batch_size, dim_chosen):
-        """
-        :return: A batch of high resolution images,
-        along the dimension chosen (0->x,1->y,2->z) in the 3d tif image.
-        """
-        res = np.zeros((batch_size, len(self.phases), self.high_res,
-                        self.high_res))
-        for i in range(batch_size):
-            res[i, :, :, :] = self.generate_a_random_image(dim_chosen)
-        # return a torch tensor:
-        return torch.FloatTensor(res).to(self.device)
-
     def random_batch3d(self, batch_size, dim_chosen):
         """
         :return: A batch of high resolution images,
@@ -70,32 +58,9 @@ class BatchMaker:
         res = np.zeros((batch_size, len(self.phases),
                         *self.high_res * np.ones(self.dims, dtype=int)))
         for i in range(batch_size):
-            res[i, :, :, :] = self.generate_a_random_image(dim_chosen)
+            res[i, ...] = self.generate_a_random_image3d(dim_chosen)
         # return a torch tensor:
         return torch.FloatTensor(res).to(self.device)
-
-    def generate_a_random_image(self, dim_chosen):
-        """
-        :param dim_chosen: the dimension chosen for the slice
-        :return: A random image of size res from the dimension chosen of the
-        image.
-        """
-        slice_chosen = random.randint(0, self.min_d - 1)  # the
-        # slice chosen
-        lim_pix = self.min_d - self.high_res  # the maximum pixel to start with
-        # the starting pixels of the other dimensions:
-        pix1 = random.randint(0, lim_pix)
-        pix2 = random.randint(0, lim_pix)
-        if dim_chosen == 0:
-            res_image = self.im_ohe[:, slice_chosen, pix1:pix1 + self.high_res,
-                                    pix2:pix2 + self.high_res]
-        elif dim_chosen == 1:
-            res_image = self.im_ohe[:, pix1:pix1 + self.high_res, slice_chosen,
-                                    pix2:pix2 + self.high_res]
-        else:  # dim_chosen == 2
-            res_image = self.im_ohe[:, pix1:pix1 + self.high_res, pix2:pix2 +
-                                    self.high_res, slice_chosen]
-        return res_image
 
     def generate_a_random_image3d(self, dim_chosen):
         """
@@ -104,6 +69,36 @@ class BatchMaker:
         image. TODO I don't think we can separate between 2d and 3d here
         TODO because of slice
         """
+        h_r = self.high_res
+        lim_pix = self.min_d - h_r  # the maximum pixel to start with
+        # the starting pixels of the other dimensions:
+        s_pix = np.random.randint(0, lim_pix, size=self.dims)
+        s_x, s_y, s_z = s_pix  # starting voxels, TODO see how to generalise
+        # TODO for 2d as well..
+        res_image = self.im_ohe[:, s_x:s_x + h_r, s_y:s_y + h_r, s_z:s_z + h_r]
+        # for different view, change the cube around..
+        return res_image.transpose(0, *perms[dim_chosen])
+
+    def random_batch2d(self, batch_size, dim_chosen):
+        """
+        :return: A batch of high resolution images, TODO 2d function
+        along the dimension chosen (0->x,1->y,2->z) in the 3d tif image.
+        """
+        res = np.zeros((batch_size, len(self.phases), self.high_res,
+                        self.high_res))
+        for i in range(batch_size):
+            res[i, :, :, :] = self.generate_a_random_image2d(dim_chosen)
+        # return a torch tensor:
+        return torch.FloatTensor(res).to(self.device)
+
+    def generate_a_random_image2d(self, dim_chosen):
+        """
+        :param dim_chosen: the dimension chosen for the slice TODO 2d function
+        :return: A random image of size res from the dimension chosen of the
+        image.
+        """
+        slice_chosen = random.randint(0, self.min_d - 1)  # the
+        # slice chosen
         lim_pix = self.min_d - self.high_res  # the maximum pixel to start with
         # the starting pixels of the other dimensions:
         pix1 = random.randint(0, lim_pix)
@@ -151,8 +146,9 @@ class BatchMaker:
 
 def main():
     BM = BatchMaker('cpu')
-    z_slices = BM.random_batch(64, 1)
+    cubes = BM.random_batch3d(8, 0)
     print(BM.im_ohe.shape)
+    print(cubes.size())
 
 
 if __name__ == '__main__':

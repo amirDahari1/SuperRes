@@ -3,7 +3,7 @@ import numpy as np
 import torch
 
 
-LOW_RES = 16
+LOW_RES = 18
 HIGH_RES = 64
 N_SAMPLES = 10000
 
