@@ -9,8 +9,8 @@ import cv2
 
 
 perms = [[1, 2, 3], [2, 1, 3], [3, 1, 2]]  # permutations for a 4d array.
-LOW_RES = 18  # the low resolution number of pixels LOW_RESxLOW_RES
-HIGH_RES = 64  # the high resolution number of pixels HIGH_RESxHIGH_RES
+LOW_RES = 32  # the low resolution number of pixels LOW_RESxLOW_RES
+HIGH_RES = 128  # the high resolution number of pixels HIGH_RESxHIGH_RES
 N_SAMPLES = 10000
 CROP = 4  # crop pixels in each dimension when choosing train slices
 
