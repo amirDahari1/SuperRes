@@ -100,13 +100,14 @@ def weights_init(m):
 
 
 def save_differences(network_g, high_res_im, grey_idx,
-                     device, save_dir, filename, wandb):
+                     device, save_dir, filename, scale_factor, wandb):
     """
     Saves the image of the differences between the high-res real and the
     generated images that are supposed to be similar.
     """
     low_res_input = LearnTools.down_sample_for_g_input(high_res_im,
-                                                       grey_idx, device)
+                                                       grey_idx,
+                                                       scale_factor, device)
     g_output = network_g(low_res_input).detach().cpu()
     ImageTools.plot_fake_difference(high_res_im.detach().cpu(),
                                     low_res_input.detach().cpu(), g_output,
@@ -263,7 +264,7 @@ if __name__ == '__main__':
                     fake_output = netD(fake_for_g).view(-1)
                     # get the pixel-wise-distance loss
                     pix_loss = LearnTools.pixel_wise_distance(low_res,
-                                          fake_for_g, grey_index, n_dims)
+                               fake_for_g, grey_index, BM.scale_factor)
                     # Calculate G's loss based on this output
                     g_cost += -fake_output.mean() + pix_distance * pix_loss
 
@@ -271,26 +272,27 @@ if __name__ == '__main__':
                 g_cost.backward()
                 # Update G
                 optimizerG.step()
+                wandb.log({"pixel distance": pix_loss})
 
 
             # Output training stats
             if i == j:
                 wandb.log({"wass": wass})
                 wandb.log({"real": output_real, "fake": output_fake})
-                wandb.log({"pixel distance": pix_loss})
                 torch.save(netG.state_dict(), PATH_G)
                 torch.save(netD.state_dict(), PATH_D)
                 ImageTools.calc_and_save_eta(steps, time.time(), start, i,
                                              epoch, num_epochs, eta_file)
-                with torch.no_grad():  # only for plotting
-                    save_differences(netG, high_res.detach(),
-                                     grey_index, device, progress_dir,
-                                     'running slices', wandb)
-                # save fifteen images during the run
-                if epoch % (num_epochs//21) == 0 and epoch > 0:
-                    save_differences(netG, high_res.detach(), grey_index,
-                                     device, progress_dir, 'Iteration_'
-                                     + str(iters), wandb)
+                # TODO add plots
+                # with torch.no_grad():  # only for plotting
+                #     save_differences(netG, high_res.detach(),
+                #                      grey_index, device, progress_dir,
+                #                      'running slices', wandb)
+                # # save fifteen images during the run
+                # if epoch % (num_epochs//21) == 0 and epoch > 0:
+                #     save_differences(netG, high_res.detach(), grey_index,
+                #                      device, progress_dir, 'Iteration_'
+                #                      + str(iters), wandb)
 
             iters += 1
             i += 1

@@ -50,6 +50,7 @@ class BatchMaker:
             self.low_l, self.high_l = LOW_L_3D, HIGH_L_3D
         else:  # dims = 2
             self.low_l, self.high_l = LOW_L_2D, HIGH_L_2D
+        self.scale_factor = self.low_l/self.high_l
         # TODO right now, high_res = 4*low_res -6, make it more general
 
     def random_batch_for_real(self, batch_size, dim_chosen):
@@ -67,7 +68,7 @@ class BatchMaker:
         along the dimension chosen (0->x,1->y,2->z) in the 3d tif image.
         """
         res = np.zeros((batch_size, len(self.phases),
-                        *self.high_res * np.ones(self.dims, dtype=int)))
+                        *self.high_l * np.ones(self.dims, dtype=int)))
         for i in range(batch_size):
             res[i, ...] = self.generate_a_random_image3d(dim_chosen)
         # return a torch tensor:
@@ -80,7 +81,7 @@ class BatchMaker:
         image. TODO I don't think we can separate between 2d and 3d here
         TODO because of slice
         """
-        h_r = self.high_res
+        h_r = self.high_l
         lim_pix = self.min_d - h_r  # the maximum pixel to start with
         # the starting pixels of the other dimensions:
         s_pix = np.random.randint(0, lim_pix, size=self.dims)
@@ -95,8 +96,8 @@ class BatchMaker:
         :return: A batch of high resolution images, TODO 2d function
         along the dimension chosen (0->x,1->y,2->z) in the 3d tif image.
         """
-        res = np.zeros((batch_size, len(self.phases), self.high_res,
-                        self.high_res))
+        res = np.zeros((batch_size, len(self.phases), self.high_l,
+                        self.high_l))
         for i in range(batch_size):
             res[i, :, :, :] = self.generate_a_random_image2d(dim_chosen)
         # return a torch tensor:
@@ -110,19 +111,19 @@ class BatchMaker:
         """
         slice_chosen = random.randint(0, self.min_d - 1)  # the
         # slice chosen
-        lim_pix = self.min_d - self.high_res  # the maximum pixel to start with
+        lim_pix = self.min_d - self.high_l  # the maximum pixel to start with
         # the starting pixels of the other dimensions:
         pix1 = random.randint(0, lim_pix)
         pix2 = random.randint(0, lim_pix)
         if dim_chosen == 0:
-            res_image = self.im_ohe[:, slice_chosen, pix1:pix1 + self.high_res,
-                                    pix2:pix2 + self.high_res]
+            res_image = self.im_ohe[:, slice_chosen, pix1:pix1 + self.high_l,
+                                    pix2:pix2 + self.high_l]
         elif dim_chosen == 1:
-            res_image = self.im_ohe[:, pix1:pix1 + self.high_res, slice_chosen,
-                                    pix2:pix2 + self.high_res]
+            res_image = self.im_ohe[:, pix1:pix1 + self.high_l, slice_chosen,
+                                    pix2:pix2 + self.high_l]
         else:  # dim_chosen == 2
-            res_image = self.im_ohe[:, pix1:pix1 + self.high_res, pix2:pix2 +
-                                    self.high_res, slice_chosen]
+            res_image = self.im_ohe[:, pix1:pix1 + self.high_l, pix2:pix2 +
+                                    self.high_l, slice_chosen]
         return res_image
 
     def all_image_batch(self, dim, all_image=False):
@@ -138,8 +139,8 @@ class BatchMaker:
         resolution = self.min_d
         if not all_image:
             # s.t. the image will be in the middle
-            start = (self.min_d - self.high_res) // 2
-            resolution = self.high_res
+            start = (self.min_d - self.high_l) // 2
+            resolution = self.high_l
         if dim == 0:
             res = self.im_ohe[:, :, start:start + resolution, start:start +
                               resolution]
