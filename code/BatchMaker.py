@@ -9,10 +9,12 @@ import cv2
 
 
 perms = [[1, 2, 3], [2, 1, 3], [3, 1, 2]]  # permutations for a 4d array.
-LOW_RES = 32  # the low resolution number of pixels LOW_RESxLOW_RES
-HIGH_RES = 128  # the high resolution number of pixels HIGH_RESxHIGH_RES
+LOW_RES_2D = 32  # the low resolution number of pixels LOW_RESxLOW_RES
+HIGH_RES_2D = 128  # the high resolution number of pixels HIGH_RESxHIGH_RES
 N_SAMPLES = 10000
 CROP = 4  # crop pixels in each dimension when choosing train slices
+LOW_RES_3D = 18
+HIGH_RES_3D = 64
 
 if os.getcwd().endswith('code'):
     os.chdir('..')  # current directory from /SuperRes/code to SuperRes/
@@ -24,8 +26,7 @@ class BatchMaker:
     Makes and saves training and test batch images.
     """
 
-    def __init__(self, device, path=TIF_IMAGE, dims=3,
-                 low_res=LOW_RES, high_res=HIGH_RES, crop=True):
+    def __init__(self, device, path=TIF_IMAGE, dims=3, crop=True):
         """
         :param path: the path of the tif file (TODO make it more general)
         :param dims: number of dimensions for the batches (2 or 3)
@@ -46,8 +47,10 @@ class BatchMaker:
                                     CROP:self.min_d-CROP]
             self.min_d = self.min_d - 2*CROP  # update the min dimension
         self.im_ohe = ImageTools.one_hot_encoding(self.im_3d, self.phases)
-        self.low_res = low_res
-        self.high_res = high_res
+        if self.dims == 3:
+            self.low_res, self.high_res = LOW_RES_3D, HIGH_RES_3D
+        else:  # dims = 2
+            self.low_res, self.high_res = LOW_RES_2D, HIGH_RES_2D
         # TODO right now, high_res = 4*low_res -6, make it more general
 
     def random_batch3d(self, batch_size, dim_chosen):

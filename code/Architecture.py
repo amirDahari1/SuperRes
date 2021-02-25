@@ -41,8 +41,8 @@ PATH_D = 'progress/' + progress_dir + '/d_weights.pth'
 eta_file = 'eta.npy'
 
 # G and D slices to choose from
-g_slices = [0, 1]
-d_slices = [0, 1]
+g_slices = [0]
+d_slices = [0]
 
 # Root directory for dataset
 dataroot = "data/"
@@ -52,9 +52,9 @@ workers = 2
 
 # Batch size during training
 batch_size2d = 64
-batch_size_G = 32
 
-batch_size_D = 4*64  # the coefficient
+batch_size_G = 32
+batch_size_G_for_D = 4
 
 # Number of channels in the training images. For color images this is 3
 nc_g = 2  # two phases for the generator input
@@ -149,8 +149,9 @@ if __name__ == '__main__':
     # The batch maker:
     BM = BatchMaker(device)
 
+    batch_size_D = batch_size_G_for_D * BM.high_res
     # Create the generator
-    netG = Networks.Generator2D(ngpu, wg, nc_g, nc_d, n_res_blocks).to(device)
+    netG = Networks.Generator3D(ngpu, wg, nc_g, nc_d, n_res_blocks).to(device)
     # wandb.watch(netG)
 
     # Handle multi-gpu if desired
