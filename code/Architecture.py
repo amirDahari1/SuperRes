@@ -7,6 +7,7 @@ import os
 import time
 import random
 import torch.nn as nn
+import math
 # import torch.nn.functional as F
 # import torch.nn.parallel
 # import torch.backends.cudnn as cudnn
@@ -53,7 +54,7 @@ workers = 2
 # Batch sizes during training
 if n_dims == 3:
     batch_size_G_for_D, batch_size_G, batch_size_D = 4, 32, 64
-else:  # n_dims = 2
+else:  # n_dims == 2
     batch_size_G_for_D, batch_size_G, batch_size_D = 64, 64, 64
 
 
@@ -79,20 +80,6 @@ ngpu = 1
 # When to save progress
 saving_num = 50
 
-# Create the datasets for the training of d and g
-# d_train_dataset = torch.load(dataroot + 'd_train.pth')
-# g_train_dataset = torch.load(dataroot + 'g_train.pth')
-
-# Create the dataloader
-# d_dataloader = torch.utils.data.DataLoader(d_train_dataset,
-#                                            batch_size=batch_size,
-#                                            shuffle=True, num_workers=workers)
-
-# g_dataloader = torch.utils.data.DataLoader(g_train_dataset,
-#                                            batch_size=batch_size,
-#                                            shuffle=True, num_workers=workers)
-# TODO see maybe change to shuffle=true and normalize the data to have 0
-#  mean and 1 std.
 
 # Decide which device we want to run on
 device = torch.device(
@@ -101,10 +88,6 @@ print('device is ' + str(device))
 
 # the grey channel in the images:
 grey_index = torch.LongTensor([1]).to(device)
-
-# Plot one training image of d
-# first_d_batch = next(iter(d_dataloader))
-
 
 # custom weights initialization called on netG and netD
 def weights_init(m):
@@ -149,9 +132,8 @@ def save_tif_3d(network_g, high_res_im, grey_idx, device, filename):
 if __name__ == '__main__':
 
     # The batch maker:
-    BM = BatchMaker(device)
+    BM = BatchMaker(device, dims=n_dims)
 
-    batch_size_D = batch_size_G_for_D * BM.high_res
     # Create the generator
     netG = Networks.Generator(ngpu, wg, nc_g, nc_d, n_res_blocks, n_dims).to(
         device)
@@ -196,18 +178,11 @@ if __name__ == '__main__':
             ############################
             # (1) Update D network:
             ###########################
-            # Train with all-real batch
-            netD.zero_grad()
-            # Format batch
-            d_slice = random.choice(d_slices)
-            high_res = BM.random_batch_for_real(batch_size2d, d_slice)
-
-            # Forward pass real batch through D
-            output_real = netD(high_res).view(-1).mean()
 
             # Generate batch of g input
             g_slice = random.choice(g_slices)
-            before_down_sampling = BM.random_batch2d(batch_size2d, g_slice)
+            before_down_sampling = BM.random_batch2d(batch_size_G_for_D,
+                                                     g_slice)
             # down sample:
             low_res = LearnTools.down_sample_for_g_input(
                 before_down_sampling, grey_index, device)
@@ -216,21 +191,32 @@ if __name__ == '__main__':
             # fake = netG(low_res_with_sim)
             fake = netG(low_res)
 
-            # Classify all fake batch with D
-            output_fake = netD(fake.detach()).view(-1).mean()
+            for k in range(math.comb(3, n_dims)):
 
-            # Calculate gradient penalty
-            gradient_penalty = LearnTools.calc_gradient_penalty(netD,
-                               high_res, fake.detach(), batch_size2d,
-                               BM.high_res, device, Lambda, nc_d)
+                # Train with all-real batch
+                netD.zero_grad()
+                # Format batch
+                d_slice = random.choice(d_slices)
+                high_res = BM.random_batch_for_real(batch_size_D, d_slice)
 
-            # discriminator is trying to minimize:
-            d_cost = output_fake - output_real + gradient_penalty
-            # Calculate gradients for D in backward pass
-            d_cost.backward()
-            optimizerD.step()
+                # Forward pass real batch through D
+                output_real = netD(high_res).view(-1).mean()
 
-            wass = abs(output_fake.item() - output_real.item())
+                # Classify all fake batch with D
+                output_fake = netD(fake.detach()).view(-1).mean()
+
+                # Calculate gradient penalty
+                gradient_penalty = LearnTools.calc_gradient_penalty(netD,
+                                   high_res, fake.detach(), batch_size2d,
+                                   BM.high_res, device, Lambda, nc_d)
+
+                # discriminator is trying to minimize:
+                d_cost = output_fake - output_real + gradient_penalty
+                # Calculate gradients for D in backward pass
+                d_cost.backward()
+                optimizerD.step()
+
+                wass = abs(output_fake.item() - output_real.item())
 
             ############################
             # (2) Update G network:
