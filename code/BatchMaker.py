@@ -9,12 +9,12 @@ import cv2
 
 
 perms = [[1, 2, 3], [2, 1, 3], [3, 1, 2]]  # permutations for a 4d array.
-LOW_RES_2D = 32  # the low resolution number of pixels LOW_RESxLOW_RES
-HIGH_RES_2D = 128  # the high resolution number of pixels HIGH_RESxHIGH_RES
+LOW_L_2D = 32  # the low resolution number of pixels LOW_RESxLOW_RES
+HIGH_L_2D = 128  # the high resolution number of pixels HIGH_RESxHIGH_RES
 N_SAMPLES = 10000
 CROP = 4  # crop pixels in each dimension when choosing train slices
-LOW_RES_3D = 18
-HIGH_RES_3D = 64
+LOW_L_3D = 18
+HIGH_L_3D = 64
 
 if os.getcwd().endswith('code'):
     os.chdir('..')  # current directory from /SuperRes/code to SuperRes/
@@ -31,8 +31,6 @@ class BatchMaker:
         :param path: the path of the tif file (TODO make it more general)
         :param dims: number of dimensions for the batches (2 or 3)
         :param device: the device that the image is on.
-        :param low_res: the low resolution of the 2d image.
-        :param high_res: the high resolution of the 2d image.
         :param crop: if to crop the image at the edges
         """
         self.path = path
@@ -48,9 +46,9 @@ class BatchMaker:
             self.min_d = self.min_d - 2*CROP  # update the min dimension
         self.im_ohe = ImageTools.one_hot_encoding(self.im_3d, self.phases)
         if self.dims == 3:
-            self.low_res, self.high_res = LOW_RES_3D, HIGH_RES_3D
+            self.low_l, self.high_l = LOW_L_3D, HIGH_L_3D
         else:  # dims = 2
-            self.low_res, self.high_res = LOW_RES_2D, HIGH_RES_2D
+            self.low_l, self.high_l = LOW_L_2D, HIGH_L_2D
         # TODO right now, high_res = 4*low_res -6, make it more general
 
     def random_batch_for_real(self, batch_size, dim_chosen):

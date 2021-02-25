@@ -159,15 +159,39 @@ if __name__ == '__main__':
     optimizerD = optim.Adam(netD.parameters(), lr=lr, betas=(beta1, 0.999))
     optimizerG = optim.Adam(netG.parameters(), lr=lr, betas=(beta1, 0.999))
 
-    # Training Loop
 
+
+    def generate_fake_image(detach=True):
+        """
+        :param detach: if to detach the output
+        :return: the generated image from G
+        """
+        # Generate batch of g input
+        g_slice = random.choice(g_slices)
+        before_down_sampling = BM.random_batch_for_fake(batch_size_G_for_D,
+                                                        g_slice)
+        # down sample:
+        low_res_im = LearnTools.down_sample_for_g_input(
+            before_down_sampling, grey_index, device)
+
+        # Generate fake image batch with G
+        if detach:
+            return low_res_im, netG(low_res).detach()
+        else:
+            return low_res_im, netG(low_res)
+
+    def take_fake_slices():
+        """
+        :return: batch of slices from the 3d image (if 2d image,
+        just returns the image)
+        """
+
+    # Training Loop!
     iters = 0
-
     steps = epoch_iterations
-
     print("Starting Training Loop...")
     start = time.time()
-    # For each epoch
+
     for epoch in range(num_epochs):
         # For each batch in the dataloader
         i = 0
@@ -179,19 +203,9 @@ if __name__ == '__main__':
             # (1) Update D network:
             ###########################
 
-            # Generate batch of g input
-            g_slice = random.choice(g_slices)
-            before_down_sampling = BM.random_batch2d(batch_size_G_for_D,
-                                                     g_slice)
-            # down sample:
-            low_res = LearnTools.down_sample_for_g_input(
-                before_down_sampling, grey_index, device)
+            _, fake_for_d = generate_fake_image(detach=True)
 
-            # Generate fake image batch with G
-            # fake = netG(low_res_with_sim)
-            fake = netG(low_res)
-
-            for k in range(math.comb(3, n_dims)):
+            for k in range(math.comb(n_dims, 2)):
 
                 # Train with all-real batch
                 netD.zero_grad()
@@ -202,13 +216,26 @@ if __name__ == '__main__':
                 # Forward pass real batch through D
                 output_real = netD(high_res).view(-1).mean()
 
+                if n_dims == 3:
+                    # permute the fake output of G to make it into a batch
+                    # of images to feed D (each time different axis)
+                    fake_slices = fake_for_d.permute(0, perms[0], 1, *perms[1:])
+                    # the new batch size feeding D:
+                    batch_size_new = batch_size_G_for_D * BM.high_l
+                    # reshaping for the correct size of D's input
+                    fake_slices = fake_slices.reshape(batch_size_new, nc_d,
+                                                      BM.high_l, BM.high_l)
+                else:  # same 2d slices are fed into D
+                    fake_slices = fake_for_d
+
                 # Classify all fake batch with D
-                output_fake = netD(fake.detach()).view(-1).mean()
+                output_fake = netD(fake_slices).view(-1).mean()
 
                 # Calculate gradient penalty
                 gradient_penalty = LearnTools.calc_gradient_penalty(netD,
-                                   high_res, fake.detach(), batch_size2d,
-                                   BM.high_res, device, Lambda, nc_d)
+                                   high_res, fake_slices[:batch_size_D],
+                                   batch_size_D, BM.high_l, device,
+                                   Lambda, nc_d)
 
                 # discriminator is trying to minimize:
                 d_cost = output_fake - output_real + gradient_penalty
@@ -224,13 +251,13 @@ if __name__ == '__main__':
 
             if (i % g_update) == 0:
                 netG.zero_grad()
-
-                # Since we just updated D, perform another forward pass of
-                # all-fake batch through D
-                fake_output = netD(fake).view(-1)
+                # generate fake again to update G:
+                low_res, fake_for_g = generate_fake_image(detach=False)
+                # perform a forward pass of all-fake batch through D
+                fake_output = netD(fake_for_g).view(-1)
                 # get the pixel-wise-distance loss
                 pix_loss = LearnTools.pixel_wise_distance(low_res,
-                                                          fake, grey_index)
+                                                          fake_for_g, grey_index)
 
                 # Calculate G's loss based on this output
                 # g_cost = -fake_output.mean()
@@ -242,7 +269,7 @@ if __name__ == '__main__':
                 optimizerG.step()
             else:  # not a g update iteration
                 pix_loss = LearnTools.pixel_wise_distance(low_res,
-                                                          fake, grey_index)
+                                                          fake_for_g, grey_index)
 
 
             # Output training stats
