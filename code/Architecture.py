@@ -159,11 +159,9 @@ if __name__ == '__main__':
     optimizerD = optim.Adam(netD.parameters(), lr=lr, betas=(beta1, 0.999))
     optimizerG = optim.Adam(netG.parameters(), lr=lr, betas=(beta1, 0.999))
 
-
-
-    def generate_fake_image(detach=True):
+    def generate_fake_image(detach_output=True):
         """
-        :param detach: if to detach the output
+        :param detach_output: to detach the tensor output from gradient memory.
         :return: the generated image from G
         """
         # Generate batch of g input
@@ -175,16 +173,28 @@ if __name__ == '__main__':
             before_down_sampling, grey_index, device)
 
         # Generate fake image batch with G
-        if detach:
+        if detach_output:
             return low_res_im, netG(low_res).detach()
         else:
             return low_res_im, netG(low_res)
 
-    def take_fake_slices():
+    def take_fake_slices(fake_image, perm_idx):
         """
         :return: batch of slices from the 3d image (if 2d image,
         just returns the image)
         """
+        if n_dims == 3:
+            perm = perms_3d[perm_idx]
+            # permute the fake output of G to make it into a batch
+            # of images to feed D (each time different axis)
+            fake_slices = fake_image.permute(0, perm[0], 1, *perm[1:])
+            # the new batch size feeding D:
+            batch_size_new = batch_size_G_for_D * BM.high_l
+            # reshaping for the correct size of D's input
+            return fake_slices.reshape(batch_size_new, nc_d,
+                                              BM.high_l, BM.high_l)
+        else:  # same 2d slices are fed into D
+            return fake_image
 
     # Training Loop!
     iters = 0
@@ -203,7 +213,7 @@ if __name__ == '__main__':
             # (1) Update D network:
             ###########################
 
-            _, fake_for_d = generate_fake_image(detach=True)
+            _, fake_for_d = generate_fake_image(detach_output=True)
 
             for k in range(math.comb(n_dims, 2)):
 
@@ -216,17 +226,8 @@ if __name__ == '__main__':
                 # Forward pass real batch through D
                 output_real = netD(high_res).view(-1).mean()
 
-                if n_dims == 3:
-                    # permute the fake output of G to make it into a batch
-                    # of images to feed D (each time different axis)
-                    fake_slices = fake_for_d.permute(0, perms[0], 1, *perms[1:])
-                    # the new batch size feeding D:
-                    batch_size_new = batch_size_G_for_D * BM.high_l
-                    # reshaping for the correct size of D's input
-                    fake_slices = fake_slices.reshape(batch_size_new, nc_d,
-                                                      BM.high_l, BM.high_l)
-                else:  # same 2d slices are fed into D
-                    fake_slices = fake_for_d
+                # obtain fake slices from the fake image
+                fake_slices = take_fake_slices(fake_for_d, k)
 
                 # Classify all fake batch with D
                 output_fake = netD(fake_slices).view(-1).mean()
@@ -252,24 +253,24 @@ if __name__ == '__main__':
             if (i % g_update) == 0:
                 netG.zero_grad()
                 # generate fake again to update G:
-                low_res, fake_for_g = generate_fake_image(detach=False)
-                # perform a forward pass of all-fake batch through D
-                fake_output = netD(fake_for_g).view(-1)
-                # get the pixel-wise-distance loss
-                pix_loss = LearnTools.pixel_wise_distance(low_res,
-                                                          fake_for_g, grey_index)
-
-                # Calculate G's loss based on this output
-                # g_cost = -fake_output.mean()
-                g_cost = -fake_output.mean() + pix_distance * pix_loss
+                low_res, fake_for_g = generate_fake_image(detach_output=False)
+                # save the cost of g to add from each axis:
+                g_cost = torch.FloatTensor(0).to(device)
+                # go through each axis
+                for k in range(math.comb(n_dims, 2)):
+                    fake_slices = take_fake_slices(fake_for_g, k)
+                    # perform a forward pass of all-fake batch through D
+                    fake_output = netD(fake_for_g).view(-1)
+                    # get the pixel-wise-distance loss
+                    pix_loss = LearnTools.pixel_wise_distance(low_res,
+                                          fake_for_g, grey_index, n_dims)
+                    # Calculate G's loss based on this output
+                    g_cost += -fake_output.mean() + pix_distance * pix_loss
 
                 # Calculate gradients for G
                 g_cost.backward()
                 # Update G
                 optimizerG.step()
-            else:  # not a g update iteration
-                pix_loss = LearnTools.pixel_wise_distance(low_res,
-                                                          fake_for_g, grey_index)
 
 
             # Output training stats
