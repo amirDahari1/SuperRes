@@ -53,6 +53,15 @@ class BatchMaker:
             self.low_res, self.high_res = LOW_RES_2D, HIGH_RES_2D
         # TODO right now, high_res = 4*low_res -6, make it more general
 
+    def random_batch_for_real(self, batch_size, dim_chosen):
+        return self.random_batch2d(batch_size, dim_chosen)
+
+    def random_batch_for_fake(self, batch_size, dim_chosen):
+        if self.dims == 3:
+            return self.random_batch3d(batch_size, dim_chosen)
+        else:  # dims = 2
+            return self.random_batch2d(batch_size, dim_chosen)
+
     def random_batch3d(self, batch_size, dim_chosen):
         """
         :return: A batch of high resolution images,

@@ -28,7 +28,7 @@ args = LearnTools.return_args(parser)
 
 progress_dir, wd, wg = args.directory, args.widthD, args.widthG
 n_res_blocks, pix_distance = args.n_res_blocks, args.pixel_coefficient_distance
-num_epochs, g_update = args.num_epochs, args.g_update
+num_epochs, g_update, n_dims = args.num_epochs, args.g_update, args.n_dims
 
 # 1. Start a new run
 # wandb.init(project='wandb test', config=args, name=progress_dir)
@@ -41,8 +41,8 @@ PATH_D = 'progress/' + progress_dir + '/d_weights.pth'
 eta_file = 'eta.npy'
 
 # G and D slices to choose from
-g_slices = [0]
-d_slices = [0]
+g_slices = [0, 1]
+d_slices = [0, 1]
 
 # Root directory for dataset
 dataroot = "data/"
@@ -50,18 +50,19 @@ dataroot = "data/"
 # Number of workers for dataloader
 workers = 2
 
-# Batch size during training
-batch_size2d = 64
+# Batch sizes during training
+if n_dims == 3:
+    batch_size_G_for_D, batch_size_G, batch_size_D = 4, 32, 64
+else:  # n_dims == 2
+    batch_size_G_for_D, batch_size_G, batch_size_D = 64, 64, 64
 
-batch_size_G = 32
-batch_size_G_for_D = 4
 
 # Number of channels in the training images. For color images this is 3
 nc_g = 2  # two phases for the generator input
 nc_d = 3  # three phases for the discriminator input
 
 # number of iterations in each epoch
-epoch_iterations = 10000//batch_size2d
+epoch_iterations = 10000//batch_size_G
 
 # Learning rate for optimizers
 lr = 0.0001
@@ -146,24 +147,22 @@ def save_tif_3d(network_g, high_res_im, grey_idx, device, filename):
 
 
 if __name__ == '__main__':
+
     # The batch maker:
     BM = BatchMaker(device)
 
     batch_size_D = batch_size_G_for_D * BM.high_res
     # Create the generator
-    netG = Networks.Generator3D(ngpu, wg, nc_g, nc_d, n_res_blocks).to(device)
+    netG = Networks.Generator(ngpu, wg, nc_g, nc_d, n_res_blocks, n_dims).to(
+        device)
     # wandb.watch(netG)
 
     # Handle multi-gpu if desired
     if (device.type == 'cuda') and (ngpu > 1):
         netG = nn.DataParallel(netG, list(range(ngpu)))
 
-    # Apply the weights_init function to randomly initialize all weights
-    #  to mean=0, stdev=0.2.
-    netG.apply(weights_init)
-
     # Create the Discriminator
-    netD = Networks.Discriminator2d(ngpu, wd, nc_d).to(device)
+    netD = Networks.Discriminator(ngpu, wd, nc_d, n_dims).to(device)
 
     # Handle multi-gpu if desired
     if (device.type == 'cuda') and (ngpu > 1):
@@ -171,6 +170,7 @@ if __name__ == '__main__':
 
     # Apply the weights_init function to randomly initialize all weights
     #  to mean=0, stdev=0.2.
+    netG.apply(weights_init)
     netD.apply(weights_init)
 
     # Setup Adam optimizers for both G and D
@@ -178,14 +178,6 @@ if __name__ == '__main__':
     optimizerG = optim.Adam(netG.parameters(), lr=lr, betas=(beta1, 0.999))
 
     # Training Loop
-
-    # Lists to keep track of progress
-    img_list = []
-    wass_outputs = []
-    real_outputs = []  # the results of D on real images
-    fake_outputs = []  # the results of D on fake images
-    gp_outputs = []  # the gradient penalty outputs
-    pixel_outputs = []
 
     iters = 0
 
@@ -207,9 +199,8 @@ if __name__ == '__main__':
             # Train with all-real batch
             netD.zero_grad()
             # Format batch
-            # high_res = d_data[0].to(device)
             d_slice = random.choice(d_slices)
-            high_res = BM.random_batch2d(batch_size2d, d_slice)
+            high_res = BM.random_batch_for_real(batch_size2d, d_slice)
 
             # Forward pass real batch through D
             output_real = netD(high_res).view(-1).mean()
@@ -221,13 +212,6 @@ if __name__ == '__main__':
             low_res = LearnTools.down_sample_for_g_input(
                 before_down_sampling, grey_index, device)
 
-            # create a random similarity channel
-            # init_rand = torch.rand(low_res.size()[0], 1, 1, 1).to(device)
-            # rand_sim = init_rand.repeat(1, 1, LOW_RES, LOW_RES)
-
-            # concatenate the low-res image and the similarity scalar matrix
-            # low_res_with_sim = torch.cat((low_res, rand_sim), dim=1)
-
             # Generate fake image batch with G
             # fake = netG(low_res_with_sim)
             fake = netG(low_res)
@@ -237,8 +221,8 @@ if __name__ == '__main__':
 
             # Calculate gradient penalty
             gradient_penalty = LearnTools.calc_gradient_penalty(netD,
-                               high_res, fake.detach(), batch_size2d, HIGH_RES,
-                               device, Lambda, nc_d)
+                               high_res, fake.detach(), batch_size2d,
+                               BM.high_res, device, Lambda, nc_d)
 
             # discriminator is trying to minimize:
             d_cost = output_fake - output_real + gradient_penalty
@@ -246,13 +230,8 @@ if __name__ == '__main__':
             d_cost.backward()
             optimizerD.step()
 
-            # save the outputs
-
-            real_outputs.append(output_real.item())
-            fake_outputs.append(output_fake.item())
             wass = abs(output_fake.item() - output_real.item())
-            wass_outputs.append(wass)
-            gp_outputs.append(gradient_penalty.item())
+
             ############################
             # (2) Update G network:
             ###########################
@@ -270,7 +249,7 @@ if __name__ == '__main__':
                 # Calculate G's loss based on this output
                 # g_cost = -fake_output.mean()
                 g_cost = -fake_output.mean() + pix_distance * pix_loss
-                pixel_outputs.append(pix_loss.item())
+
                 # Calculate gradients for G
                 g_cost.backward()
                 # Update G
@@ -278,7 +257,7 @@ if __name__ == '__main__':
             else:  # not a g update iteration
                 pix_loss = LearnTools.pixel_wise_distance(low_res,
                                                           fake, grey_index)
-                pixel_outputs.append(pix_loss.item())
+
 
             # Output training stats
             if i == j:
@@ -287,15 +266,6 @@ if __name__ == '__main__':
                 wandb.log({"pixel distance": pix_loss})
                 torch.save(netG.state_dict(), PATH_G)
                 torch.save(netD.state_dict(), PATH_D)
-                ImageTools.graph_plot([real_outputs, fake_outputs],
-                                      ['real', 'fake'], progress_dir,
-                                      'LossesGraphBN')
-                ImageTools.graph_plot([wass_outputs],
-                                      ['wass'], progress_dir, 'WassGraphBN')
-                ImageTools.graph_plot([pixel_outputs],
-                                      ['pixel'], progress_dir, 'PixelLossBN')
-                ImageTools.graph_plot([gp_outputs], ['Gradient Penalty'],
-                                      progress_dir, 'GpGraphBN')
                 ImageTools.calc_and_save_eta(steps, time.time(), start, i,
                                              epoch, num_epochs, eta_file)
                 with torch.no_grad():  # only for plotting

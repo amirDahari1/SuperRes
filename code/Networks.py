@@ -2,6 +2,17 @@ import torch.nn as nn
 import torch
 
 
+class Generator(nn.Module):
+    def __init__(self, ngpu, wg, nc_g, nc_d, n_res_block, dims):
+        super(Generator, self).__init__()
+        if dims == 3:
+            self.generator = Generator3D(ngpu, wg, nc_g, nc_d, n_res_block)
+        else:  # dims == 2
+            self.generator = Generator2D(ngpu, wg, nc_g, nc_d, n_res_block)
+
+    def forward(self, x):
+        return self.generator(x)
+
 # Generator Code
 class Generator3D(nn.Module):
     def __init__(self, ngpu, wg, nc_g, nc_d, n_res_block):
@@ -64,6 +75,18 @@ class Generator3D(nn.Module):
         # up sampling with pixel shuffling (1):
         up_1 = self.up_sample(up_0, self.bn2, self.conv_trans_2)
         return nn.Softmax(dim=1)(up_1)
+
+
+class Discriminator(nn.Module):
+    def __init__(self, ngpu, wd, nc_d, dims):
+        super(Discriminator, self).__init__()
+        if dims == 3:
+            self.discriminator = Discriminator3d(ngpu, wd, nc_d)
+        else:  # dims == 2
+            self.discriminator = Discriminator2d(ngpu, wd, nc_d)
+
+    def forward(self, x):
+        return self.discriminator(x)
 
 
 # Discriminator code

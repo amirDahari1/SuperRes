@@ -20,6 +20,9 @@ def return_args(parser):
                         width of the Generator network')
     parser.add_argument('-n_res', '--n_res_blocks', type=int, default=2,
                         help='Number of residual blocks in the network.')
+    parser.add_argument('-n_dims', '--n_dims', type=int, default=3,
+                        help='The generated image dimension (and input '
+                             'dimension), can be either 2 or 3.')
     parser.add_argument('-gu', '--g_update', type=int, default=5,
                         help='Number of iterations the generator waits before '
                              'being updated')
