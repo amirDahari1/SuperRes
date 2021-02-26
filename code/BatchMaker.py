@@ -5,7 +5,7 @@ import os
 import torch
 import torch.utils.data
 import ImageTools
-import cv2
+
 
 
 perms = [[1, 2, 3], [2, 1, 3], [3, 1, 2]]  # permutations for a 4d array.
