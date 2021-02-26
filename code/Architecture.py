@@ -114,12 +114,14 @@ def save_differences(network_g, high_res_im, grey_idx,
                                     save_dir, filename, wandb)
 
 
-def save_tif_3d(network_g, high_res_im, grey_idx, device, filename):
+def save_tif_3d(network_g, high_res_im, grey_idx, device, filename,
+                batch_maker):
     """
         Saves a tif image of the output of G on all of the 3d image high_res_im
     """
     low_res_input = LearnTools.down_sample_for_g_input(high_res_im,
-                                                       grey_idx, device)
+                                                       grey_idx,
+                                                       batch_maker.scale_factor, device)
     g_output = network_g(low_res_input).detach().cpu()
     g_output_grey = ImageTools.one_hot_decoding(g_output).astype('uint8')
     imsave('progress/' + progress_dir + '/' + filename, g_output_grey)
