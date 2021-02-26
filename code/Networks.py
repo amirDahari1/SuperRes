@@ -15,9 +15,9 @@ class Generator(nn.Module):
 
 # Generator Code
 class Generator3D(nn.Module):
-    def __init__(self, ngpu, wg, nc_g, nc_d, n_res_block):
+    def __init__(self, ngpu, wg, nc_g, nc_d, n_res_blocks):
         super(Generator3D, self).__init__()
-        self.n_res_block = n_res_block
+        self.n_res_blocks = n_res_blocks
         self.ngpu = ngpu
         self.conv_minus_1 = nn.Conv3d(nc_g, 2 ** wg, 3, 1, 1)
         self.bn_minus_1 = nn.BatchNorm3d(2**wg)
@@ -30,7 +30,6 @@ class Generator3D(nn.Module):
         # last convolution, squashing all of the channels to 3 phases:
         self.conv_trans_2 = nn.ConvTranspose3d(2 ** (wg - 1), nc_d,
                                                4, 2, 3)
-        self.bn2 = nn.BatchNorm3d(2 ** (wg - 2))
 
 
     @staticmethod
@@ -71,9 +70,9 @@ class Generator3D(nn.Module):
         # skip connection to the end after all the blocks:
         after_res = x_first + after_block
         # up sampling with pixel shuffling (0):
-        up_0 = self.up_sample(after_res, self.bn1, self.conv_trans_1)
+        up_0 = self.up_sample(after_res, self.conv_trans_1, self.bn1)
         # up sampling with pixel shuffling (1):
-        up_1 = self.up_sample(up_0, self.bn2, self.conv_trans_2)
+        up_1 = self.conv_trans_2(up_0)
         return nn.Softmax(dim=1)(up_1)
 
 
@@ -107,7 +106,7 @@ class Discriminator3d(nn.Module):
 
     def forward(self, x):
         x = nn.ReLU()(self.conv0(x))
-        x = nn.ReLU()(self.conv1(x))
+        # x = nn.ReLU()(self.conv1(x))
         x = nn.ReLU()(self.conv2(x))
         x = nn.ReLU()(self.conv3(x))
         x = nn.ReLU()(self.conv4(x))

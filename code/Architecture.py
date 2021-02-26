@@ -32,7 +32,7 @@ n_res_blocks, pix_distance = args.n_res_blocks, args.pixel_coefficient_distance
 num_epochs, g_update, n_dims = args.num_epochs, args.g_update, args.n_dims
 
 # 1. Start a new run
-# wandb.init(project='wandb test', config=args, name=progress_dir)
+wandb.init(project='3d to 3d', config=args, name=progress_dir)
 
 if not os.path.exists(ImageTools.progress_dir + progress_dir):
     os.makedirs(ImageTools.progress_dir + progress_dir)
@@ -171,13 +171,13 @@ if __name__ == '__main__':
                                                         g_slice)
         # down sample:
         low_res_im = LearnTools.down_sample_for_g_input(
-            before_down_sampling, grey_index, device)
+            before_down_sampling, grey_index, BM.scale_factor, device)
 
         # Generate fake image batch with G
         if detach_output:
-            return low_res_im, netG(low_res).detach()
+            return low_res_im, netG(low_res_im).detach()
         else:
-            return low_res_im, netG(low_res)
+            return low_res_im, netG(low_res_im)
 
     def take_fake_slices(fake_image, perm_idx):
         """
@@ -256,12 +256,12 @@ if __name__ == '__main__':
                 # generate fake again to update G:
                 low_res, fake_for_g = generate_fake_image(detach_output=False)
                 # save the cost of g to add from each axis:
-                g_cost = torch.FloatTensor(0).to(device)
+                g_cost = 0
                 # go through each axis
                 for k in range(math.comb(n_dims, 2)):
                     fake_slices = take_fake_slices(fake_for_g, k)
                     # perform a forward pass of all-fake batch through D
-                    fake_output = netD(fake_for_g).view(-1)
+                    fake_output = netD(fake_slices).view(-1)
                     # get the pixel-wise-distance loss
                     pix_loss = LearnTools.pixel_wise_distance(low_res,
                                fake_for_g, grey_index, BM.scale_factor)
@@ -273,7 +273,6 @@ if __name__ == '__main__':
                 # Update G
                 optimizerG.step()
                 wandb.log({"pixel distance": pix_loss})
-
 
             # Output training stats
             if i == j:
