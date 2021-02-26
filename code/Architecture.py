@@ -285,7 +285,8 @@ if __name__ == '__main__':
                                              epoch, num_epochs, eta_file)
 
                 with torch.no_grad():  # only for plotting
-                    save_differences(netG, high_res.detach(),
+                    save_differences(netG, BM.random_batch_for_fake(
+                                     2, random.choice(g_slices)).detach(),
                                      grey_index, device, progress_dir,
                                      'running slices', BM.scale_factor, wandb)
 
