@@ -1,5 +1,7 @@
 import torch
+from torch.nn.functional import interpolate
 from torch import autograd
+
 
 k_logistic = 30  # the logistic function coefficient
 up_sample_factor = 4
@@ -18,6 +20,9 @@ def return_args(parser):
                         width of the Generator network')
     parser.add_argument('-n_res', '--n_res_blocks', type=int, default=2,
                         help='Number of residual blocks in the network.')
+    parser.add_argument('-n_dims', '--n_dims', type=int, default=3,
+                        help='The generated image dimension (and input '
+                             'dimension), can be either 2 or 3.')
     parser.add_argument('-gu', '--g_update', type=int, default=5,
                         help='Number of iterations the generator waits before '
                              'being updated')
@@ -68,15 +73,14 @@ def calc_gradient_penalty(netD, real_data, fake_data, batch_size, l, device,
     return gradient_penalty
 
 
-def down_sample_for_g_input(high_res_3_phase, grey_idx, device):
+def down_sample_for_g_input(high_res_3_phase, grey_idx, scale_factor, device):
     """
     :return: a down-sample of the grey material.
     """
     # first choose the grey phase in the image:
     grey_material = torch.index_select(high_res_3_phase, 1, grey_idx)
-    # down sample:
-    res = torch.nn.AvgPool2d(2, 2)(grey_material)
-    res = torch.nn.AvgPool2d(2, 2)(res)
+    # down sample: TODO: maybe different mode? trilinear?
+    res = interpolate(grey_material, scale_factor=scale_factor)
     # threshold at 0.5:
     res = torch.where(res > 0.5, 1., 0.)
     zeros_channel = torch.ones(size=res.size()).to(device) - res
@@ -93,12 +97,11 @@ def logistic_function(x, k, x0):
     return 1/(1+torch.exp(-k*(x-x0)))
 
 
-def down_sample_for_similarity_check(generated_im, grey_idx):
+def down_sample_for_similarity_check(generated_im, grey_idx, scale_factor):
     # first choose the grey phase in the image:
     grey_material = torch.index_select(generated_im, 1, grey_idx)
     # down sample:
-    downscale = torch.nn.AvgPool2d(2, 2)
-    res = downscale(downscale(grey_material))
+    res = interpolate(grey_material, scale_factor=scale_factor)
     return logistic_function(res, k_logistic, threshold)
 
 
@@ -116,7 +119,8 @@ def up_sample_for_similarity_check(low_res_im, grey_idx):
     return up_sample(grey_material)
 
 
-def pixel_wise_distance(low_res_im, generated_high_res, grey_idx):
+def pixel_wise_distance(low_res_im, generated_high_res, grey_idx,
+                        scale_factor):
     """
     calculates and returns the pixel wise distance between the low resolution
     image and the down sampling of the high resolution generated image.
@@ -126,7 +130,7 @@ def pixel_wise_distance(low_res_im, generated_high_res, grey_idx):
 
     low_res_grey = torch.index_select(low_res_im, 1, grey_idx)
     down_sample = down_sample_for_similarity_check(generated_high_res,
-                                                   grey_idx)
+                                                   grey_idx, scale_factor)
     # print(low_res_grey[0, 0, :, :])
     # print(down_sample[0, 0, :, :])
     # print(low_res_grey.size())
