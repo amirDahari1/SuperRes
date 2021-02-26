@@ -35,6 +35,10 @@ def plot_fake_difference(high_res, input_to_g, output_from_g, save_dir,
 def save_three_by_two_grey(top_images, middle_images, bottom_images, title,
                            save_dir, filename, wandb):
     f, axarr = plt.subplots(3, 3)
+    images = [top_images, middle_images, bottom_images]
+    for i in range(len(images)):
+        if len(images[i].shape) > 3:
+            images[i] = images[i][:, 0, :, :]
     axarr[0,0].imshow(top_images[0, :, :], cmap='gray', vmin=0, vmax=255)
     axarr[0,1].imshow(top_images[1, :, :], cmap='gray', vmin=0, vmax=255)
     axarr[0,2].imshow(top_images[2, :, :], cmap='gray', vmin=0, vmax=255)
@@ -103,14 +107,14 @@ def one_hot_decoding(image):
     im_shape = np_image.shape
     phases = im_shape[1]
     decodes = [0, 128, 255]
-    res = np.zeros([im_shape[0], im_shape[2], im_shape[3]])
+    res = np.zeros([im_shape[0]] + im_shape[2:])
 
     # the assumption is that each pixel has exactly one 1 in its phases
     # and 0 in all other phases:
     for i in range(phases):
         if i == 0:
             continue  # the res is already 0 in all places..
-        phase_image = np_image[:, i, :, :]
+        phase_image = np_image[:, i, ...]
         res[phase_image == 1] = decodes[i]
     return res
 

@@ -280,21 +280,19 @@ if __name__ == '__main__':
                 wandb.log({"real": output_real, "fake": output_fake})
                 torch.save(netG.state_dict(), PATH_G)
                 torch.save(netD.state_dict(), PATH_D)
+
                 ImageTools.calc_and_save_eta(steps, time.time(), start, i,
                                              epoch, num_epochs, eta_file)
-                # TODO add plots
-                # with torch.no_grad():  # only for plotting
-                #     save_differences(netG, high_res.detach(),
-                #                      grey_index, device, progress_dir,
-                #                      'running slices', wandb)
-                # # save fifteen images during the run
-                # if epoch % (num_epochs//21) == 0 and epoch > 0:
-                #     save_differences(netG, high_res.detach(), grey_index,
-                #                      device, progress_dir, 'Iteration_'
-                #                      + str(iters), wandb)
+
+                with torch.no_grad():  # only for plotting
+                    save_differences(netG, high_res.detach(),
+                                     grey_index, device, progress_dir,
+                                     'running slices', BM.scale_factor, wandb)
 
             iters += 1
             i += 1
             # print(i)
 
     print('finished training')
+    wandb.save(PATH_G)
+    wandb.save(PATH_D)
