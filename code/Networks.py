@@ -26,10 +26,10 @@ class Generator3D(nn.Module):
         self.conv_minus_1 = nn.Conv3d(nc_g, 2 ** wg, 3, 1, 1)
         self.bn_minus_1 = nn.BatchNorm3d(2**wg)
         # first convolution, making many channels
-        self.conv_res = [nn.Conv3d(2 ** wg, 2 ** wg, 3, 1, 1) for _ in
-                         range(self.n_res_blocks)]
-        self.bn_res = [nn.BatchNorm3d(2 ** wg) for _ in
-                       range(self.n_res_blocks)]
+        self.conv_res = nn.ModuleList([nn.Conv3d(2 ** wg, 2 ** wg, 3, 1, 1)
+                                       for _ in range(self.n_res_blocks)])
+        self.bn_res = nn.ModuleList([nn.BatchNorm3d(2 ** wg)
+                                     for _ in range(self.n_res_blocks)])
         # the number of channels is because of pixel shuffling
         self.conv_trans_1 = nn.ConvTranspose3d(2 ** wg, 2 ** (wg - 1), 4, 2, 2)
         self.bn1 = nn.BatchNorm3d(2 ** (wg - 1))
@@ -158,10 +158,10 @@ class Generator2D(nn.Module):
         self.conv_minus_1 = nn.Conv2d(nc_g, 2 ** wg, 3, 1, 1)
         self.bn_minus_1 = nn.BatchNorm2d(2**wg)
         # first convolution, making many channels
-        self.conv_res = [nn.Conv2d(2 ** wg, 2 ** wg, 3, 1, 1) for _ in
-                         range(self.n_res_blocks)]
-        self.bn_res = [nn.BatchNorm2d(2 ** wg) for _ in
-                       range(self.n_res_blocks)]
+        self.conv_res = nn.ModuleList([nn.Conv2d(2 ** wg, 2 ** wg, 3, 1, 1)
+                                       for _ in range(self.n_res_blocks)])
+        self.bn_res = nn.ModuleList([nn.BatchNorm2d(2 ** wg) for _ in
+                                     range(self.n_res_blocks)])
         # the number of channels is because of pixel shuffling
         self.conv1 = nn.Conv2d(2 ** (wg - 2), 2 ** (wg - 2), 3, 1, 1)
         self.bn1 = nn.BatchNorm2d(2 ** (wg - 2))
