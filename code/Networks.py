@@ -16,6 +16,7 @@ class Generator(nn.Module):
     def return_scale_factor(self, high_res_length):
         return self.generator.return_scale_factor(high_res_length)
 
+
 # Generator Code
 class Generator3D(nn.Module):
     def __init__(self, ngpu, wg, nc_g, nc_d, n_res_blocks):
