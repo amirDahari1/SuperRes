@@ -25,8 +25,10 @@ class Generator3D(nn.Module):
         self.conv_minus_1 = nn.Conv3d(nc_g, 2 ** wg, 3, 1, 1)
         self.bn_minus_1 = nn.BatchNorm3d(2**wg)
         # first convolution, making many channels
-        self.conv0 = nn.Conv3d(2 ** wg, 2 ** wg, 3, 1, 1)
-        self.bn0 = nn.BatchNorm3d(2 ** wg)
+        self.conv_res = [nn.Conv3d(2 ** wg, 2 ** wg, 3, 1, 1) for _ in
+                         range(self.n_res_blocks)]
+        self.bn_res = [nn.BatchNorm3d(2 ** wg) for _ in
+                       range(self.n_res_blocks)]
         # the number of channels is because of pixel shuffling
         self.conv_trans_1 = nn.ConvTranspose3d(2 ** wg, 2 ** (wg - 1), 4, 2, 2)
         self.bn1 = nn.BatchNorm3d(2 ** (wg - 1))
@@ -66,10 +68,11 @@ class Generator3D(nn.Module):
         # x after the first run for many channels:
         x_first = nn.ReLU()(self.bn_minus_1(self.conv_minus_1(x)))
         # first residual block:
-        after_block = self.res_block(x_first, self.conv0, self.bn0)
+        after_block = self.res_block(x_first, self.conv_res[0], self.bn_res[0])
         # more residual blocks:
-        for i in range(self.n_res_blocks - 1):
-            after_block = self.res_block(after_block, self.conv0, self.bn0)
+        for i in range(1, self.n_res_blocks):
+            after_block = self.res_block(after_block, self.conv_res[i],
+                                         self.bn_res[i])
         # skip connection to the end after all the blocks:
         after_res = x_first + after_block
         # up sampling with pixel shuffling (0):
@@ -154,8 +157,10 @@ class Generator2D(nn.Module):
         self.conv_minus_1 = nn.Conv2d(nc_g, 2 ** wg, 3, 1, 1)
         self.bn_minus_1 = nn.BatchNorm2d(2**wg)
         # first convolution, making many channels
-        self.conv0 = nn.Conv2d(2 ** wg, 2 ** wg, 3, 1, 1)
-        self.bn0 = nn.BatchNorm2d(2 ** wg)
+        self.conv_res = [nn.Conv2d(2 ** wg, 2 ** wg, 3, 1, 1) for _ in
+                         range(self.n_res_blocks)]
+        self.bn_res = [nn.BatchNorm2d(2 ** wg) for _ in
+                       range(self.n_res_blocks)]
         # the number of channels is because of pixel shuffling
         self.conv1 = nn.Conv2d(2 ** (wg - 2), 2 ** (wg - 2), 3, 1, 1)
         self.bn1 = nn.BatchNorm2d(2 ** (wg - 2))
@@ -196,10 +201,11 @@ class Generator2D(nn.Module):
         # TODO also instead of conv with 1 padding to conv with 0 padding
         x_first = nn.ReLU()(self.bn_minus_1(self.conv_minus_1(x)))
         # first residual block:
-        after_block = self.res_block(x_first, self.conv0, self.bn0)
+        after_block = self.res_block(x_first, self.conv_res[0], self.bn_res[0])
         # more residual blocks:
-        for i in range(self.n_res_blocks - 1):
-            after_block = self.res_block(after_block, self.conv0, self.bn0)
+        for i in range(1, self.n_res_blocks):
+            after_block = self.res_block(after_block, self.conv_res[i],
+                                         self.bn_res[i])
         # skip connection to the end after all the blocks:
         after_res = x_first + after_block
         # up sampling with pixel shuffling (0):

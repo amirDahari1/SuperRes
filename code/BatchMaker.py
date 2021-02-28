@@ -145,7 +145,8 @@ class BatchMaker:
         if self.dims == 3:
             res = self.im_ohe[:, start:start + resolution, start:start +
                               resolution, start:start + resolution]
-            return torch.FloatTensor(res).to(self.device).unsqueeze(0)
+            return torch.FloatTensor(res).to(
+                self.device).unsqueeze(0).repeat((8,1,1,1,1))
         res = self.im_ohe.transpose(perm[0], 0, *perm[1:])
         res = res[:, :, start:start + resolution, start:start + resolution]
         return torch.FloatTensor(res).to(self.device)

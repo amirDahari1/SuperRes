@@ -279,11 +279,11 @@ if __name__ == '__main__':
                 # Update G
                 optimizerG.step()
                 wandb.log({"pixel distance": pix_loss})
+                wandb.log({"wass": wass})
+                wandb.log({"real": output_real, "fake": output_fake})
 
             # Output training stats
             if i == j:
-                wandb.log({"wass": wass})
-                wandb.log({"real": output_real, "fake": output_fake})
                 ImageTools.calc_and_save_eta(steps, time.time(), start, i,
                                              epoch, num_epochs, eta_file)
 
