@@ -26,7 +26,7 @@ def return_args(parser):
     parser.add_argument('-gu', '--g_update', type=int, default=5,
                         help='Number of iterations the generator waits before '
                              'being updated')
-    parser.add_argument('-e', '--num_epochs', type=int, default=500,
+    parser.add_argument('-e', '--num_epochs', type=int, default=300,
                         help='Number of epochs.')
     parser.add_argument('-pix_d', '--pixel_coefficient_distance', type=int,
                         default=10,
@@ -73,7 +73,8 @@ def calc_gradient_penalty(netD, real_data, fake_data, batch_size, l, device,
     return gradient_penalty
 
 
-def down_sample_for_g_input(high_res_3_phase, grey_idx, scale_factor, device):
+def down_sample_for_g_input(high_res_3_phase, grey_idx, scale_factor,
+                            device, test=False):
     """
     :return: a down-sample of the grey material.
     """

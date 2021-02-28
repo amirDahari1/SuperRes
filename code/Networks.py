@@ -13,6 +13,9 @@ class Generator(nn.Module):
     def forward(self, x):
         return self.generator(x)
 
+    def return_scale_factor(self, high_res_length):
+        return self.generator.return_scale_factor(high_res_length)
+
 # Generator Code
 class Generator3D(nn.Module):
     def __init__(self, ngpu, wg, nc_g, nc_d, n_res_blocks):
@@ -75,6 +78,8 @@ class Generator3D(nn.Module):
         up_1 = self.conv_trans_2(up_0)
         return nn.Softmax(dim=1)(up_1)
 
+    def return_scale_factor(self, high_res_length):
+        return (high_res_length / 4 + 2) / high_res_length
 
 class Discriminator(nn.Module):
     def __init__(self, ngpu, wd, nc_d, dims):
@@ -206,3 +211,6 @@ class Generator2D(nn.Module):
 
         # TODO maybe different function in the end?
         return nn.Softmax(dim=1)(y)
+
+    def return_scale_factor(self, high_res_length):
+        return (high_res_length / 4) / high_res_length

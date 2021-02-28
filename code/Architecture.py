@@ -119,10 +119,15 @@ def save_tif_3d(network_g, high_res_im, grey_idx, device, filename,
     """
         Saves a tif image of the output of G on all of the 3d image high_res_im
     """
+    high_res_length = high_res_im.size()[-1]
+    scale_factor = network_g.return_scale_factor(high_res_length)
     low_res_input = LearnTools.down_sample_for_g_input(high_res_im,
                                                        grey_idx,
-                                                       batch_maker.scale_factor, device)
+                                                       scale_factor, device)
+    print(low_res_input.size())
     g_output = network_g(low_res_input).detach().cpu()
+    print(low_res_input.size())
+    print(g_output.size())
     g_output_grey = ImageTools.one_hot_decoding(g_output).astype('uint8')
     imsave('progress/' + progress_dir + '/' + filename, g_output_grey)
     low_res_grey = ImageTools.one_hot_decoding(low_res_input).astype('uint8')
@@ -173,7 +178,7 @@ if __name__ == '__main__':
                                                         g_slice)
         # down sample:
         low_res_im = LearnTools.down_sample_for_g_input(
-            before_down_sampling, grey_index, BM.scale_factor, device)
+            before_down_sampling, grey_index, BM.train_scale_factor, device)
 
         # Generate fake image batch with G
         if detach_output:
@@ -200,7 +205,6 @@ if __name__ == '__main__':
             return fake_image
 
     # Training Loop!
-    iters = 0
     steps = epoch_iterations
     print("Starting Training Loop...")
     start = time.time()
@@ -266,7 +270,7 @@ if __name__ == '__main__':
                     fake_output = netD(fake_slices).view(-1)
                     # get the pixel-wise-distance loss
                     pix_loss = LearnTools.pixel_wise_distance(low_res,
-                               fake_for_g, grey_index, BM.scale_factor)
+                               fake_for_g, grey_index, BM.train_scale_factor)
                     # Calculate G's loss based on this output
                     g_cost += -fake_output.mean() + pix_distance * pix_loss
 
@@ -280,9 +284,6 @@ if __name__ == '__main__':
             if i == j:
                 wandb.log({"wass": wass})
                 wandb.log({"real": output_real, "fake": output_fake})
-                torch.save(netG.state_dict(), PATH_G)
-                torch.save(netD.state_dict(), PATH_D)
-
                 ImageTools.calc_and_save_eta(steps, time.time(), start, i,
                                              epoch, num_epochs, eta_file)
 
@@ -290,12 +291,14 @@ if __name__ == '__main__':
                     save_differences(netG, BM.random_batch_for_fake(
                                      6, random.choice(g_slices)).detach(),
                                      grey_index, device, progress_dir,
-                                     'running slices', BM.scale_factor, wandb)
-
-            iters += 1
+                                     'running slices', BM.train_scale_factor,
+                                     wandb)
             i += 1
-            # print(i)
+
+        if (epoch % 15) == 0:
+            torch.save(netG.state_dict(), PATH_G)
+            torch.save(netD.state_dict(), PATH_D)
+            wandb.save(PATH_G)
+            wandb.save(PATH_D)
 
     print('finished training')
-    wandb.save(PATH_G)
-    wandb.save(PATH_D)
