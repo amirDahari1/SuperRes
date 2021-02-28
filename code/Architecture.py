@@ -209,8 +209,8 @@ if __name__ == '__main__':
     print("Starting Training Loop...")
     start = time.time()
     # Tell the models it's training time for batch-norm.
-    netG.train()
-    netD.train()
+    # netG.train()
+    # netD.train()
 
     for epoch in range(num_epochs):
         # For each batch in the dataloader

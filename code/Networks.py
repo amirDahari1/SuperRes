@@ -27,9 +27,9 @@ class Generator3D(nn.Module):
         self.bn_minus_1 = nn.BatchNorm3d(2**wg)
         # first convolution, making many channels
         self.conv_res = nn.ModuleList([nn.Conv3d(2 ** wg, 2 ** wg, 3, 1, 1)
-                                       for _ in range(self.n_res_blocks)])
+                                       for _ in range(self.n_res_blocks*2)])
         self.bn_res = nn.ModuleList([nn.BatchNorm3d(2 ** wg)
-                                     for _ in range(self.n_res_blocks)])
+                                     for _ in range(self.n_res_blocks*2)])
         # the number of channels is because of pixel shuffling
         self.conv_trans_1 = nn.ConvTranspose3d(2 ** wg, 2 ** (wg - 1), 4, 2, 2)
         self.bn1 = nn.BatchNorm3d(2 ** (wg - 1))
@@ -39,18 +39,16 @@ class Generator3D(nn.Module):
 
 
     @staticmethod
-    def res_block(x, conv, bn):
+    def res_block(x, bn_out, conv_out, bn_in, conv_in):
         """
         A forward pass of a residual block (from the original paper)
-        :param x: the input
-        :param conv: the convolution function, should return the same number
-        of channels, and the same width and height of the image. For example,
-        kernel size 3, padding 1 stride 1.
-        :param bn: batch norm function
-        :return: the result after the residual block.
+        :return: the result after the residual block. the convolution
+        function should return the same number of channels, and the same
+        width and height of the image. For example, kernel size 3, padding 1
+        stride 1.
         """
         # the residual side
-        x_side = bn(conv(nn.ReLU()(bn(conv(x)))))
+        x_side = bn_out(conv_out(nn.ReLU()(bn_in(conv_in(x)))))
         return nn.ReLU()(x + x_side)
 
     @staticmethod
@@ -69,11 +67,13 @@ class Generator3D(nn.Module):
         # x after the first run for many channels:
         x_first = nn.ReLU()(self.bn_minus_1(self.conv_minus_1(x)))
         # first residual block:
-        after_block = self.res_block(x_first, self.conv_res[0], self.bn_res[0])
+        after_block = self.res_block(x_first, self.bn_res[0], self.conv_res[0],
+                                     self.bn_res[1], self.conv_res[1])
         # more residual blocks:
-        for i in range(1, self.n_res_blocks):
-            after_block = self.res_block(after_block, self.conv_res[i],
-                                         self.bn_res[i])
+        for i in range(2, self.n_res_blocks, 2):
+            after_block = self.res_block(after_block, self.bn_res[i],
+                                         self.conv_res[i], self.bn_res[i+1],
+                                         self.conv_res[i+1])
         # skip connection to the end after all the blocks:
         after_res = x_first + after_block
         # up sampling with pixel shuffling (0):
