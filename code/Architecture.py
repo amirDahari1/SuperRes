@@ -299,7 +299,7 @@ if __name__ == '__main__':
                                      wandb)
             i += 1
 
-        if (epoch % 15) == 0:
+        if (epoch % 5) == 0:
             torch.save(netG.state_dict(), PATH_G)
             torch.save(netD.state_dict(), PATH_D)
             wandb.save(PATH_G)
