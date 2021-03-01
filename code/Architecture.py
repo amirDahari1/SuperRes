@@ -161,8 +161,8 @@ if __name__ == '__main__':
 
     # Apply the weights_init function to randomly initialize all weights
     #  to mean=0, stdev=0.2.
-    netG.apply(weights_init)
-    netD.apply(weights_init)
+    # netG.apply(weights_init)
+    # netD.apply(weights_init)
 
     # Setup Adam optimizers for both G and D
     optimizerD = optim.Adam(netD.parameters(), lr=lr, betas=(beta1, 0.999))
