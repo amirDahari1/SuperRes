@@ -2,19 +2,11 @@ import torch.nn as nn
 import torch
 
 
-class Generator(nn.Module):
-    def __init__(self, ngpu, wg, nc_g, nc_d, n_res_block, dims):
-        super(Generator, self).__init__()
-        if dims == 3:
-            self.generator = Generator3D(ngpu, wg, nc_g, nc_d, n_res_block)
-        else:  # dims == 2
-            self.generator = Generator2D(ngpu, wg, nc_g, nc_d, n_res_block)
-
-    def forward(self, x):
-        return self.generator(x)
-
-    def return_scale_factor(self, high_res_length):
-        return self.generator.return_scale_factor(high_res_length)
+def generator(ngpu, wg, nc_g, nc_d, n_res_block, dims):
+    if dims == 3:
+        return Generator3D(ngpu, wg, nc_g, nc_d, n_res_block)
+    else:  # dims == 2
+        return Generator2D(ngpu, wg, nc_g, nc_d, n_res_block)
 
 
 # Generator Code
@@ -85,16 +77,12 @@ class Generator3D(nn.Module):
     def return_scale_factor(self, high_res_length):
         return (high_res_length / 4 + 2) / high_res_length
 
-class Discriminator(nn.Module):
-    def __init__(self, ngpu, wd, nc_d, dims):
-        super(Discriminator, self).__init__()
-        if dims == 3:
-            self.discriminator = Discriminator3d(ngpu, wd, nc_d)
-        else:  # dims == 2
-            self.discriminator = Discriminator2d(ngpu, wd, nc_d)
 
-    def forward(self, x):
-        return self.discriminator(x)
+def discriminator(ngpu, wd, nc_d, dims):
+    if dims == 3:
+        return Discriminator3d(ngpu, wd, nc_d)
+    else:  # dims == 2
+        return Discriminator2d(ngpu, wd, nc_d)
 
 
 # Discriminator code

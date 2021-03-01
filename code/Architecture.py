@@ -125,6 +125,7 @@ def save_tif_3d(network_g, high_res_im, grey_idx, device, filename,
                                                        grey_idx,
                                                        scale_factor, device)
     print(low_res_input.size())
+    network_g.train()
     g_output = network_g(low_res_input).detach().cpu()
     print(low_res_input.size())
     print(g_output.size())
@@ -143,7 +144,7 @@ if __name__ == '__main__':
     BM = BatchMaker(device, dims=n_dims)
 
     # Create the generator
-    netG = Networks.Generator(ngpu, wg, nc_g, nc_d, n_res_blocks, n_dims).to(
+    netG = Networks.generator(ngpu, wg, nc_g, nc_d, n_res_blocks, n_dims).to(
         device)
     # wandb.watch(netG)
 
@@ -152,7 +153,7 @@ if __name__ == '__main__':
         netG = nn.DataParallel(netG, list(range(ngpu)))
 
     # Create the Discriminator
-    netD = Networks.Discriminator(ngpu, wd, nc_d, n_dims).to(device)
+    netD = Networks.discriminator(ngpu, wd, nc_d, n_dims).to(device)
 
     # Handle multi-gpu if desired
     if (device.type == 'cuda') and (ngpu > 1):
