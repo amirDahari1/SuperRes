@@ -16,15 +16,15 @@ class Generator3D(nn.Module):
         self.n_res_blocks = n_res_blocks
         self.ngpu = ngpu
         self.conv_minus_1 = nn.Conv3d(nc_g, 2 ** wg, 3, 1, 1)
-        self.bn_minus_1 = nn.BatchNorm3d(2**wg)
+        self.bn_minus_1 = nn.BatchNorm3d(2**wg, track_running_stats=False)
         # first convolution, making many channels
         self.conv_res = nn.ModuleList([nn.Conv3d(2 ** wg, 2 ** wg, 3, 1, 1)
                                        for _ in range(self.n_res_blocks*2)])
-        self.bn_res = nn.ModuleList([nn.BatchNorm3d(2 ** wg)
+        self.bn_res = nn.ModuleList([nn.BatchNorm3d(2 ** wg, track_running_stats=False)
                                      for _ in range(self.n_res_blocks*2)])
         # the number of channels is because of pixel shuffling
         self.conv_trans_1 = nn.ConvTranspose3d(2 ** wg, 2 ** (wg - 1), 4, 2, 2)
-        self.bn1 = nn.BatchNorm3d(2 ** (wg - 1))
+        self.bn1 = nn.BatchNorm3d(2 ** (wg - 1), track_running_stats=False)
         # last convolution, squashing all of the channels to 3 phases:
         self.conv_trans_2 = nn.ConvTranspose3d(2 ** (wg - 1), nc_d,
                                                4, 2, 3)
