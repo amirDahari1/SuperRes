@@ -74,14 +74,16 @@ def calc_gradient_penalty(netD, real_data, fake_data, batch_size, l, device,
 
 
 def down_sample_for_g_input(high_res_3_phase, grey_idx, scale_factor,
-                            device, test=False):
+                            device, n_dims):
     """
     :return: a down-sample of the grey material.
     """
+    modes = ['bilinear', 'trilinear']
     # first choose the grey phase in the image:
     grey_material = torch.index_select(high_res_3_phase, 1, grey_idx)
     # down sample: TODO: maybe different mode? trilinear?
-    res = interpolate(grey_material, scale_factor=scale_factor)
+    res = interpolate(grey_material, scale_factor=scale_factor,
+                      mode=modes[n_dims-2])
     # threshold at 0.5:
     res = torch.where(res > 0.5, 1., 0.)
     zeros_channel = torch.ones(size=res.size()).to(device) - res
@@ -98,11 +100,14 @@ def logistic_function(x, k, x0):
     return 1/(1+torch.exp(-k*(x-x0)))
 
 
-def down_sample_for_similarity_check(generated_im, grey_idx, scale_factor):
+def down_sample_for_similarity_check(generated_im, grey_idx, scale_factor,
+                                     n_dims):
     # first choose the grey phase in the image:
     grey_material = torch.index_select(generated_im, 1, grey_idx)
     # down sample:
-    res = interpolate(grey_material, scale_factor=scale_factor)
+    modes = ['bilinear', 'trilinear']
+    res = interpolate(grey_material, scale_factor=scale_factor,
+                      mode=modes[n_dims-2])
     return logistic_function(res, k_logistic, threshold)
 
 
