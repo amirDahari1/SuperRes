@@ -1,4 +1,5 @@
 import torch.nn as nn
+from torch.nn.functional import interpolate
 import torch
 
 
@@ -72,6 +73,11 @@ class Generator3D(nn.Module):
         up_0 = self.up_sample(after_res, self.conv_trans_1, self.bn1)
         # up sampling with pixel shuffling (1):
         up_1 = self.conv_trans_2(up_0)
+        # up sample the original input:
+        scale_factor = self.return_scale_factor(up_1.size()[-1])
+        input_up_sample = interpolate(x, scale_factor=scale_factor,
+                                      mode='trilinear')
+        up_1[:, :2] += input_up_sample
         return nn.Softmax(dim=1)(up_1)
 
     def return_scale_factor(self, high_res_length):
