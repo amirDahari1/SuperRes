@@ -132,7 +132,6 @@ class BatchMaker:
         :param all_image: if True, all image is chosen, if False,
         only middle part of the image at given dimension is chosen with high
         resolution
-        :param device: the device that G is on.
         :return: a 3d image with dimension Depthx3xWidthxHeight
         """
         start = 0  # the start pixel

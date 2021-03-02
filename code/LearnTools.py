@@ -126,7 +126,7 @@ def up_sample_for_similarity_check(low_res_im, grey_idx):
 
 
 def pixel_wise_distance(low_res_im, generated_high_res, grey_idx,
-                        scale_factor):
+                        scale_factor, n_dims):
     """
     calculates and returns the pixel wise distance between the low resolution
     image and the down sampling of the high resolution generated image.
@@ -136,7 +136,7 @@ def pixel_wise_distance(low_res_im, generated_high_res, grey_idx,
 
     low_res_grey = torch.index_select(low_res_im, 1, grey_idx)
     down_sample = down_sample_for_similarity_check(generated_high_res,
-                                                   grey_idx, scale_factor)
+                                                   grey_idx, scale_factor, n_dims)
     # print(low_res_grey[0, 0, :, :])
     # print(down_sample[0, 0, :, :])
     # print(low_res_grey.size())

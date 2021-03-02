@@ -2,7 +2,7 @@ import LearnTools
 import Networks
 from BatchMaker import *
 import wandb
-import argparse
+# import argparse
 import os
 import time
 import random
@@ -16,7 +16,7 @@ import torch.utils.data
 # import torchvision.datasets as dset
 # import torchvision.transforms as transforms
 # import torchvision.utils as vutils
-from matplotlib import pyplot as plt
+# from matplotlib import pyplot as plt
 import argparse
 
 if os.getcwd().endswith('code'):
@@ -107,7 +107,7 @@ def save_differences(network_g, high_res_im, grey_idx,
     """
     low_res_input = LearnTools.down_sample_for_g_input(high_res_im,
                                                        grey_idx,
-                                                       scale_factor, device)
+                                                       scale_factor, device, n_dims)
     g_output = network_g(low_res_input).detach().cpu()
     ImageTools.plot_fake_difference(high_res_im.detach().cpu(),
                                     low_res_input.detach().cpu(), g_output,
@@ -123,7 +123,7 @@ def save_tif_3d(network_g, high_res_im, grey_idx, device, filename,
     scale_factor = network_g.return_scale_factor(high_res_length)
     low_res_input = LearnTools.down_sample_for_g_input(high_res_im,
                                                        grey_idx,
-                                                       scale_factor, device)
+                                                       scale_factor, device, n_dims)
     print(low_res_input.size())
     network_g.train()
     g_output = network_g(low_res_input).detach().cpu()
@@ -180,7 +180,7 @@ if __name__ == '__main__':
                                                         g_slice)
         # down sample:
         low_res_im = LearnTools.down_sample_for_g_input(
-            before_down_sampling, grey_index, BM.train_scale_factor, device)
+            before_down_sampling, grey_index, BM.train_scale_factor, device, n_dims)
 
         # Generate fake image batch with G
         if detach_output:
@@ -275,7 +275,8 @@ if __name__ == '__main__':
                     fake_output = netD(fake_slices).view(-1)
                     # get the pixel-wise-distance loss
                     pix_loss = LearnTools.pixel_wise_distance(low_res,
-                               fake_for_g, grey_index, BM.train_scale_factor)
+                               fake_for_g, grey_index, BM.train_scale_factor,
+                                                              n_dims)
                     # Calculate G's loss based on this output
                     g_cost += -fake_output.mean() + pix_distance * pix_loss
 
@@ -299,6 +300,7 @@ if __name__ == '__main__':
                                      'running slices', BM.train_scale_factor,
                                      wandb)
             i += 1
+            print(i)
 
         if (epoch % 5) == 0:
             torch.save(netG.state_dict(), PATH_G)
