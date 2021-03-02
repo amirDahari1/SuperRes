@@ -74,7 +74,7 @@ class Generator3D(nn.Module):
         # up sampling with pixel shuffling (1):
         up_1 = self.conv_trans_2(up_0)
         # up sample the original input:
-        scale_factor = self.return_scale_factor(up_1.size()[-1])
+        scale_factor = 1/self.return_scale_factor(up_1.size()[-1])
         input_up_sample = interpolate(x, scale_factor=scale_factor,
                                       mode='trilinear')
         up_1[:, :2] += input_up_sample
