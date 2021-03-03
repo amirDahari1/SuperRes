@@ -18,7 +18,7 @@ def return_args(parser):
     parser.add_argument('-wg', '--widthG', type=int, default=8,
                         help='Hyper-parameter for the \
                         width of the Generator network')
-    parser.add_argument('-n_res', '--n_res_blocks', type=int, default=2,
+    parser.add_argument('-n_res', '--n_res_blocks', type=int, default=1,
                         help='Number of residual blocks in the network.')
     parser.add_argument('-n_dims', '--n_dims', type=int, default=3,
                         help='The generated image dimension (and input '

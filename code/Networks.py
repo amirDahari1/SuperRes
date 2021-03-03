@@ -29,6 +29,7 @@ class Generator3D(nn.Module):
         # last convolution, squashing all of the channels to 3 phases:
         self.conv_trans_2 = nn.ConvTranspose3d(2 ** (wg - 1), nc_d,
                                                4, 2, 3)
+        self.conv_concat = nn.Conv3d(nc_d+nc_g, nc_g, 1, 1, 0)
 
 
     @staticmethod
@@ -51,10 +52,12 @@ class Generator3D(nn.Module):
         """
         return nn.ReLU()(bn(conv(x)))
 
-    def forward(self, x):
+    def forward(self, x, mask=False):
         """
         forward pass of x
         :param x: input
+        :param mask: for plotting purposes, returns the mask (result of all
+        convolutions) and the up-sampled original image.
         :return: the output of the forward pass.
         """
         # x after the first run for many channels:
@@ -77,7 +80,11 @@ class Generator3D(nn.Module):
         scale_factor = 1/self.return_scale_factor(up_1.size()[-1])
         input_up_sample = interpolate(x, scale_factor=scale_factor,
                                       mode='trilinear')
-        up_1[:, :2] += input_up_sample
+        if mask:
+            return up_1
+        concat = torch.cat((up_1, input_up_sample), dim=1)
+        res = self.conv_concat(concat)
+        # softmax in the end
         return nn.Softmax(dim=1)(up_1)
 
     def return_scale_factor(self, high_res_length):

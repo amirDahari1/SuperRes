@@ -16,7 +16,7 @@ import torch.utils.data
 # import torchvision.datasets as dset
 # import torchvision.transforms as transforms
 # import torchvision.utils as vutils
-# from matplotlib import pyplot as plt
+from matplotlib import pyplot as plt
 import argparse
 
 if os.getcwd().endswith('code'):
@@ -31,8 +31,7 @@ progress_dir, wd, wg = args.directory, args.widthD, args.widthG
 n_res_blocks, pix_distance = args.n_res_blocks, args.pixel_coefficient_distance
 num_epochs, g_update, n_dims = args.num_epochs, args.g_update, args.n_dims
 
-# 1. Start a new run
-wandb.init(project='3d to 3d', config=args, name=progress_dir)
+
 
 if not os.path.exists(ImageTools.progress_dir + progress_dir):
     os.makedirs(ImageTools.progress_dir + progress_dir)
@@ -115,7 +114,7 @@ def save_differences(network_g, high_res_im, grey_idx,
 
 
 def save_tif_3d(network_g, high_res_im, grey_idx, device, filename,
-                batch_maker):
+                mask=False):
     """
         Saves a tif image of the output of G on all of the 3d image high_res_im
     """
@@ -126,20 +125,63 @@ def save_tif_3d(network_g, high_res_im, grey_idx, device, filename,
                                                        scale_factor, device, n_dims)
     print(low_res_input.size())
     network_g.train()
-    g_output = network_g(low_res_input).detach().cpu()
-    print(low_res_input.size())
-    print(g_output.size())
-    g_output = ImageTools.fractions_to_ohe(g_output)
-    g_output_grey = ImageTools.one_hot_decoding(g_output).astype('uint8')
-    imsave('progress/' + progress_dir + '/' + filename, g_output_grey)
-    low_res_grey = ImageTools.one_hot_decoding(low_res_input).astype('uint8')
-    imsave('progress/' + progress_dir + '/low_res' + filename , low_res_grey)
-    high_res_im = ImageTools.one_hot_decoding(high_res_im).astype('uint8')
-    imsave('progress/' + progress_dir + '/' + filename + '-original',
-           high_res_im)
+    g_output = network_g(low_res_input, mask).detach().cpu()
+    after_softmax = nn.Softmax(dim=1)(g_output)
+    without_mask = network_g(low_res_input, mask=False).detach().cpu()
+    difference = after_softmax - without_mask
+    change = np.abs(np.array(difference))
+    # print(np.sum(change))
+    # print(np.mean(change))
+    # plt.hist(np.array(difference.view(-1)))
+    # plt.show()
+    # print('im here')
+    # fig, a = plt.subplots(3, 2)
+    # for i, title in enumerate(['Pore', 'Particle', 'Binder'], 0):
+    #     print(i)
+    #     a[i,0].hist(np.array(g_output[:, i, :, :, :].view(-1)), bins=150)
+    #     a[i,0].set_xlim(-150,150)
+    #     a[i,0].set_title(title + ' before softmax')
+    #     a[i, 1].hist(np.array(after_softmax[:, i, :, :, :].view(-1)), bins=150)
+    #     a[i, 1].set_xlim(0, 1)
+    #     a[i, 1].set_title(title + ' after softmax')
+    # plt.show()
+    # for j, sup_title in enumerate(['Pore', 'Particle', 'Binder'], 0):
+    #     output_mask = g_output[:, j, :, :, :].view(-1)>0
+    #     fig, a = plt.subplots(3, 2)
+    #     plt.suptitle('Voxels where ' + sup_title + ' is > 0')
+    #     for i, title in enumerate(['Pore', 'Particle', 'Binder'], 0):
+    #         print(i)
+    #         a[i, 0].hist(np.array(g_output[:, i, :, :, :].view(
+    #             -1)[output_mask]),
+    #                      bins=150)
+    #         a[i, 0].set_xlim(-150, 150)
+    #         a[i, 0].set_title(title + ' before softmax')
+    #         a[i, 1].hist(np.array(after_softmax[:, i, :, :, :].view(-1)[output_mask]), bins=150)
+    #         a[i, 1].set_xlim(0, 1)
+    #         a[i, 1].set_title(title + ' after softmax')
+    #     plt.show()
+    # print(low_res_input.size())
+    # print(g_output.size())
+    # g_output = ImageTools.fractions_to_ohe(after_softmax)
+    # g_output_grey = ImageTools.one_hot_decoding(g_output).astype('uint8')
+    # g_output_mask = ImageTools.fractions_to_ohe(without_mask)
+    # g_output_grey_mask = ImageTools.one_hot_decoding(g_output).astype('uint8')
+    # difference = g_output_grey - g_output_grey_mask
+    # change = np.abs(np.array(difference))
+    # print(np.sum(change))
+    # print(np.mean(change))
+    # imsave('progress/' + progress_dir + '/dif' + filename, difference)
+    # low_res_grey = ImageTools.one_hot_decoding(low_res_input).astype('uint8')
+    # imsave('progress/' + progress_dir + '/low_res' + filename , low_res_grey)
+    # high_res_im = ImageTools.one_hot_decoding(high_res_im).astype('uint8')
+    # imsave('progress/' + progress_dir + '/' + filename + '-original',
+    #        high_res_im)
 
 
 if __name__ == '__main__':
+
+    # 1. Start a new run
+    wandb.init(project='3d to 3d', config=args, name=progress_dir)
 
     # The batch maker:
     BM = BatchMaker(device, dims=n_dims)
