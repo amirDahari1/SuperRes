@@ -29,7 +29,7 @@ class Generator3D(nn.Module):
         # last convolution, squashing all of the channels to 3 phases:
         self.conv_trans_2 = nn.ConvTranspose3d(2 ** (wg - 1), nc_d,
                                                4, 2, 3)
-        self.conv_concat = nn.Conv3d(nc_d+nc_g, nc_g, 1, 1, 0)
+        self.conv_concat = nn.Conv3d(nc_d+nc_g, nc_d, 1, 1, 0)
 
 
     @staticmethod
@@ -85,7 +85,7 @@ class Generator3D(nn.Module):
         concat = torch.cat((up_1, input_up_sample), dim=1)
         res = self.conv_concat(concat)
         # softmax in the end
-        return nn.Softmax(dim=1)(up_1)
+        return nn.Softmax(dim=1)(res)
 
     def return_scale_factor(self, high_res_length):
         return (high_res_length / 4 + 2) / high_res_length
