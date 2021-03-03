@@ -189,7 +189,7 @@ if __name__ == '__main__':
     # Create the generator
     netG = Networks.generator(ngpu, wg, nc_g, nc_d, n_res_blocks, n_dims).to(
         device)
-    # wandb.watch(netG)
+    wandb.watch(netG)
 
     # Handle multi-gpu if desired
     if (device.type == 'cuda') and (ngpu > 1):
@@ -252,9 +252,6 @@ if __name__ == '__main__':
     steps = epoch_iterations
     print("Starting Training Loop...")
     start = time.time()
-    # Tell the models it's training time for batch-norm.
-    # netG.train()
-    # netD.train()
 
     for epoch in range(num_epochs):
         # For each batch in the dataloader
@@ -342,7 +339,6 @@ if __name__ == '__main__':
                                      'running slices', BM.train_scale_factor,
                                      wandb)
             i += 1
-            print(i)
 
         if (epoch % 5) == 0:
             torch.save(netG.state_dict(), PATH_G)
