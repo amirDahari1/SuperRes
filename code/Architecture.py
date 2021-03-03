@@ -126,10 +126,10 @@ def save_tif_3d(network_g, high_res_im, grey_idx, device, filename,
     print(low_res_input.size())
     network_g.train()
     g_output = network_g(low_res_input, mask).detach().cpu()
-    after_softmax = nn.Softmax(dim=1)(g_output)
-    without_mask = network_g(low_res_input, mask=False).detach().cpu()
-    difference = after_softmax - without_mask
-    change = np.abs(np.array(difference))
+    # after_softmax = nn.Softmax(dim=1)(g_output)
+    # without_mask = network_g(low_res_input, mask=False).detach().cpu()
+    # difference = after_softmax - without_mask
+    # change = np.abs(np.array(difference))
     # print(np.sum(change))
     # print(np.mean(change))
     # plt.hist(np.array(difference.view(-1)))
@@ -162,20 +162,20 @@ def save_tif_3d(network_g, high_res_im, grey_idx, device, filename,
     #     plt.show()
     # print(low_res_input.size())
     # print(g_output.size())
-    # g_output = ImageTools.fractions_to_ohe(after_softmax)
-    # g_output_grey = ImageTools.one_hot_decoding(g_output).astype('uint8')
+    g_output = ImageTools.fractions_to_ohe(g_output)
+    g_output_grey = ImageTools.one_hot_decoding(g_output).astype('uint8')
     # g_output_mask = ImageTools.fractions_to_ohe(without_mask)
     # g_output_grey_mask = ImageTools.one_hot_decoding(g_output).astype('uint8')
     # difference = g_output_grey - g_output_grey_mask
     # change = np.abs(np.array(difference))
     # print(np.sum(change))
     # print(np.mean(change))
-    # imsave('progress/' + progress_dir + '/dif' + filename, difference)
-    # low_res_grey = ImageTools.one_hot_decoding(low_res_input).astype('uint8')
-    # imsave('progress/' + progress_dir + '/low_res' + filename , low_res_grey)
-    # high_res_im = ImageTools.one_hot_decoding(high_res_im).astype('uint8')
-    # imsave('progress/' + progress_dir + '/' + filename + '-original',
-    #        high_res_im)
+    imsave('progress/' + progress_dir + '/dif' + filename, g_output_grey)
+    low_res_grey = ImageTools.one_hot_decoding(low_res_input).astype('uint8')
+    imsave('progress/' + progress_dir + '/low_res' + filename , low_res_grey)
+    high_res_im = ImageTools.one_hot_decoding(high_res_im).astype('uint8')
+    imsave('progress/' + progress_dir + '/' + filename + '-original',
+           high_res_im)
 
 
 if __name__ == '__main__':
@@ -189,7 +189,7 @@ if __name__ == '__main__':
     # Create the generator
     netG = Networks.generator(ngpu, wg, nc_g, nc_d, n_res_blocks, n_dims).to(
         device)
-    wandb.watch(netG)
+    wandb.watch(netG, log='all')
 
     # Handle multi-gpu if desired
     if (device.type == 'cuda') and (ngpu > 1):
