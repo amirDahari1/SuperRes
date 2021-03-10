@@ -44,6 +44,8 @@ eta_file = 'eta.npy'
 g_slices = [0, 1]
 d_slices = [0, 1]
 
+start_g_update = 15
+
 # Root directory for dataset
 dataroot = "data/"
 
@@ -301,7 +303,7 @@ if __name__ == '__main__':
             # (2) Update G network:
             ###########################
 
-            if (i % g_update) == 0:
+            if (i % (g_update + start_g_update)) == 0:
                 netG.zero_grad()
                 # generate fake again to update G:
                 low_res, fake_for_g = generate_fake_image(detach_output=False)
@@ -340,7 +342,10 @@ if __name__ == '__main__':
                                      wandb)
             i += 1
 
-        if (epoch % 5) == 0:
+        if start_g_update > 0:
+            start_g_update = start_g_update - 1
+
+        if (epoch % 3) == 0:
             torch.save(netG.state_dict(), PATH_G)
             torch.save(netD.state_dict(), PATH_D)
             wandb.save(PATH_G)
