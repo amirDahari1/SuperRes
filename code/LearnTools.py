@@ -26,6 +26,9 @@ def return_args(parser):
     parser.add_argument('-gu', '--g_update', type=int, default=5,
                         help='Number of iterations the generator waits before '
                              'being updated')
+    parser.add_argument('-gus', '--g_update_start', type=int, default=50,
+                        help='Starting number of iterations before updating '
+                             '(each iteration this gets shorter)')
     parser.add_argument('-e', '--num_epochs', type=int, default=500,
                         help='Number of epochs.')
     parser.add_argument('-pix_d', '--pixel_coefficient_distance', type=int,

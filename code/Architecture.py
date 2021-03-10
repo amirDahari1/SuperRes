@@ -30,7 +30,7 @@ args = LearnTools.return_args(parser)
 progress_dir, wd, wg = args.directory, args.widthD, args.widthG
 n_res_blocks, pix_distance = args.n_res_blocks, args.pixel_coefficient_distance
 num_epochs, g_update, n_dims = args.num_epochs, args.g_update, args.n_dims
-
+g_update_start = args.g_update_start
 
 
 if not os.path.exists(ImageTools.progress_dir + progress_dir):
@@ -43,8 +43,6 @@ eta_file = 'eta.npy'
 # G and D slices to choose from
 g_slices = [0, 1]
 d_slices = [0, 1]
-
-start_g_update = 15
 
 # Root directory for dataset
 dataroot = "data/"
@@ -303,7 +301,7 @@ if __name__ == '__main__':
             # (2) Update G network:
             ###########################
 
-            if (i % (g_update + start_g_update)) == 0:
+            if (i % (g_update + g_update_start)) == 0:
                 netG.zero_grad()
                 # generate fake again to update G:
                 low_res, fake_for_g = generate_fake_image(detach_output=False)
@@ -342,8 +340,8 @@ if __name__ == '__main__':
                                      wandb)
             i += 1
 
-        if start_g_update > 0:
-            start_g_update = start_g_update - 1
+        if g_update_start > 0:
+            g_update_start -= 1
 
         if (epoch % 3) == 0:
             torch.save(netG.state_dict(), PATH_G)
