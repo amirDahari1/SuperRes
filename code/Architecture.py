@@ -124,7 +124,7 @@ def save_tif_3d(network_g, high_res_im, grey_idx, device, filename,
                                                        grey_idx,
                                                        scale_factor, device, n_dims)
     print(low_res_input.size())
-    network_g.train()
+
     g_output = network_g(low_res_input, mask).detach().cpu()
     # after_softmax = nn.Softmax(dim=1)(g_output)
     # without_mask = network_g(low_res_input, mask=False).detach().cpu()
