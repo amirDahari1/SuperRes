@@ -16,19 +16,22 @@ class Generator3D(nn.Module):
         super(Generator3D, self).__init__()
         self.n_res_blocks = n_res_blocks
         self.ngpu = ngpu
+        # first convolution, making many channels
         self.conv_minus_1 = nn.Conv3d(nc_g, 2 ** wg, 3, 1, 1)
         self.bn_minus_1 = nn.BatchNorm3d(2**wg)
-        # first convolution, making many channels
+
         self.conv_res = nn.ModuleList([nn.Conv3d(2 ** wg, 2 ** wg, 3, 1, 1)
                                        for _ in range(self.n_res_blocks*2)])
         self.bn_res = nn.ModuleList([nn.BatchNorm3d(2 ** wg)
                                      for _ in range(self.n_res_blocks*2)])
-        # the number of channels is because of pixel shuffling
-        self.conv_trans_1 = nn.ConvTranspose3d(2 ** wg, 2 ** (wg - 1), 4, 2, 2)
+        # transpose convolution:
+        self.conv_trans_1 = nn.ConvTranspose3d(2 ** wg, 2 ** (wg - 1), 4, 2, 1)
         self.bn1 = nn.BatchNorm3d(2 ** (wg - 1))
-        # last convolution, squashing all of the channels to 3 phases:
-        self.conv_trans_2 = nn.ConvTranspose3d(2 ** (wg - 1), nc_d,
-                                               4, 2, 3)
+        # convolution resize:
+        self.up_sample = nn.Upsample(scale_factor=2)
+        self.conv_resize = nn.Conv3d(2 ** (wg - 1), 2 ** (wg - 2), 3, 1, 1)
+        self.bn_resize = nn.BatchNorm3d(2 ** (wg - 2))
+        self.conv_bf_end = nn.Conv3d(2 ** (wg - 2), nc_d, 3, 1, 1)
         self.conv_concat = nn.Conv3d(nc_d+nc_g, nc_d, 1, 1, 0)
 
 
@@ -44,13 +47,6 @@ class Generator3D(nn.Module):
         # the residual side
         x_side = bn_out(conv_out(nn.ReLU()(bn_in(conv_in(x)))))
         return nn.ReLU()(x + x_side)
-
-    @staticmethod
-    def up_sample(x, conv, bn):
-        """
-        Up sampling with pixel shuffling block.
-        """
-        return nn.ReLU()(bn(conv(x)))
 
     def forward(self, x, mask=False):
         """
@@ -72,23 +68,24 @@ class Generator3D(nn.Module):
                                          self.conv_res[i+1])
         # skip connection to the end after all the blocks:
         after_res = x_first + after_block
-        # up sampling with pixel shuffling (0):
-        up_0 = self.up_sample(after_res, self.conv_trans_1, self.bn1)
-        # up sampling with pixel shuffling (1):
-        up_1 = self.conv_trans_2(up_0)
-        # up sample the original input:
-        scale_factor = 1/self.return_scale_factor(up_1.size()[-1])
+        # first up sampling using transpose convolution
+        up_1 = nn.ReLU()(self.bn1(self.conv_trans_1(after_res)))
+        # second up sample using conv resize:
+        up_2 = nn.ReLU(self.bn_resize(self.conv_resize(self.up_sample(up_1))))
+        # another convolution before the end:
+        bf_end = self.conv_bf_end(up_2)
+
+        scale_factor = 1/self.return_scale_factor(bf_end.size()[-1])
         input_up_sample = interpolate(x, scale_factor=scale_factor,
                                       mode='trilinear')
         if mask:
-            return up_1
-        concat = torch.cat((up_1, input_up_sample), dim=1)
+            return bf_end
+        concat = torch.cat((bf_end, input_up_sample), dim=1)
         res = self.conv_concat(concat)
-        # softmax in the end
         return nn.Softmax(dim=1)(res)
 
     def return_scale_factor(self, high_res_length):
-        return (high_res_length / 4 + 2) / high_res_length
+        return (high_res_length / 4) / high_res_length
 
 
 def discriminator(ngpu, wd, nc_d, dims):
