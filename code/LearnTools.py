@@ -12,7 +12,7 @@ def return_args(parser):
     parser.add_argument('-d', '--directory', type=str, default='default',
                         help='Stores the progress output in the \
                         directory name given')
-    parser.add_argument('-wd', '--widthD', type=int, default=8,
+    parser.add_argument('-wd', '--widthD', type=int, default=9,
                         help='Hyper-parameter for \
                         the width of the Discriminator network')
     parser.add_argument('-wg', '--widthG', type=int, default=8,
@@ -26,7 +26,7 @@ def return_args(parser):
     parser.add_argument('-gu', '--g_update', type=int, default=5,
                         help='Number of iterations the generator waits before '
                              'being updated')
-    parser.add_argument('-e', '--num_epochs', type=int, default=300,
+    parser.add_argument('-e', '--num_epochs', type=int, default=500,
                         help='Number of epochs.')
     parser.add_argument('-pix_d', '--pixel_coefficient_distance', type=int,
                         default=10,
