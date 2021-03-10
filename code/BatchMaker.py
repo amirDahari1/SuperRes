@@ -14,7 +14,7 @@ LOW_L_2D = 32  # the low resolution number of pixels LOW_RESxLOW_RES
 HIGH_L_2D = 128  # the high resolution number of pixels HIGH_RESxHIGH_RES
 N_SAMPLES = 10000
 CROP = 4  # crop pixels in each dimension when choosing train slices
-LOW_L_3D = 18
+LOW_L_3D = 16
 HIGH_L_3D = 64
 
 if os.getcwd().endswith('code'):
