@@ -71,18 +71,19 @@ class Generator3D(nn.Module):
         # first up sampling using transpose convolution
         up_1 = nn.ReLU()(self.bn1(self.conv_trans_1(after_res)))
         # second up sample using conv resize:
-        up_2 = nn.ReLU(self.bn_resize(self.conv_resize(self.up_sample(up_1))))
+        up_2 = nn.ReLU()(self.bn_resize(self.conv_resize(self.up_sample(
+            up_1))))
         # another convolution before the end:
         bf_end = self.conv_bf_end(up_2)
-
-        scale_factor = 1/self.return_scale_factor(bf_end.size()[-1])
-        input_up_sample = interpolate(x, scale_factor=scale_factor,
-                                      mode='trilinear')
-        if mask:
-            return bf_end
-        concat = torch.cat((bf_end, input_up_sample), dim=1)
-        res = self.conv_concat(concat)
-        return nn.Softmax(dim=1)(res)
+        # up sampling of original image:
+        # scale_factor = 1/self.return_scale_factor(bf_end.size()[-1])
+        # input_up_sample = interpolate(x, scale_factor=scale_factor,
+        #                               mode='trilinear')
+        # if mask:
+        #     return bf_end
+        # concat = torch.cat((bf_end, input_up_sample), dim=1)
+        # res = self.conv_concat(concat)
+        return nn.Softmax(dim=1)(bf_end)
 
     def return_scale_factor(self, high_res_length):
         return (high_res_length / 4) / high_res_length
