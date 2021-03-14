@@ -12,13 +12,13 @@ def return_args(parser):
     parser.add_argument('-d', '--directory', type=str, default='default',
                         help='Stores the progress output in the \
                         directory name given')
-    parser.add_argument('-wd', '--widthD', type=int, default=8,
+    parser.add_argument('-wd', '--widthD', type=int, default=9,
                         help='Hyper-parameter for \
                         the width of the Discriminator network')
     parser.add_argument('-wg', '--widthG', type=int, default=8,
                         help='Hyper-parameter for the \
                         width of the Generator network')
-    parser.add_argument('-n_res', '--n_res_blocks', type=int, default=2,
+    parser.add_argument('-n_res', '--n_res_blocks', type=int, default=1,
                         help='Number of residual blocks in the network.')
     parser.add_argument('-n_dims', '--n_dims', type=int, default=3,
                         help='The generated image dimension (and input '
@@ -73,14 +73,17 @@ def calc_gradient_penalty(netD, real_data, fake_data, batch_size, l, device,
     return gradient_penalty
 
 
-def down_sample_for_g_input(high_res_3_phase, grey_idx, scale_factor, device):
+def down_sample_for_g_input(high_res_3_phase, grey_idx, scale_factor,
+                            device, n_dims):
     """
     :return: a down-sample of the grey material.
     """
+    modes = ['bilinear', 'trilinear']
     # first choose the grey phase in the image:
     grey_material = torch.index_select(high_res_3_phase, 1, grey_idx)
     # down sample: TODO: maybe different mode? trilinear?
-    res = interpolate(grey_material, scale_factor=scale_factor)
+    res = interpolate(grey_material, scale_factor=scale_factor,
+                      mode=modes[n_dims-2])
     # threshold at 0.5:
     res = torch.where(res > 0.5, 1., 0.)
     zeros_channel = torch.ones(size=res.size()).to(device) - res
@@ -97,11 +100,14 @@ def logistic_function(x, k, x0):
     return 1/(1+torch.exp(-k*(x-x0)))
 
 
-def down_sample_for_similarity_check(generated_im, grey_idx, scale_factor):
+def down_sample_for_similarity_check(generated_im, grey_idx, scale_factor,
+                                     n_dims):
     # first choose the grey phase in the image:
     grey_material = torch.index_select(generated_im, 1, grey_idx)
     # down sample:
-    res = interpolate(grey_material, scale_factor=scale_factor)
+    modes = ['bilinear', 'trilinear']
+    res = interpolate(grey_material, scale_factor=scale_factor,
+                      mode=modes[n_dims-2])
     return logistic_function(res, k_logistic, threshold)
 
 
@@ -120,7 +126,7 @@ def up_sample_for_similarity_check(low_res_im, grey_idx):
 
 
 def pixel_wise_distance(low_res_im, generated_high_res, grey_idx,
-                        scale_factor):
+                        scale_factor, n_dims):
     """
     calculates and returns the pixel wise distance between the low resolution
     image and the down sampling of the high resolution generated image.
@@ -130,7 +136,7 @@ def pixel_wise_distance(low_res_im, generated_high_res, grey_idx,
 
     low_res_grey = torch.index_select(low_res_im, 1, grey_idx)
     down_sample = down_sample_for_similarity_check(generated_high_res,
-                                                   grey_idx, scale_factor)
+                                                   grey_idx, scale_factor, n_dims)
     # print(low_res_grey[0, 0, :, :])
     # print(down_sample[0, 0, :, :])
     # print(low_res_grey.size())

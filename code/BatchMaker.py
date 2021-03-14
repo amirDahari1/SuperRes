@@ -14,7 +14,7 @@ LOW_L_2D = 32  # the low resolution number of pixels LOW_RESxLOW_RES
 HIGH_L_2D = 128  # the high resolution number of pixels HIGH_RESxHIGH_RES
 N_SAMPLES = 10000
 CROP = 4  # crop pixels in each dimension when choosing train slices
-LOW_L_3D = 18
+LOW_L_3D = 16
 HIGH_L_3D = 64
 
 if os.getcwd().endswith('code'):
@@ -50,7 +50,7 @@ class BatchMaker:
             self.low_l, self.high_l = LOW_L_3D, HIGH_L_3D
         else:  # dims = 2
             self.low_l, self.high_l = LOW_L_2D, HIGH_L_2D
-        self.scale_factor = self.low_l/self.high_l
+        self.train_scale_factor = self.low_l/self.high_l
         # TODO right now, high_res = 4*low_res -6, make it more general
 
     def random_batch_for_real(self, batch_size, dim_chosen):
@@ -132,27 +132,22 @@ class BatchMaker:
         :param all_image: if True, all image is chosen, if False,
         only middle part of the image at given dimension is chosen with high
         resolution
-        :param device: the device that G is on.
         :return: a 3d image with dimension Depthx3xWidthxHeight
         """
         start = 0  # the start pixel
         resolution = self.min_d
+        perm = perms[dim]
         if not all_image:
             # s.t. the image will be in the middle
             start = (self.min_d - self.high_l) // 2
             resolution = self.high_l
-        if dim == 0:
-            res = self.im_ohe[:, :, start:start + resolution, start:start +
-                              resolution]
-            res = res.transpose(1, 0, 2, 3)
-        if dim == 1:
-            res = self.im_ohe[:,start:start + resolution, :, start:start +
-                              resolution]
-            res = res.transpose(2, 0, 1, 3)
-        else:  # dim == 2:
+        if self.dims == 3:
             res = self.im_ohe[:, start:start + resolution, start:start +
-                              resolution, :]
-            res = res.transpose(3, 0, 1, 2)
+                              resolution, start:start + resolution]
+            return torch.FloatTensor(res).to(
+                self.device).unsqueeze(0)
+        res = self.im_ohe.transpose(perm[0], 0, *perm[1:])
+        res = res[:, :, start:start + resolution, start:start + resolution]
         return torch.FloatTensor(res).to(self.device)
 
 

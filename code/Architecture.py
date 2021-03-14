@@ -2,7 +2,7 @@ import LearnTools
 import Networks
 from BatchMaker import *
 import wandb
-import argparse
+# import argparse
 import os
 import time
 import random
@@ -31,8 +31,6 @@ progress_dir, wd, wg = args.directory, args.widthD, args.widthG
 n_res_blocks, pix_distance = args.n_res_blocks, args.pixel_coefficient_distance
 num_epochs, g_update, n_dims = args.num_epochs, args.g_update, args.n_dims
 
-# 1. Start a new run
-wandb.init(project='3d to 3d', config=args, name=progress_dir)
 
 if not os.path.exists(ImageTools.progress_dir + progress_dir):
     os.makedirs(ImageTools.progress_dir + progress_dir)
@@ -107,24 +105,73 @@ def save_differences(network_g, high_res_im, grey_idx,
     """
     low_res_input = LearnTools.down_sample_for_g_input(high_res_im,
                                                        grey_idx,
-                                                       scale_factor, device)
+                                                       scale_factor, device, n_dims)
     g_output = network_g(low_res_input).detach().cpu()
     ImageTools.plot_fake_difference(high_res_im.detach().cpu(),
                                     low_res_input.detach().cpu(), g_output,
                                     save_dir, filename, wandb)
 
 
-def save_tif_3d(network_g, high_res_im, grey_idx, device, filename):
+def save_tif_3d(network_g, high_res_im, grey_idx, device, filename,
+                mask=False):
     """
         Saves a tif image of the output of G on all of the 3d image high_res_im
     """
+    high_res_length = high_res_im.size()[-1]
+    scale_factor = network_g.return_scale_factor(high_res_length)
     low_res_input = LearnTools.down_sample_for_g_input(high_res_im,
-                                                       grey_idx, device)
-    g_output = network_g(low_res_input).detach().cpu()
+                                                       grey_idx,
+                                                       scale_factor, device, n_dims)
+    print(low_res_input.size())
+
+    g_output = network_g(low_res_input, mask).detach().cpu()
+    # after_softmax = nn.Softmax(dim=1)(g_output)
+    # without_mask = network_g(low_res_input, mask=False).detach().cpu()
+    # difference = after_softmax - without_mask
+    # change = np.abs(np.array(difference))
+    # print(np.sum(change))
+    # print(np.mean(change))
+    # plt.hist(np.array(difference.view(-1)))
+    # plt.show()
+    # print('im here')
+    # fig, a = plt.subplots(3, 2)
+    # for i, title in enumerate(['Pore', 'Particle', 'Binder'], 0):
+    #     print(i)
+    #     a[i,0].hist(np.array(g_output[:, i, :, :, :].view(-1)), bins=150)
+    #     a[i,0].set_xlim(-150,150)
+    #     a[i,0].set_title(title + ' before softmax')
+    #     a[i, 1].hist(np.array(after_softmax[:, i, :, :, :].view(-1)), bins=150)
+    #     a[i, 1].set_xlim(0, 1)
+    #     a[i, 1].set_title(title + ' after softmax')
+    # plt.show()
+    # for j, sup_title in enumerate(['Pore', 'Particle', 'Binder'], 0):
+    #     output_mask = g_output[:, j, :, :, :].view(-1)>0
+    #     fig, a = plt.subplots(3, 2)
+    #     plt.suptitle('Voxels where ' + sup_title + ' is > 0')
+    #     for i, title in enumerate(['Pore', 'Particle', 'Binder'], 0):
+    #         print(i)
+    #         a[i, 0].hist(np.array(g_output[:, i, :, :, :].view(
+    #             -1)[output_mask]),
+    #                      bins=150)
+    #         a[i, 0].set_xlim(-150, 150)
+    #         a[i, 0].set_title(title + ' before softmax')
+    #         a[i, 1].hist(np.array(after_softmax[:, i, :, :, :].view(-1)[output_mask]), bins=150)
+    #         a[i, 1].set_xlim(0, 1)
+    #         a[i, 1].set_title(title + ' after softmax')
+    #     plt.show()
+    # print(low_res_input.size())
+    # print(g_output.size())
+    g_output = ImageTools.fractions_to_ohe(g_output)
     g_output_grey = ImageTools.one_hot_decoding(g_output).astype('uint8')
+    # g_output_mask = ImageTools.fractions_to_ohe(without_mask)
+    # g_output_grey_mask = ImageTools.one_hot_decoding(g_output).astype('uint8')
+    # difference = g_output_grey - g_output_grey_mask
+    # change = np.abs(np.array(difference))
+    # print(np.sum(change))
+    # print(np.mean(change))
     imsave('progress/' + progress_dir + '/' + filename, g_output_grey)
     low_res_grey = ImageTools.one_hot_decoding(low_res_input).astype('uint8')
-    imsave('progress/' + progress_dir + '/low_res' + filename , low_res_grey)
+    imsave('progress/' + progress_dir + '/low_res' + filename, low_res_grey)
     high_res_im = ImageTools.one_hot_decoding(high_res_im).astype('uint8')
     imsave('progress/' + progress_dir + '/' + filename + '-original',
            high_res_im)
@@ -132,20 +179,23 @@ def save_tif_3d(network_g, high_res_im, grey_idx, device, filename):
 
 if __name__ == '__main__':
 
+    # 1. Start a new run
+    wandb.init(project='3d to 3d', config=args, name=progress_dir)
+
     # The batch maker:
     BM = BatchMaker(device, dims=n_dims)
 
     # Create the generator
-    netG = Networks.Generator(ngpu, wg, nc_g, nc_d, n_res_blocks, n_dims).to(
+    netG = Networks.generator(ngpu, wg, nc_g, nc_d, n_res_blocks, n_dims).to(
         device)
-    # wandb.watch(netG)
+    wandb.watch(netG, log='all')
 
     # Handle multi-gpu if desired
     if (device.type == 'cuda') and (ngpu > 1):
         netG = nn.DataParallel(netG, list(range(ngpu)))
 
     # Create the Discriminator
-    netD = Networks.Discriminator(ngpu, wd, nc_d, n_dims).to(device)
+    netD = Networks.discriminator(ngpu, wd, nc_d, n_dims).to(device)
 
     # Handle multi-gpu if desired
     if (device.type == 'cuda') and (ngpu > 1):
@@ -153,8 +203,8 @@ if __name__ == '__main__':
 
     # Apply the weights_init function to randomly initialize all weights
     #  to mean=0, stdev=0.2.
-    netG.apply(weights_init)
-    netD.apply(weights_init)
+    # netG.apply(weights_init)
+    # netD.apply(weights_init)
 
     # Setup Adam optimizers for both G and D
     optimizerD = optim.Adam(netD.parameters(), lr=lr, betas=(beta1, 0.999))
@@ -171,7 +221,7 @@ if __name__ == '__main__':
                                                         g_slice)
         # down sample:
         low_res_im = LearnTools.down_sample_for_g_input(
-            before_down_sampling, grey_index, BM.scale_factor, device)
+            before_down_sampling, grey_index, BM.train_scale_factor, device, n_dims)
 
         # Generate fake image batch with G
         if detach_output:
@@ -198,7 +248,6 @@ if __name__ == '__main__':
             return fake_image
 
     # Training Loop!
-    iters = 0
     steps = epoch_iterations
     print("Starting Training Loop...")
     start = time.time()
@@ -264,23 +313,24 @@ if __name__ == '__main__':
                     fake_output = netD(fake_slices).view(-1)
                     # get the pixel-wise-distance loss
                     pix_loss = LearnTools.pixel_wise_distance(low_res,
-                               fake_for_g, grey_index, BM.scale_factor)
+                               fake_for_g, grey_index, BM.train_scale_factor,
+                                                              n_dims)
                     # Calculate G's loss based on this output
-                    g_cost += -fake_output.mean() + pix_distance * pix_loss
+                    if pix_loss.item() > 0.1:
+                        g_cost += -fake_output.mean() + pix_distance * pix_loss
+                    else:
+                        g_cost += -fake_output.mean()
 
                 # Calculate gradients for G
                 g_cost.backward()
                 # Update G
                 optimizerG.step()
                 wandb.log({"pixel distance": pix_loss})
+                wandb.log({"wass": wass})
+                wandb.log({"real": output_real, "fake": output_fake})
 
             # Output training stats
             if i == j:
-                wandb.log({"wass": wass})
-                wandb.log({"real": output_real, "fake": output_fake})
-                torch.save(netG.state_dict(), PATH_G)
-                torch.save(netD.state_dict(), PATH_D)
-
                 ImageTools.calc_and_save_eta(steps, time.time(), start, i,
                                              epoch, num_epochs, eta_file)
 
@@ -288,12 +338,15 @@ if __name__ == '__main__':
                     save_differences(netG, BM.random_batch_for_fake(
                                      6, random.choice(g_slices)).detach(),
                                      grey_index, device, progress_dir,
-                                     'running slices', BM.scale_factor, wandb)
-
-            iters += 1
+                                     'running slices', BM.train_scale_factor,
+                                     wandb)
             i += 1
-            # print(i)
+
+
+        if (epoch % 3) == 0:
+            torch.save(netG.state_dict(), PATH_G)
+            torch.save(netD.state_dict(), PATH_D)
+            wandb.save(PATH_G)
+            wandb.save(PATH_D)
 
     print('finished training')
-    wandb.save(PATH_G)
-    wandb.save(PATH_D)
