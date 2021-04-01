@@ -75,14 +75,7 @@ class Generator3D(nn.Module):
             up_1))))
         # another convolution before the end:
         bf_end = self.conv_bf_end(up_2)
-        # up sampling of original image:
-        # scale_factor = 1/self.return_scale_factor(bf_end.size()[-1])
-        # input_up_sample = interpolate(x, scale_factor=scale_factor,
-        #                               mode='trilinear')
-        # if mask:
-        #     return bf_end
-        # concat = torch.cat((bf_end, input_up_sample), dim=1)
-        # res = self.conv_concat(concat)
+        # softmax of the phase dimension:
         return nn.Softmax(dim=1)(bf_end)
 
     def return_scale_factor(self, high_res_length):
