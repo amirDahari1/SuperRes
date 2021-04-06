@@ -16,7 +16,7 @@ import torch.utils.data
 # import torchvision.datasets as dset
 # import torchvision.transforms as transforms
 # import torchvision.utils as vutils
-from matplotlib import pyplot as plt
+# from matplotlib import pyplot as plt
 import argparse
 
 if os.getcwd().endswith('code'):
@@ -45,6 +45,8 @@ d_slices = [0, 1]
 
 # Root directory for dataset
 dataroot = "data/"
+D_image = dataroot + 'train_cube_sofc.tif'
+G_image = dataroot + 'test_cube_sofc.tif'
 
 # Number of workers for dataloader
 workers = 2
@@ -87,6 +89,7 @@ print('device is ' + str(device))
 # the grey channel in the images:
 grey_index = torch.LongTensor([1]).to(device)
 
+
 # custom weights initialization called on netG and netD
 def weights_init(m):
     classname = m.__class__.__name__
@@ -105,7 +108,8 @@ def save_differences(network_g, high_res_im, grey_idx,
     """
     low_res_input = LearnTools.down_sample_for_g_input(high_res_im,
                                                        grey_idx,
-                                                       scale_factor, device, n_dims)
+                                                       scale_factor, device,
+                                                       n_dims)
     g_output = network_g(low_res_input).detach().cpu()
     ImageTools.plot_fake_difference(high_res_im.detach().cpu(),
                                     low_res_input.detach().cpu(), g_output,
@@ -117,8 +121,9 @@ if __name__ == '__main__':
     # 1. Start a new run
     wandb.init(project='3d to 3d', config=args, name=progress_dir)
 
-    # The batch maker:
-    BM = BatchMaker(device, dims=n_dims)
+    # The batch makers for D and G:
+    BM_D = BatchMaker(device, path=D_image, dims=n_dims)
+    BM_G = BatchMaker(device, path=G_image, dims=n_dims)
 
     # Create the generator
     netG = Networks.generator(ngpu, wg, nc_g, nc_d, n_res_blocks, n_dims).to(
@@ -152,11 +157,12 @@ if __name__ == '__main__':
         """
         # Generate batch of g input
         g_slice = random.choice(g_slices)
-        before_down_sampling = BM.random_batch_for_fake(batch_size_G_for_D,
-                                                        g_slice)
+        before_down_sampling = BM_G.random_batch_for_fake(batch_size_G_for_D,
+                                                          g_slice)
         # down sample:
         low_res_im = LearnTools.down_sample_for_g_input(
-            before_down_sampling, grey_index, BM.train_scale_factor, device, n_dims)
+            before_down_sampling, grey_index, BM_G.train_scale_factor,
+            device, n_dims)
 
         # Generate fake image batch with G
         if detach_output:
@@ -173,12 +179,12 @@ if __name__ == '__main__':
             perm = perms_3d[perm_idx]
             # permute the fake output of G to make it into a batch
             # of images to feed D (each time different axis)
-            fake_slices = fake_image.permute(0, perm[0], 1, *perm[1:])
+            fake_slices_for_D = fake_image.permute(0, perm[0], 1, *perm[1:])
             # the new batch size feeding D:
-            batch_size_new = batch_size_G_for_D * BM.high_l
+            batch_size_new = batch_size_G_for_D * BM_G.high_l
             # reshaping for the correct size of D's input
-            return fake_slices.reshape(batch_size_new, nc_d,
-                                              BM.high_l, BM.high_l)
+            return fake_slices_for_D.reshape(batch_size_new, nc_d,
+                                       BM_G.high_l, BM_G.high_l)
         else:  # same 2d slices are fed into D
             return fake_image
 
@@ -204,9 +210,9 @@ if __name__ == '__main__':
 
                 # Train with all-real batch
                 netD.zero_grad()
-                # Format batch
+                # Batch of real high res for D
                 d_slice = random.choice(d_slices)
-                high_res = BM.random_batch_for_real(batch_size_D, d_slice)
+                high_res = BM_D.random_batch_for_real(batch_size_D, d_slice)
 
                 # Forward pass real batch through D
                 output_real = netD(high_res).view(-1).mean()
@@ -220,7 +226,7 @@ if __name__ == '__main__':
                 # Calculate gradient penalty
                 gradient_penalty = LearnTools.calc_gradient_penalty(netD,
                                    high_res, fake_slices[:batch_size_D],
-                                   batch_size_D, BM.high_l, device,
+                                   batch_size_D, BM_D.high_l, device,
                                    Lambda, nc_d)
 
                 # discriminator is trying to minimize:
@@ -248,7 +254,7 @@ if __name__ == '__main__':
                     fake_output = netD(fake_slices).view(-1)
                     # get the pixel-wise-distance loss
                     pix_loss = LearnTools.pixel_wise_distance(low_res,
-                               fake_for_g, grey_index, BM.train_scale_factor,
+                               fake_for_g, grey_index, BM_G.train_scale_factor,
                                                               n_dims)
                     # Calculate G's loss based on this output
                     if pix_loss.item() > 0.1:
@@ -270,13 +276,12 @@ if __name__ == '__main__':
                                              epoch, num_epochs, eta_file)
 
                 with torch.no_grad():  # only for plotting
-                    save_differences(netG, BM.random_batch_for_fake(
+                    save_differences(netG, BM_G.random_batch_for_fake(
                                      6, random.choice(g_slices)).detach(),
                                      grey_index, device, progress_dir,
-                                     'running slices', BM.train_scale_factor,
+                                     'running slices', BM_G.train_scale_factor,
                                      wandb)
             i += 1
-
 
         if (epoch % 3) == 0:
             torch.save(netG.state_dict(), PATH_G)

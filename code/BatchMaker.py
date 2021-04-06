@@ -7,19 +7,18 @@ import torch.utils.data
 import ImageTools
 
 
-
 perms = [[1, 2, 3], [2, 1, 3], [3, 1, 2]]  # permutations for a 4d array.
 perms_3d = np.array(perms) + 1
 LOW_L_2D = 32  # the low resolution number of pixels LOW_RESxLOW_RES
 HIGH_L_2D = 128  # the high resolution number of pixels HIGH_RESxHIGH_RES
-N_SAMPLES = 10000
 CROP = 4  # crop pixels in each dimension when choosing train slices
-LOW_L_3D = 16
-HIGH_L_3D = 64
+LOW_L_3D = 16  # length of low resolution 3d
+HIGH_L_3D = 64  # length of high resolution 3d
 
 if os.getcwd().endswith('code'):
     os.chdir('..')  # current directory from /SuperRes/code to SuperRes/
-TIF_IMAGE = 'data/NMC.tif'
+NMC_PATH = 'data/NMC.tif'
+SOFC_CATHODE_PATH = 'netl-sofc-cathode-segmented.tif'
 
 
 class BatchMaker:
@@ -27,7 +26,7 @@ class BatchMaker:
     Makes and saves training and test batch images.
     """
 
-    def __init__(self, device, path=TIF_IMAGE, dims=3, crop=True):
+    def __init__(self, device, path=NMC_PATH, dims=3, crop=True):
         """
         :param path: the path of the tif file (TODO make it more general)
         :param dims: number of dimensions for the batches (2 or 3)
@@ -35,23 +34,21 @@ class BatchMaker:
         :param crop: if to crop the image at the edges
         """
         self.path = path
-        self.dims = dims
+        self.dims = dims  # if G is 3D to 3D or 2D to 2D
         self.device = device
         self.im_3d = imread(path)
         self.phases = np.unique(self.im_3d)  # the unique values in image
-        self.min_d = min(self.im_3d.shape)  # the minimal dimension
-        # crop the image in the edges:
-        if crop:
-            self.im_3d = self.im_3d[CROP:self.min_d-CROP, CROP:self.min_d-CROP,
-                                    CROP:self.min_d-CROP]
-            self.min_d = self.min_d - 2*CROP  # update the min dimension
+        self.min_l = min(self.im_3d.shape)  # the minimal length of image
+        if crop:  # crop the image in the edges:
+            self.im_3d = self.im_3d[CROP:self.min_l-CROP, CROP:self.min_l-CROP,
+                                    CROP:self.min_l-CROP]
+            self.min_l = self.min_l - 2*CROP  # update the min length
         self.im_ohe = ImageTools.one_hot_encoding(self.im_3d, self.phases)
         if self.dims == 3:
             self.low_l, self.high_l = LOW_L_3D, HIGH_L_3D
         else:  # dims = 2
             self.low_l, self.high_l = LOW_L_2D, HIGH_L_2D
         self.train_scale_factor = self.low_l/self.high_l
-        # TODO right now, high_res = 4*low_res -6, make it more general
 
     def random_batch_for_real(self, batch_size, dim_chosen):
         return self.random_batch2d(batch_size, dim_chosen)
@@ -82,7 +79,7 @@ class BatchMaker:
         TODO because of slice
         """
         h_r = self.high_l
-        lim_pix = self.min_d - h_r  # the maximum pixel to start with
+        lim_pix = self.min_l - h_r  # the maximum pixel to start with
         # the starting pixels of the other dimensions:
         s_pix = np.random.randint(0, lim_pix, size=self.dims)
         s_x, s_y, s_z = s_pix  # starting voxels, TODO see how to generalise
@@ -109,9 +106,9 @@ class BatchMaker:
         :return: A random image of size res from the dimension chosen of the
         image.
         """
-        slice_chosen = random.randint(0, self.min_d - 1)  # the
+        slice_chosen = random.randint(0, self.min_l - 1)  # the
         # slice chosen
-        lim_pix = self.min_d - self.high_l  # the maximum pixel to start with
+        lim_pix = self.min_l - self.high_l  # the maximum pixel to start with
         # the starting pixels of the other dimensions:
         pix1 = random.randint(0, lim_pix)
         pix2 = random.randint(0, lim_pix)
@@ -135,11 +132,11 @@ class BatchMaker:
         :return: a 3d image with dimension Depthx3xWidthxHeight
         """
         start = 0  # the start pixel
-        resolution = self.min_d
+        resolution = self.min_l
         perm = perms[dim]
         if not all_image:
             # s.t. the image will be in the middle
-            start = (self.min_d - self.high_l) // 2
+            start = (self.min_l - self.high_l) // 2
             resolution = self.high_l
         if self.dims == 3:
             res = self.im_ohe[:, start:start + resolution, start:start +
