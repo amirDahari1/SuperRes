@@ -93,15 +93,21 @@ def down_sample(high_res_multi_phase, mat_idx, scale_factor, device, n_dims,
     """
     # first choose the material phase in the image:
     material_phases = torch.index_select(high_res_multi_phase, 1, mat_idx)
-    # sum all the material phases:
-    sum_material = torch.sum(material_phases, dim=1).unsqueeze(dim=1)
-    # make the pore channel:
-    pore_phase = torch.ones(size=sum_material.size()).to(device) - sum_material
     if squash:  # all phases of material are same in low-res
-        material_phases = sum_material
+        # sum all the material phases:
+        material_phases = torch.sum(material_phases, dim=1).unsqueeze(dim=1)
     # down sample:
     material_low_res = interpolate(material_phases, scale_factor=scale_factor,
                                    mode=modes[n_dims - 2])
+    # make the pore channel:
+    if squash:  # material_low_res already in one channel
+        pore_phase = torch.ones(size=material_low_res.size()).to(device) - \
+                     material_low_res
+    else:  # material_low_res can be in multiple channels
+        sum_of_low_res = torch.sum(material_low_res, dim=1).unsqueeze(dim=1)
+        pore_phase = torch.ones(size=sum_of_low_res.size()).to(
+            device) - sum_of_low_res
+    print(material_low_res.size())
     return pore_phase, material_low_res
 
 
@@ -150,11 +156,11 @@ def pixel_wise_distance(low_res_im, generated_im, mat_idx,
     :return: the normalized distance (divided by the number of pixels of the
     low resolution image
     """
-
-    low_res_mat = torch.index_select(low_res_im, 1, mat_idx)
-    _, down_sample_im = down_sample_for_similarity_check(generated_im, mat_idx,
-                                                         scale_factor,
-                                                         device, n_dims,
-                                                         squash)
+    print(low_res_im.size())
+    # all low res phases which are not pore are to be matched:
+    low_res_mat = low_res_im[:, 1:]
+    down_sample_im = down_sample_for_similarity_check(generated_im, mat_idx,
+                                                      scale_factor, device,
+                                                      n_dims, squash)
     return torch.nn.MSELoss()(low_res_mat, down_sample_im)
 

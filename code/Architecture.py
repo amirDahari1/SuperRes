@@ -17,6 +17,7 @@ import torch.utils.data
 # import torchvision.utils as vutils
 # from matplotlib import pyplot as plt
 import argparse
+import wandb
 
 if os.getcwd().endswith('code'):
     os.chdir('..')  # current directory from /SuperRes/code to SuperRes/
@@ -56,9 +57,24 @@ if n_dims == 3:
 else:  # n_dims == 2
     batch_size_G_for_D, batch_size_G, batch_size_D = 64, 64, 64
 
+# Number of GPUs available. Use 0 for CPU mode.
+ngpu = 1
+
+# Decide which device we want to run on
+device = torch.device(
+    "cuda:0" if (torch.cuda.is_available() and ngpu > 0) else "cpu")
+print('device is ' + str(device))
+
+# the material indices to low-res:
+to_low_idx = torch.LongTensor(phases_to_low).to(device)
+print(to_low_idx)
 
 # Number of channels in the training images. For color images this is 3
-nc_g = 2  # two phases for the generator input
+if squash:
+    nc_g = 2
+else:
+    nc_g = 1 + to_low_idx.size()[0]  # channel for pore plus number of
+    # material phases to low res.
 nc_d = 3  # three phases for the discriminator input
 
 # number of iterations in each epoch
@@ -73,20 +89,8 @@ beta1 = 0.5
 # Learning parameter for gradient penalty
 Lambda = 10
 
-# Number of GPUs available. Use 0 for CPU mode.
-ngpu = 1
-
 # When to save progress
 saving_num = 50
-
-
-# Decide which device we want to run on
-device = torch.device(
-    "cuda:0" if (torch.cuda.is_available() and ngpu > 0) else "cpu")
-print('device is ' + str(device))
-
-# the material indices to low-res:
-to_low_idx = torch.LongTensor(phases_to_low).to(device)
 
 
 # custom weights initialization called on netG and netD
@@ -282,7 +286,7 @@ if __name__ == '__main__':
                                      'running slices', BM_G.train_scale_factor,
                                      wandb)
             i += 1
-
+            print(i,j)
         if (epoch % 3) == 0:
             torch.save(netG.state_dict(), PATH_G)
             torch.save(netD.state_dict(), PATH_D)
