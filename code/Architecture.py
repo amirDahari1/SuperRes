@@ -119,7 +119,8 @@ def save_differences(network_g, high_res_im, grey_idx,
 if __name__ == '__main__':
 
     # 1. Start a new run
-    wandb.init(project='3d to 3d', config=args, name=progress_dir)
+    wandb.init(project='SuperRes', config=args, name=progress_dir,
+               entity='tldr-group')
 
     # The batch makers for D and G:
     BM_D = BatchMaker(device, path=D_image, dims=n_dims)
