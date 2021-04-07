@@ -103,8 +103,7 @@ def weights_init(m):
         nn.init.constant_(m.bias.data, 0)
 
 
-def save_differences(network_g, high_res_im,
-                     device, save_dir, filename, scale_factor):
+def save_differences(network_g, high_res_im, save_dir, filename, scale_factor):
     """
     Saves the image of the differences between the high-res real and the
     generated images that are supposed to be similar.
@@ -282,9 +281,8 @@ if __name__ == '__main__':
                 with torch.no_grad():  # only for plotting
                     save_differences(netG, BM_G.random_batch_for_fake(
                                      6, random.choice(g_slices)).detach(),
-                                     to_low_idx, device, progress_dir,
-                                     'running slices', BM_G.train_scale_factor,
-                                     wandb)
+                                     progress_dir, 'running slices',
+                                     BM_G.train_scale_factor)
             i += 1
             print(i,j)
         if (epoch % 3) == 0:
