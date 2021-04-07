@@ -1,7 +1,7 @@
 from matplotlib import pyplot as plt
 import numpy as np
 import torch
-
+import wandb
 
 LOW_RES = 16
 HIGH_RES = 64
@@ -10,7 +10,7 @@ N_SAMPLES = 10000
 progress_dir = 'progress/'
 
 
-def show_grey_image(image, title, wandb):
+def show_grey_image(image, title):
     """
     Plots the image in grey scale, assuming the image is 1 channel of 0-255
     """
@@ -20,7 +20,7 @@ def show_grey_image(image, title, wandb):
 
 
 def plot_fake_difference(high_res, input_to_g, output_from_g, save_dir,
-                         filename, wandb):
+                         filename):
     # first move everything to numpy
     # rand_sim = np.array(input_to_g[:, 2, :, :])
     images = [high_res, input_to_g, output_from_g]
@@ -28,12 +28,11 @@ def plot_fake_difference(high_res, input_to_g, output_from_g, save_dir,
     images[2] = fractions_to_ohe(images[2])  # the output from g needs to ohe
     images = [one_hot_decoding(image) for image in images]
     save_three_by_two_grey(images[0], images[1], images[2],
-                           save_dir + ' ' + filename, save_dir, filename,
-                           wandb)
+                           save_dir + ' ' + filename, save_dir, filename)
 
 
 def save_three_by_two_grey(top_images, middle_images, bottom_images, title,
-                           save_dir, filename, wandb):
+                           save_dir, filename):
     f, axarr = plt.subplots(3, 3)
     images = [top_images, middle_images, bottom_images]
     for i in range(len(images)):

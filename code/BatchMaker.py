@@ -6,7 +6,6 @@ import torch
 import torch.utils.data
 import ImageTools
 
-
 perms = [[1, 2, 3], [2, 1, 3], [3, 1, 2]]  # permutations for a 4d array.
 perms_3d = np.array(perms) + 1
 LOW_L_2D = 32  # the low resolution number of pixels LOW_RESxLOW_RES

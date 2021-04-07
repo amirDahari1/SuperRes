@@ -34,7 +34,6 @@ class Generator3D(nn.Module):
         self.conv_bf_end = nn.Conv3d(2 ** (wg - 2), nc_d, 3, 1, 1)
         self.conv_concat = nn.Conv3d(nc_d+nc_g, nc_d, 1, 1, 0)
 
-
     @staticmethod
     def res_block(x, bn_out, conv_out, bn_in, conv_in):
         """

@@ -1,7 +1,6 @@
 import LearnTools
 import Networks
 from BatchMaker import *
-import wandb
 # import argparse
 import os
 import time
@@ -30,7 +29,7 @@ args = LearnTools.return_args(parser)
 progress_dir, wd, wg = args.directory, args.widthD, args.widthG
 n_res_blocks, pix_distance = args.n_res_blocks, args.pixel_coefficient_distance
 num_epochs, g_update, n_dims = args.num_epochs, args.g_update, args.n_dims
-
+squash, phases_to_low = args.squash_phases, args.phases_low_res_idx
 
 if not os.path.exists(ImageTools.progress_dir + progress_dir):
     os.makedirs(ImageTools.progress_dir + progress_dir)
@@ -86,8 +85,8 @@ device = torch.device(
     "cuda:0" if (torch.cuda.is_available() and ngpu > 0) else "cpu")
 print('device is ' + str(device))
 
-# the grey channel in the images:
-grey_index = torch.LongTensor([1]).to(device)
+# the material indices to low-res:
+to_low_idx = torch.LongTensor(phases_to_low).to(device)
 
 
 # custom weights initialization called on netG and netD
@@ -100,20 +99,20 @@ def weights_init(m):
         nn.init.constant_(m.bias.data, 0)
 
 
-def save_differences(network_g, high_res_im, grey_idx,
-                     device, save_dir, filename, scale_factor, wandb):
+def save_differences(network_g, high_res_im,
+                     device, save_dir, filename, scale_factor):
     """
     Saves the image of the differences between the high-res real and the
     generated images that are supposed to be similar.
     """
     low_res_input = LearnTools.down_sample_for_g_input(high_res_im,
-                                                       grey_idx,
+                                                       to_low_idx,
                                                        scale_factor, device,
-                                                       n_dims)
+                                                       n_dims, squash)
     g_output = network_g(low_res_input).detach().cpu()
     ImageTools.plot_fake_difference(high_res_im.detach().cpu(),
                                     low_res_input.detach().cpu(), g_output,
-                                    save_dir, filename, wandb)
+                                    save_dir, filename)
 
 
 if __name__ == '__main__':
@@ -162,8 +161,8 @@ if __name__ == '__main__':
                                                           g_slice)
         # down sample:
         low_res_im = LearnTools.down_sample_for_g_input(
-            before_down_sampling, grey_index, BM_G.train_scale_factor,
-            device, n_dims)
+            before_down_sampling, to_low_idx, BM_G.train_scale_factor,
+            device, n_dims, squash)
 
         # Generate fake image batch with G
         if detach_output:
@@ -255,8 +254,8 @@ if __name__ == '__main__':
                     fake_output = netD(fake_slices).view(-1)
                     # get the pixel-wise-distance loss
                     pix_loss = LearnTools.pixel_wise_distance(low_res,
-                               fake_for_g, grey_index, BM_G.train_scale_factor,
-                                                              n_dims)
+                               fake_for_g, to_low_idx, BM_G.train_scale_factor,
+                               device, n_dims, squash)
                     # Calculate G's loss based on this output
                     if pix_loss.item() > 0.1:
                         g_cost += -fake_output.mean() + pix_distance * pix_loss
@@ -279,7 +278,7 @@ if __name__ == '__main__':
                 with torch.no_grad():  # only for plotting
                     save_differences(netG, BM_G.random_batch_for_fake(
                                      6, random.choice(g_slices)).detach(),
-                                     grey_index, device, progress_dir,
+                                     to_low_idx, device, progress_dir,
                                      'running slices', BM_G.train_scale_factor,
                                      wandb)
             i += 1

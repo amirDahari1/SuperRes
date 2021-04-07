@@ -13,6 +13,10 @@ def return_args(parser):
     parser.add_argument('-d', '--directory', type=str, default='default',
                         help='Stores the progress output in the \
                         directory name given')
+    parser.add_argument("--squash_phases", default=False, action="store_true",
+                        help="All material phases in low res are the same.")
+    parser.add_argument('-phases_idx', '--phases_low_res_idx', nargs='+',
+                        type=int, default=[1])
     parser.add_argument('-wd', '--widthD', type=int, default=9,
                         help='Hyper-parameter for \
                         the width of the Discriminator network')
@@ -31,8 +35,8 @@ def return_args(parser):
                         help='Number of epochs.')
     parser.add_argument('-pix_d', '--pixel_coefficient_distance', type=int,
                         default=10,
-                        help='The coefficient of the pixel distance loss added '
-                             'to the cost of G.')
+                        help='The coefficient of the pixel distance loss '
+                             'added to the cost of G.')
     args, unknown = parser.parse_known_args()
     return args
 
@@ -51,7 +55,7 @@ def calc_gradient_penalty(netD, real_data, fake_data, batch_size, l, device,
     :param nc: channels
     :return: gradient penalty
     """
-    #sample and reshape random numbers
+    # sample and reshape random numbers
     alpha = torch.rand(batch_size, 1, device = device)
     num_images = real_data.size()[0]
     alpha = alpha.expand(batch_size, int(real_data.numel() /
@@ -63,7 +67,7 @@ def calc_gradient_penalty(netD, real_data, fake_data, batch_size, l, device,
     interpolates = alpha * real_data.detach() + ((1 - alpha) * fake_data.detach())
     interpolates.requires_grad_(True)
 
-    #pass interpolates through netD
+    # pass interpolates through netD
     disc_interpolates = netD(interpolates)
     gradients = autograd.grad(outputs=disc_interpolates, inputs=interpolates,
                               grad_outputs=torch.ones(disc_interpolates.size(), device = device),
@@ -76,6 +80,17 @@ def calc_gradient_penalty(netD, real_data, fake_data, batch_size, l, device,
 
 def down_sample(high_res_multi_phase, mat_idx, scale_factor, device, n_dims,
                 squash=True):
+    """
+    :param high_res_multi_phase: the high resolution image to downsample.
+    :param mat_idx: the indices of phases to downsample.
+    :param scale_factor: what is the scale factor of the downsample.
+    :param device: cpu or gpu
+    :param n_dims: 2d or 3d
+    :param squash: if to squash all material phases together for
+    downsampling. (when it is hard to distinguish between material phases in
+    low resolution e.g. SOFC cathode.)
+    :return: a down-sample image of the high resolution image.
+    """
     # first choose the material phase in the image:
     material_phases = torch.index_select(high_res_multi_phase, 1, mat_idx)
     # sum all the material phases:
@@ -93,15 +108,8 @@ def down_sample(high_res_multi_phase, mat_idx, scale_factor, device, n_dims,
 def down_sample_for_g_input(high_res_multi_phase, mat_idx, scale_factor,
                             device, n_dims, squash=True):
     """
-    :param high_res_multi_phase: the high resolution image to downsample.
-    :param mat_idx: the indices of phases to downsample.
-    :param scale_factor: what is the scale factor of the downsample.
-    :param device: cpu or gpu
-    :param n_dims: 2d or 3d
-    :param squash: if to squash all material phases together for
-    downsampling. (when it is hard to distinguish between material phases in
-    low resolution e.g. SOFC cathode.)
-    :return: a down-sample image of the high resolution image.
+    :return: a down-sample image of the high resolution image for the input
+    of G.
     """
     pore_phase, material_low_res = down_sample(high_res_multi_phase, mat_idx,
                                                scale_factor, device, n_dims,
@@ -124,6 +132,11 @@ def logistic_function(x, k, x0):
 
 def down_sample_for_similarity_check(generated_im, mat_idx, scale_factor,
                                      device, n_dims, squash=True):
+    """
+    :return: down sample images of the generated image for the similarity
+    check with the low res input, no threshold (logistic function instead)
+    for differentiability.
+    """
     _, material_low_res = down_sample(generated_im, mat_idx, scale_factor,
                                       device, n_dims, squash)
     return logistic_function(material_low_res, k_logistic, threshold)
