@@ -74,6 +74,22 @@ def calc_gradient_penalty(netD, real_data, fake_data, batch_size, l, device,
     return gradient_penalty
 
 
+def down_sample(high_res_multi_phase, mat_idx, scale_factor, device, n_dims,
+                squash=True):
+    # first choose the material phase in the image:
+    material_phases = torch.index_select(high_res_multi_phase, 1, mat_idx)
+    # sum all the material phases:
+    sum_material = torch.sum(material_phases, dim=1).unsqueeze(dim=1)
+    # make the pore channel:
+    pore_phase = torch.ones(size=sum_material.size()).to(device) - sum_material
+    if squash:  # all phases of material are same in low-res
+        material_phases = sum_material
+    # down sample:
+    material_low_res = interpolate(material_phases, scale_factor=scale_factor,
+                                   mode=modes[n_dims - 2])
+    return pore_phase, material_low_res
+
+
 def down_sample_for_g_input(high_res_multi_phase, mat_idx, scale_factor,
                             device, n_dims, squash=True):
     """
@@ -87,16 +103,12 @@ def down_sample_for_g_input(high_res_multi_phase, mat_idx, scale_factor,
     low resolution e.g. SOFC cathode.)
     :return: a down-sample image of the high resolution image.
     """
-    # first choose the material phase in the image:
-    material_phases = torch.index_select(high_res_multi_phase, 1, mat_idx)
-    sum_material = torch.sum(material_phases, dim=1).unsqueeze(dim=1)
-    pore_phase = torch.ones(size=sum_material.size()).to(device) - sum_material
-    if squash:
-        material_phases = sum_material
-    material_low_res = interpolate(material_phases, scale_factor=scale_factor,
-                                   mode=modes[n_dims-2])
+    pore_phase, material_low_res = down_sample(high_res_multi_phase, mat_idx,
+                                               scale_factor, device, n_dims,
+                                               squash)
     # threshold at 0.5:
     material_low_res = torch.where(material_low_res > 0.5, 1., 0.)
+    # concat pore and material:
     return torch.cat((pore_phase, material_low_res), dim=1)
 
 
@@ -110,18 +122,15 @@ def logistic_function(x, k, x0):
     return 1/(1+torch.exp(-k*(x-x0)))
 
 
-def down_sample_for_similarity_check(generated_im, grey_idx, scale_factor,
-                                     n_dims):
-    # first choose the grey phase in the image:
-    grey_material = torch.index_select(generated_im, 1, grey_idx)
-    # down sample:
-    res = interpolate(grey_material, scale_factor=scale_factor,
-                      mode=modes[n_dims-2])
-    return logistic_function(res, k_logistic, threshold)
+def down_sample_for_similarity_check(generated_im, mat_idx, scale_factor,
+                                     device, n_dims, squash=True):
+    _, material_low_res = down_sample(generated_im, mat_idx, scale_factor,
+                                      device, n_dims, squash)
+    return logistic_function(material_low_res, k_logistic, threshold)
 
 
-def pixel_wise_distance(low_res_im, generated_high_res, grey_idx,
-                        scale_factor, n_dims):
+def pixel_wise_distance(low_res_im, generated_im, mat_idx,
+                        scale_factor, device, n_dims, squash=True):
     """
     calculates and returns the pixel wise distance between the low resolution
     image and the down sampling of the high resolution generated image.
@@ -129,11 +138,10 @@ def pixel_wise_distance(low_res_im, generated_high_res, grey_idx,
     low resolution image
     """
 
-    low_res_grey = torch.index_select(low_res_im, 1, grey_idx)
-    down_sample = down_sample_for_similarity_check(generated_high_res,
-                                                   grey_idx, scale_factor, n_dims)
-    # print(low_res_grey[0, 0, :, :])
-    # print(down_sample[0, 0, :, :])
-    # print(low_res_grey.size())
-    return torch.nn.MSELoss()(low_res_grey, down_sample)
+    low_res_mat = torch.index_select(low_res_im, 1, mat_idx)
+    _, down_sample_im = down_sample_for_similarity_check(generated_im, mat_idx,
+                                                         scale_factor,
+                                                         device, n_dims,
+                                                         squash)
+    return torch.nn.MSELoss()(low_res_mat, down_sample_im)
 
