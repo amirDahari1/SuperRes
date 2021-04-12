@@ -1,3 +1,5 @@
+import matplotlib.pyplot as plt
+
 import LearnTools
 import Networks
 from BatchMaker import *
@@ -31,6 +33,7 @@ progress_dir, wd, wg = args.directory, args.widthD, args.widthG
 n_res_blocks, pix_distance = args.n_res_blocks, args.pixel_coefficient_distance
 num_epochs, g_update, n_dims = args.num_epochs, args.g_update, args.n_dims
 squash, phases_to_low = args.squash_phases, args.phases_low_res_idx
+D_dimensions_to_check = args.d_dimensions_to_check
 
 if not os.path.exists(ImageTools.progress_dir + progress_dir):
     os.makedirs(ImageTools.progress_dir + progress_dir)
@@ -40,13 +43,15 @@ PATH_D = 'progress/' + progress_dir + '/d_weights.pth'
 eta_file = 'eta.npy'
 
 # G and D slices to choose from
-g_slices = [0, 1]
-d_slices = [0, 1]
+g_slices = [0]
+d_slices = [0]
 
 # Root directory for dataset
 dataroot = "data/"
-D_image = dataroot + 'train_cube_sofc.tif'
-G_image = dataroot + 'test_cube_sofc.tif'
+D_image_path = 'separator_changed_2D.tif'
+G_image_path = 'might_fit_size.tif'
+D_image = dataroot + D_image_path
+G_image = dataroot + G_image_path
 
 # Number of workers for dataloader
 workers = 2
@@ -67,7 +72,6 @@ print('device is ' + str(device))
 
 # the material indices to low-res:
 to_low_idx = torch.LongTensor(phases_to_low).to(device)
-print(to_low_idx)
 
 # Number of channels in the training images. For color images this is 3
 if squash:
@@ -127,6 +131,8 @@ if __name__ == '__main__':
     # The batch makers for D and G:
     BM_D = BatchMaker(device, path=D_image, dims=n_dims)
     BM_G = BatchMaker(device, path=G_image, dims=n_dims)
+
+    nc_d = len(BM_D.phases)
 
     # Create the generator
     netG = Networks.generator(ngpu, wg, nc_g, nc_d, n_res_blocks, n_dims).to(
@@ -210,7 +216,9 @@ if __name__ == '__main__':
             _, fake_for_d = generate_fake_image(detach_output=True)
 
             for k in range(math.comb(n_dims, 2)):
-
+                if k not in D_dimensions_to_check:  # only look at
+                    # slices from the right directions
+                    continue
                 # Train with all-real batch
                 netD.zero_grad()
                 # Batch of real high res for D
@@ -252,6 +260,9 @@ if __name__ == '__main__':
                 g_cost = 0
                 # go through each axis
                 for k in range(math.comb(n_dims, 2)):
+                    if k not in D_dimensions_to_check:  # only look at
+                        # slices from the right directions
+                        continue
                     fake_slices = take_fake_slices(fake_for_g, k)
                     # perform a forward pass of all-fake batch through D
                     fake_output = netD(fake_slices).view(-1)
@@ -284,7 +295,7 @@ if __name__ == '__main__':
                                      progress_dir, 'running slices',
                                      BM_G.train_scale_factor)
             i += 1
-            print(i,j)
+
         if (epoch % 3) == 0:
             torch.save(netG.state_dict(), PATH_G)
             torch.save(netD.state_dict(), PATH_D)
