@@ -91,7 +91,7 @@ def one_hot_encoding(image, phases):
         image_copy = np.zeros(im_shape)  # just an encoding for one
         # channel
         image_copy[image == phase] = 1
-        res[count, :, :, :] = image_copy
+        res[count, ...] = image_copy
     return res
 
 

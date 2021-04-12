@@ -25,7 +25,7 @@ class BatchMaker:
     Makes and saves training and test batch images.
     """
 
-    def __init__(self, device, path=NMC_PATH, dims=3, crop=True):
+    def __init__(self, device, path=NMC_PATH, dims=3, crop=False):
         """
         :param path: the path of the tif file (TODO make it more general)
         :param dims: number of dimensions for the batches (2 or 3)
@@ -77,7 +77,7 @@ class BatchMaker:
         """
         h_r = self.high_l
         # starting voxels
-        s_ind = np.random.randint(self.im_ohe.shape[1:] - h_r)
+        s_ind = np.random.randint(np.array(self.im_ohe.shape[1:]) - h_r)
         e_ind = s_ind + h_r  # the end indices
         res_image = self.im_ohe[:, s_ind[0]:e_ind[0], s_ind[1]:e_ind[1],
                                 s_ind[2]:e_ind[2]]
@@ -103,11 +103,12 @@ class BatchMaker:
         image.
         """
         # the starting pixels of the other dimensions:
-        s_ind = np.random.randint(self.im_ohe.shape[1:] - self.high_l)
+        s_ind = np.random.randint(np.array(self.im_ohe.shape[1:]) -
+                                  self.high_l)
         e_ind = s_ind + self.high_l
         if self.dim_im == 2:  # the image is just 2D
             return self.im_ohe[:, s_ind[0]:e_ind[0], s_ind[0]:e_ind[0]]
-        slice_chosen = np.random.randint(self.im_ohe.shape[1:])
+        slice_chosen = np.random.randint(np.array(self.im_ohe.shape[1:]))
         if dim_chosen == 0:
             res_image = self.im_ohe[:, slice_chosen[0], s_ind[1]:e_ind[1],
                                     s_ind[2]:e_ind[2]]

@@ -1,3 +1,5 @@
+import matplotlib.pyplot as plt
+
 import LearnTools
 import Networks
 from BatchMaker import *
@@ -70,7 +72,6 @@ print('device is ' + str(device))
 
 # the material indices to low-res:
 to_low_idx = torch.LongTensor(phases_to_low).to(device)
-print(to_low_idx)
 
 # Number of channels in the training images. For color images this is 3
 if squash:
@@ -130,6 +131,8 @@ if __name__ == '__main__':
     # The batch makers for D and G:
     BM_D = BatchMaker(device, path=D_image, dims=n_dims)
     BM_G = BatchMaker(device, path=G_image, dims=n_dims)
+
+    nc_d = len(BM_D.phases)
 
     # Create the generator
     netG = Networks.generator(ngpu, wg, nc_g, nc_d, n_res_blocks, n_dims).to(
@@ -292,7 +295,7 @@ if __name__ == '__main__':
                                      progress_dir, 'running slices',
                                      BM_G.train_scale_factor)
             i += 1
-            print(i,j)
+
         if (epoch % 3) == 0:
             torch.save(netG.state_dict(), PATH_G)
             torch.save(netD.state_dict(), PATH_D)
