@@ -17,6 +17,8 @@ def return_args(parser):
                         help="All material phases in low res are the same.")
     parser.add_argument('-phases_idx', '--phases_low_res_idx', nargs='+',
                         type=int, default=[1])
+    parser.add_argument('-d_dimensions', '--d_dimensions_to_check', nargs='+',
+                        type=int, default=[0, 1, 2])
     parser.add_argument('-wd', '--widthD', type=int, default=9,
                         help='Hyper-parameter for \
                         the width of the Discriminator network')

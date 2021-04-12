@@ -31,6 +31,7 @@ progress_dir, wd, wg = args.directory, args.widthD, args.widthG
 n_res_blocks, pix_distance = args.n_res_blocks, args.pixel_coefficient_distance
 num_epochs, g_update, n_dims = args.num_epochs, args.g_update, args.n_dims
 squash, phases_to_low = args.squash_phases, args.phases_low_res_idx
+D_dimensions_to_check = args.d_dimensions_to_check
 
 if not os.path.exists(ImageTools.progress_dir + progress_dir):
     os.makedirs(ImageTools.progress_dir + progress_dir)
@@ -40,14 +41,15 @@ PATH_D = 'progress/' + progress_dir + '/d_weights.pth'
 eta_file = 'eta.npy'
 
 # G and D slices to choose from
-g_slices = [0, 1]
-d_slices = [0, 1]
+g_slices = [0]
+d_slices = [0]
 
 # Root directory for dataset
 dataroot = "data/"
-D_image_path = 'change_seperator.png'
-D_image = dataroot + 'train_cube_sofc.tif'
-G_image = dataroot + 'test_cube_sofc.tif'
+D_image_path = 'separator_changed_2D.tif'
+G_image_path = 'might_fit_size.tif'
+D_image = dataroot + D_image_path
+G_image = dataroot + G_image_path
 
 # Number of workers for dataloader
 workers = 2
@@ -211,7 +213,9 @@ if __name__ == '__main__':
             _, fake_for_d = generate_fake_image(detach_output=True)
 
             for k in range(math.comb(n_dims, 2)):
-
+                if k not in D_dimensions_to_check:  # only look at
+                    # slices from the right directions
+                    continue
                 # Train with all-real batch
                 netD.zero_grad()
                 # Batch of real high res for D
@@ -253,6 +257,9 @@ if __name__ == '__main__':
                 g_cost = 0
                 # go through each axis
                 for k in range(math.comb(n_dims, 2)):
+                    if k not in D_dimensions_to_check:  # only look at
+                        # slices from the right directions
+                        continue
                     fake_slices = take_fake_slices(fake_for_g, k)
                     # perform a forward pass of all-fake batch through D
                     fake_output = netD(fake_slices).view(-1)
