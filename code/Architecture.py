@@ -271,7 +271,7 @@ if __name__ == '__main__':
                                fake_for_g, to_low_idx, BM_G.train_scale_factor,
                                device, n_dims, squash)
                     # Calculate G's loss based on this output
-                    if pix_loss.item() > 0.1:
+                    if pix_loss.item() > 0.02:
                         g_cost += -fake_output.mean() + pix_distance * pix_loss
                     else:
                         g_cost += -fake_output.mean()

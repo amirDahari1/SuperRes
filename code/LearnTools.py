@@ -1,6 +1,8 @@
 import torch
 from torch.nn.functional import interpolate
 from torch import autograd
+import numpy as np
+import matplotlib.pyplot as plt
 
 separator = True
 k_logistic = 30  # the logistic function coefficient
