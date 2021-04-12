@@ -2,7 +2,7 @@ import torch
 from torch.nn.functional import interpolate
 from torch import autograd
 
-
+separator = True
 k_logistic = 30  # the logistic function coefficient
 up_sample_factor = 4
 threshold = 0.5
@@ -107,7 +107,6 @@ def down_sample(high_res_multi_phase, mat_idx, scale_factor, device, n_dims,
         sum_of_low_res = torch.sum(material_low_res, dim=1).unsqueeze(dim=1)
         pore_phase = torch.ones(size=sum_of_low_res.size()).to(
             device) - sum_of_low_res
-    print(material_low_res.size())
     return pore_phase, material_low_res
 
 
@@ -156,11 +155,13 @@ def pixel_wise_distance(low_res_im, generated_im, mat_idx,
     :return: the normalized distance (divided by the number of pixels of the
     low resolution image
     """
-    print(low_res_im.size())
     # all low res phases which are not pore are to be matched:
     low_res_mat = low_res_im[:, 1:]
     down_sample_im = down_sample_for_similarity_check(generated_im, mat_idx,
                                                       scale_factor, device,
                                                       n_dims, squash)
+    if separator:  # no punishment for making more material where pore is in
+        # low_res
+        down_sample_im[low_res_mat == 0] = 0
     return torch.nn.MSELoss()(low_res_mat, down_sample_im)
 

@@ -45,6 +45,7 @@ d_slices = [0, 1]
 
 # Root directory for dataset
 dataroot = "data/"
+D_image_path = 'change_seperator.png'
 D_image = dataroot + 'train_cube_sofc.tif'
 G_image = dataroot + 'test_cube_sofc.tif'
 

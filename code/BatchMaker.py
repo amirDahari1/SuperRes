@@ -36,12 +36,10 @@ class BatchMaker:
         self.dims = dims  # if G is 3D to 3D or 2D to 2D
         self.device = device
         self.im_3d = imread(path)
+        self.dim_im = len(self.im_3d.shape)  # the dimension of the image
         self.phases = np.unique(self.im_3d)  # the unique values in image
-        self.min_l = min(self.im_3d.shape)  # the minimal length of image
         if crop:  # crop the image in the edges:
-            self.im_3d = self.im_3d[CROP:self.min_l-CROP, CROP:self.min_l-CROP,
-                                    CROP:self.min_l-CROP]
-            self.min_l = self.min_l - 2*CROP  # update the min length
+            self.im_3d = self.im_3d[CROP:-CROP, CROP:-CROP, CROP:-CROP]
         self.im_ohe = ImageTools.one_hot_encoding(self.im_3d, self.phases)
         if self.dims == 3:
             self.low_l, self.high_l = LOW_L_3D, HIGH_L_3D
@@ -78,12 +76,11 @@ class BatchMaker:
         TODO because of slice
         """
         h_r = self.high_l
-        lim_pix = self.min_l - h_r  # the maximum pixel to start with
-        # the starting pixels of the other dimensions:
-        s_pix = np.random.randint(0, lim_pix, size=self.dims)
-        s_x, s_y, s_z = s_pix  # starting voxels, TODO see how to generalise
-        # TODO for 2d as well..
-        res_image = self.im_ohe[:, s_x:s_x + h_r, s_y:s_y + h_r, s_z:s_z + h_r]
+        # starting voxels
+        s_ind = np.random.randint(self.im_ohe.shape[1:] - h_r)
+        e_ind = s_ind + h_r  # the end indices
+        res_image = self.im_ohe[:, s_ind[0]:e_ind[0], s_ind[1]:e_ind[1],
+                                s_ind[2]:e_ind[2]]
         # for different view, change the cube around..
         return res_image.transpose(0, *perms[dim_chosen])
 
@@ -105,46 +102,29 @@ class BatchMaker:
         :return: A random image of size res from the dimension chosen of the
         image.
         """
-        slice_chosen = random.randint(0, self.min_l - 1)  # the
-        # slice chosen
-        lim_pix = self.min_l - self.high_l  # the maximum pixel to start with
         # the starting pixels of the other dimensions:
-        pix1 = random.randint(0, lim_pix)
-        pix2 = random.randint(0, lim_pix)
+        s_ind = np.random.randint(self.im_ohe.shape[1:] - self.high_l)
+        e_ind = s_ind + self.high_l
+        if self.dim_im == 2:  # the image is just 2D
+            return self.im_ohe[:, s_ind[0]:e_ind[0], s_ind[0]:e_ind[0]]
+        slice_chosen = np.random.randint(self.im_ohe.shape[1:])
         if dim_chosen == 0:
-            res_image = self.im_ohe[:, slice_chosen, pix1:pix1 + self.high_l,
-                                    pix2:pix2 + self.high_l]
+            res_image = self.im_ohe[:, slice_chosen[0], s_ind[1]:e_ind[1],
+                                    s_ind[2]:e_ind[2]]
         elif dim_chosen == 1:
-            res_image = self.im_ohe[:, pix1:pix1 + self.high_l, slice_chosen,
-                                    pix2:pix2 + self.high_l]
+            res_image = self.im_ohe[:, s_ind[0]:e_ind[0], slice_chosen[1],
+                                    s_ind[2]:e_ind[2]]
         else:  # dim_chosen == 2
-            res_image = self.im_ohe[:, pix1:pix1 + self.high_l, pix2:pix2 +
-                                    self.high_l, slice_chosen]
+            res_image = self.im_ohe[:, s_ind[0]:e_ind[0], s_ind[1]:e_ind[1],
+                                    slice_chosen[2]]
         return res_image
 
-    def all_image_batch(self, dim, all_image=False):
+    def all_image_batch(self):
         """
-        :param dim: the dimension to slice the images.
-        :param all_image: if True, all image is chosen, if False,
-        only middle part of the image at given dimension is chosen with high
-        resolution
-        :return: a 3d image with dimension Depthx3xWidthxHeight
+        :return: the 3d image ready to be fed into the G with dimensions
+        1xCxDxHxW or 1xCxHxW
         """
-        start = 0  # the start pixel
-        resolution = self.min_l
-        perm = perms[dim]
-        if not all_image:
-            # s.t. the image will be in the middle
-            start = (self.min_l - self.high_l) // 2
-            resolution = self.high_l
-        if self.dims == 3:
-            res = self.im_ohe[:, start:start + resolution, start:start +
-                              resolution, start:start + resolution]
-            return torch.FloatTensor(res).to(
-                self.device).unsqueeze(0)
-        res = self.im_ohe.transpose(perm[0], 0, *perm[1:])
-        res = res[:, :, start:start + resolution, start:start + resolution]
-        return torch.FloatTensor(res).to(self.device)
+        return torch.FloatTensor(self.im_ohe).to(self.device).unsqueeze(0)
 
 
 def main():
