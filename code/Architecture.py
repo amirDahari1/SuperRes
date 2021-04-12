@@ -48,8 +48,8 @@ d_slices = [0]
 
 # Root directory for dataset
 dataroot = "data/"
-D_image_path = 'separator_changed_2D.tif'
-G_image_path = 'might_fit_size.tif'
+D_image_path = 'separator_2D.tif'
+G_image_path = 'lower_res_separator_3d.tif'
 D_image = dataroot + D_image_path
 G_image = dataroot + G_image_path
 
