@@ -83,9 +83,6 @@ class Generator3D(nn.Module):
         # softmax of the phase dimension:
         return nn.Softmax(dim=1)(bf_end)
 
-    def return_scale_factor(self, high_res_length):
-        return (high_res_length / 4) / high_res_length
-
 
 def discriminator(ngpu, wd, nc_d, dims):
     if dims == 3:
