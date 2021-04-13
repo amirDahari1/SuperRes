@@ -166,6 +166,6 @@ def pixel_wise_distance(low_res_im, generated_im, mat_idx,
                                                       n_dims, squash)
     if separator:  # no punishment for making more material where pore is in
         # low_res
-        down_sample_im[low_res_mat == 0] = 0
+        down_sample_im = down_sample_im * low_res_mat
     return torch.nn.MSELoss()(low_res_mat, down_sample_im)
 

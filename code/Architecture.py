@@ -48,7 +48,7 @@ d_slices = [0]
 
 # Root directory for dataset
 dataroot = "data/"
-D_image_path = 'separator_2D.tif'
+D_image_path = 'Segmented_separator2D.tif'
 G_image_path = 'lower_res_separator_3d.tif'
 D_image = dataroot + D_image_path
 G_image = dataroot + G_image_path
@@ -271,7 +271,7 @@ if __name__ == '__main__':
                                fake_for_g, to_low_idx, BM_G.train_scale_factor,
                                device, n_dims, squash)
                     # Calculate G's loss based on this output
-                    if pix_loss.item() > 0.02:
+                    if pix_loss.item() > 0.01:
                         g_cost += -fake_output.mean() + pix_distance * pix_loss
                     else:
                         g_cost += -fake_output.mean()
@@ -295,6 +295,7 @@ if __name__ == '__main__':
                                      progress_dir, 'running slices',
                                      BM_G.train_scale_factor)
             i += 1
+            print(i,j)
 
         if (epoch % 3) == 0:
             torch.save(netG.state_dict(), PATH_G)

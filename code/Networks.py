@@ -1,7 +1,7 @@
 import torch.nn as nn
 from torch.nn.functional import interpolate
 import torch
-
+smaller_cube = True
 
 def generator(ngpu, wg, nc_g, nc_d, n_res_block, dims):
     if dims == 3:
@@ -17,10 +17,13 @@ class Generator3D(nn.Module):
         self.n_res_blocks = n_res_blocks
         self.ngpu = ngpu
         # first convolution, making many channels
-        self.conv_minus_1 = nn.Conv3d(nc_g, 2 ** wg, 3, 1, 1)
+        self.conv_minus_1 = nn.Conv3d(nc_g, 2 ** wg, 3, stride=1, padding=1,
+                                      padding_mode='replicate')
         self.bn_minus_1 = nn.BatchNorm3d(2**wg)
 
-        self.conv_res = nn.ModuleList([nn.Conv3d(2 ** wg, 2 ** wg, 3, 1, 1)
+        self.conv_res = nn.ModuleList([nn.Conv3d(2 ** wg, 2 ** wg, 3,
+                                                 stride=1, padding=1,
+                                                 padding_mode='replicate')
                                        for _ in range(self.n_res_blocks*2)])
         self.bn_res = nn.ModuleList([nn.BatchNorm3d(2 ** wg)
                                      for _ in range(self.n_res_blocks*2)])
@@ -29,9 +32,12 @@ class Generator3D(nn.Module):
         self.bn1 = nn.BatchNorm3d(2 ** (wg - 1))
         # convolution resize:
         self.up_sample = nn.Upsample(scale_factor=2)
-        self.conv_resize = nn.Conv3d(2 ** (wg - 1), 2 ** (wg - 2), 3, 1, 1)
+        self.conv_resize = nn.Conv3d(2 ** (wg - 1), 2 ** (wg - 2), 3,
+                                     stride=1, padding=1,
+                                     padding_mode='replicate')
         self.bn_resize = nn.BatchNorm3d(2 ** (wg - 2))
-        self.conv_bf_end = nn.Conv3d(2 ** (wg - 2), nc_d, 3, 1, 1)
+        self.conv_bf_end = nn.Conv3d(2 ** (wg - 2), nc_d, 3, stride=1, padding=1,
+                                     padding_mode='replicate')
         self.conv_concat = nn.Conv3d(nc_d+nc_g, nc_d, 1, 1, 0)
 
     @staticmethod
@@ -103,12 +109,16 @@ class Discriminator3d(nn.Module):
         self.conv4 = nn.Conv2d(2 ** (wd - 1), 2 ** wd, 4, 2, 1)
         # fifth convolution, input is 256x4x4
         self.conv5 = nn.Conv2d(2 ** wd, 1, 4, 2, 0)
+        # for smaller cube
+        self.conv_early = nn.Conv2d(2**(wd-1), 1, 4, 2, 0)
 
     def forward(self, x):
         x = nn.ReLU()(self.conv0(x))
         # x = nn.ReLU()(self.conv1(x))
         x = nn.ReLU()(self.conv2(x))
         x = nn.ReLU()(self.conv3(x))
+        if smaller_cube:
+            return self.conv_early(x)
         x = nn.ReLU()(self.conv4(x))
         return self.conv5(x)
 
