@@ -21,6 +21,7 @@ progress_main_dir = 'progress/' + progress_dir
 path_to_g_weights = progress_main_dir + '/g_weights.pth'
 G_image_path = 'data/lower_res_separator_3d.tif'
 file_name = progress_main_dir + 'generated_tif.tif'
+crop_to_cube = True
 
 # TODO all of these (ngpu, device, to_low_idx, nc_g..) can go into a
 #  function in LearnTools that Architecture can also use
@@ -78,5 +79,8 @@ def save_tif_3d(network_g, high_res_im, grey_idx, device, filename,
 
 with torch.no_grad():  # save the images
     im_3d = BM.all_image_batch()
+    if crop_to_cube:
+        min_d = min(im_3d.size()[2:])
+        im_3d = im_3d[:, :, :min_d, :min_d, :min_d]
     save_tif_3d(G_net, im_3d, to_low_idx, device, file_name,
                 mask=False)
