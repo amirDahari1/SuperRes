@@ -1,6 +1,7 @@
 import torch
 from torch.nn.functional import interpolate
 from torch import autograd
+import math  # just so I don't use numpy by accident
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -43,6 +44,56 @@ def return_args(parser):
                              'added to the cost of G.')
     args, unknown = parser.parse_known_args()
     return args
+
+
+def forty_five_deg_masks(batch_size, phases, high_l):
+    """
+    :param batch_size: batch size for the images for the making of the mask.
+    :param phases: number of phases.
+    :param high_l: the length of the high resolution
+    :return: list of two masks of the 45 degree angle slices along the
+    z-axis of the 3d (returns masks for both slices of 45 degrees).
+    """
+    # create the masks
+    mask1 = torch.zeros((batch_size, phases, *[high_l]*3), dtype=torch.bool)
+    mask2 = torch.zeros(mask1.size(), dtype=torch.bool)
+    over_sqrt_2 = high_l//math.sqrt(2)  # high_l in the diagonal
+    for i in range(over_sqrt_2):  # make the two masks along the z axis
+        mask1[..., i, i, :] = True
+        mask2[..., i, -1 - i, :] = True
+    return [mask1, mask2]
+
+
+def to_slice(k, forty_five_deg, D_dimensions_to_check):
+    """
+    :param k: axis idx.
+    :param forty_five_deg: bool determining if to slice in 45 deg.
+    :param D_dimensions_to_check: The dimensions to check by the user.
+    :return: When to slice the volume (in which axis/45 deg angles).
+    """
+    if k not in D_dimensions_to_check:
+        if k != 3:
+            return False
+        if not forty_five_deg:
+            return False
+    return True
+
+
+def forty_five_deg_slices(masks, volume_input):
+    """
+    :param masks: the masks of the 45 degree angle slices
+    :param volume_input: the volume to slice
+    :return: the two slices (as a tensor of batch size x 2)
+    """
+    tensors = []
+    batch_size, phases, high_l = volume_input.size[:3]
+    for mask in masks:
+        # the result of the mask on the input:
+        slice_mask = volume_input[mask].view(batch_size, phases, -1, high_l)
+        # add the slice after up_sample to wanted size:
+        tensors.append(interpolate(slice_mask, size=(batch_size, phases,
+                                   high_l, high_l), mode=modes[0]))
+    return torch.cat(tensors, dim=0)  # concat tensors along batch_size
 
 
 def calc_gradient_penalty(netD, real_data, fake_data, batch_size, l, device,

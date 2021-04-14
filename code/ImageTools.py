@@ -19,21 +19,22 @@ def show_grey_image(image, title):
     # plt.show()
 
 
-def plot_fake_difference(high_res, input_to_g, output_from_g, save_dir,
-                         filename):
+def plot_fake_difference(high_res, input_to_g, output_from_g,
+                         slices_45, save_dir, filename):
     # first move everything to numpy
     # rand_sim = np.array(input_to_g[:, 2, :, :])
-    images = [high_res, input_to_g, output_from_g]
+    images = [high_res, input_to_g, output_from_g, slices_45]
     images = [np.array(image) for image in images]
     images[2] = fractions_to_ohe(images[2])  # the output from g needs to ohe
+    images[3] = fractions_to_ohe(images[2])  # also the slices
     images = [one_hot_decoding(image) for image in images]
-    save_three_by_two_grey(images[0], images[1], images[2],
+    save_three_by_two_grey(images[0], images[1], images[2], images[3],
                            save_dir + ' ' + filename, save_dir, filename)
 
 
-def save_three_by_two_grey(top_images, middle_images, bottom_images, title,
-                           save_dir, filename):
-    f, axarr = plt.subplots(3, 3)
+def save_three_by_two_grey(top_images, middle_images, bottom_images,
+                           slices_45, title, save_dir, filename):
+    f, axarr = plt.subplots(4, 3)
     images = [top_images, middle_images, bottom_images]
     for i in range(len(images)):
         if len(images[i].shape) > 3:
@@ -47,6 +48,9 @@ def save_three_by_two_grey(top_images, middle_images, bottom_images, title,
     axarr[2, 0].imshow(images[2][0, :, :], cmap='gray', vmin=0, vmax=255)
     axarr[2, 1].imshow(images[2][1, :, :], cmap='gray', vmin=0, vmax=255)
     axarr[2, 2].imshow(images[2][2, :, :], cmap='gray', vmin=0, vmax=255)
+    axarr[3, 0].imshow(images[3][0, :, :], cmap='gray', vmin=0, vmax=255)
+    axarr[3, 1].imshow(images[3][1, :, :], cmap='gray', vmin=0, vmax=255)
+    axarr[3, 2].imshow(images[3][2, :, :], cmap='gray', vmin=0, vmax=255)
     plt.suptitle(title)
     wandb.log({"examples": [wandb.Image(plt, caption="Running Examples")]})
     plt.savefig(progress_dir + save_dir + '/' + filename + '.png')

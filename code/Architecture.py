@@ -46,6 +46,9 @@ eta_file = 'eta.npy'
 g_slices = [0]
 d_slices = [0]
 
+# adding 45 degree angle instead of z axis slices (TODO in addition)
+forty_five_deg = True
+
 # Root directory for dataset
 dataroot = "data/"
 D_image_path = 'Segmented_separator2D.tif'
@@ -107,7 +110,8 @@ def weights_init(m):
         nn.init.constant_(m.bias.data, 0)
 
 
-def save_differences(network_g, high_res_im, save_dir, filename, scale_factor):
+def save_differences(network_g, high_res_im, save_dir, filename,
+                     scale_factor, masks):
     """
     Saves the image of the differences between the high-res real and the
     generated images that are supposed to be similar.
@@ -117,9 +121,10 @@ def save_differences(network_g, high_res_im, save_dir, filename, scale_factor):
                                                        scale_factor, device,
                                                        n_dims, squash)
     g_output = network_g(low_res_input).detach().cpu()
+    slices_45 = LearnTools.forty_five_deg_slices(masks, g_output)
     ImageTools.plot_fake_difference(high_res_im.detach().cpu(),
                                     low_res_input.detach().cpu(), g_output,
-                                    save_dir, filename)
+                                    slices_45, save_dir, filename)
 
 
 if __name__ == '__main__':
@@ -154,6 +159,9 @@ if __name__ == '__main__':
     #  to mean=0, stdev=0.2.
     # netG.apply(weights_init)
     # netD.apply(weights_init)
+    # masks for 45 degree angle
+    masks_45 = LearnTools.forty_five_deg_masks(batch_size_G_for_D,
+                                               nc_d, BM_D.high_l)
 
     # Setup Adam optimizers for both G and D
     optimizerD = optim.Adam(netD.parameters(), lr=lr, betas=(beta1, 0.999))
@@ -186,6 +194,8 @@ if __name__ == '__main__':
         """
         if n_dims == 3:
             perm = perms_3d[perm_idx]
+            if perm_idx == 3 and forty_five_deg:  # take forty five deg slices
+                return LearnTools.forty_five_deg_slices(masks_45, fake_image)
             # permute the fake output of G to make it into a batch
             # of images to feed D (each time different axis)
             fake_slices_for_D = fake_image.permute(0, perm[0], 1, *perm[1:])
@@ -193,7 +203,7 @@ if __name__ == '__main__':
             batch_size_new = batch_size_G_for_D * BM_G.high_l
             # reshaping for the correct size of D's input
             return fake_slices_for_D.reshape(batch_size_new, nc_d,
-                                       BM_G.high_l, BM_G.high_l)
+                                             BM_G.high_l, BM_G.high_l)
         else:  # same 2d slices are fed into D
             return fake_image
 
@@ -216,8 +226,9 @@ if __name__ == '__main__':
             _, fake_for_d = generate_fake_image(detach_output=True)
 
             for k in range(math.comb(n_dims, 2)):
-                if k not in D_dimensions_to_check:  # only look at
-                    # slices from the right directions
+                # only look at slices from the right directions:
+                if not LearnTools.to_slice(k, forty_five_deg,
+                                           D_dimensions_to_check):
                     continue
                 # Train with all-real batch
                 netD.zero_grad()
@@ -260,8 +271,9 @@ if __name__ == '__main__':
                 g_cost = 0
                 # go through each axis
                 for k in range(math.comb(n_dims, 2)):
-                    if k not in D_dimensions_to_check:  # only look at
-                        # slices from the right directions
+                    # only look at slices from the right directions:
+                    if not LearnTools.to_slice(k, forty_five_deg,
+                                               D_dimensions_to_check):
                         continue
                     fake_slices = take_fake_slices(fake_for_g, k)
                     # perform a forward pass of all-fake batch through D
@@ -276,10 +288,10 @@ if __name__ == '__main__':
                     else:
                         g_cost += -fake_output.mean()
 
-                # Calculate gradients for G
-                g_cost.backward()
-                # Update G
-                optimizerG.step()
+                    # Calculate gradients for G
+                    g_cost.backward()
+                    # Update G
+                    optimizerG.step()
                 wandb.log({"pixel distance": pix_loss})
                 wandb.log({"wass": wass})
                 wandb.log({"real": output_real, "fake": output_fake})
@@ -295,7 +307,7 @@ if __name__ == '__main__':
                                      progress_dir, 'running slices',
                                      BM_G.train_scale_factor)
             i += 1
-            print(i,j)
+            print(i, j)
 
         if (epoch % 3) == 0:
             torch.save(netG.state_dict(), PATH_G)
