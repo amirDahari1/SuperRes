@@ -21,7 +21,7 @@ def return_args(parser):
     parser.add_argument('-phases_idx', '--phases_low_res_idx', nargs='+',
                         type=int, default=[1])
     parser.add_argument('-d_dimensions', '--d_dimensions_to_check', nargs='+',
-                        type=int, default=[0, 1, 2])
+                        type=int, default=[0, 1])  # TODO just for separator! change after
     parser.add_argument('-wd', '--widthD', type=int, default=9,
                         help='Hyper-parameter for \
                         the width of the Discriminator network')
@@ -72,7 +72,7 @@ def to_slice(k, forty_five_deg, D_dimensions_to_check):
     :return: When to slice the volume (in which axis/45 deg angles).
     """
     if k not in D_dimensions_to_check:
-        if k != 3:
+        if k != 2:
             return False
         if not forty_five_deg:
             return False
@@ -91,8 +91,7 @@ def forty_five_deg_slices(masks, volume_input):
         # the result of the mask on the input:
         slice_mask = volume_input[mask].view(batch_size, phases, -1, high_l)
         # add the slice after up_sample to wanted size:
-        tensors.append(interpolate(slice_mask, size=(batch_size, phases,
-                                   high_l, high_l), mode=modes[0]))
+        tensors.append(interpolate(slice_mask, size=(high_l, high_l), mode=modes[0]))
     return torch.cat(tensors, dim=0)  # concat tensors along batch_size
 
 

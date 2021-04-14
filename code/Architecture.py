@@ -196,7 +196,7 @@ if __name__ == '__main__':
         """
         if n_dims == 3:
             perm = perms_3d[perm_idx]
-            if perm_idx == 3 and forty_five_deg:  # take forty five deg slices
+            if perm_idx == 2 and forty_five_deg:  # take forty five deg slices
                 return LearnTools.forty_five_deg_slices(masks_45, fake_image)
             # permute the fake output of G to make it into a batch
             # of images to feed D (each time different axis)
@@ -247,9 +247,10 @@ if __name__ == '__main__':
                 # Classify all fake batch with D
                 output_fake = netD(fake_slices).view(-1).mean()
 
+                min_batch = min(high_res.size()[0], fake_slices.size()[0])
                 # Calculate gradient penalty
                 gradient_penalty = LearnTools.calc_gradient_penalty(netD,
-                                   high_res, fake_slices[:batch_size_D],
+                                   high_res[:min_batch], fake_slices[:min_batch],
                                    batch_size_D, BM_D.high_l, device,
                                    Lambda, nc_d)
 
@@ -288,7 +289,12 @@ if __name__ == '__main__':
                     if pix_loss.item() > 0.003:
                         g_cost += -fake_output.mean() + pix_distance * pix_loss
                     else:
-                        g_cost += -fake_output.mean()
+                        if k == 3 and forty_five_deg:
+                            g_cost += -fake_output.mean() * 10
+                        else:
+                            g_cost += -fake_output.mean()
+
+
 
                 # Calculate gradients for G
                 g_cost.backward()
