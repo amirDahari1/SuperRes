@@ -305,7 +305,7 @@ if __name__ == '__main__':
                 wandb.log({"real": output_real, "fake": output_fake})
 
             # Output training stats
-            if i == j:
+            if i == j or i == 0:
                 ImageTools.calc_and_save_eta(steps, time.time(), start, i,
                                              epoch, num_epochs, eta_file)
 
