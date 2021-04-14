@@ -86,7 +86,7 @@ def forty_five_deg_slices(masks, volume_input):
     :return: the two slices (as a tensor of batch size x 2)
     """
     tensors = []
-    batch_size, phases, high_l = volume_input.size[:3]
+    batch_size, phases, high_l = volume_input.size()[:3]
     for mask in masks:
         # the result of the mask on the input:
         slice_mask = volume_input[mask].view(batch_size, phases, -1, high_l)

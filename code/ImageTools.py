@@ -52,7 +52,7 @@ def save_three_by_two_grey(top_images, middle_images, bottom_images,
     axarr[3, 1].imshow(images[3][1, :, :], cmap='gray', vmin=0, vmax=255)
     axarr[3, 2].imshow(images[3][2, :, :], cmap='gray', vmin=0, vmax=255)
     plt.suptitle(title)
-    wandb.log({"examples": [wandb.Image(plt, caption="Running Examples")]})
+    wandb.log({"running slices": plt})
     plt.savefig(progress_dir + save_dir + '/' + filename + '.png')
     plt.close()
 

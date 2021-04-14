@@ -120,8 +120,10 @@ def save_differences(network_g, high_res_im, save_dir, filename,
                                                        to_low_idx,
                                                        scale_factor, device,
                                                        n_dims, squash)
-    g_output = network_g(low_res_input).detach().cpu()
+    g_output = network_g(low_res_input)
     slices_45 = LearnTools.forty_five_deg_slices(masks, g_output)
+    g_output = g_output.detach().cpu()
+    slices_45 = slices_45.detach().cpu()
     ImageTools.plot_fake_difference(high_res_im.detach().cpu(),
                                     low_res_input.detach().cpu(), g_output,
                                     slices_45, save_dir, filename)
@@ -283,7 +285,7 @@ if __name__ == '__main__':
                                fake_for_g, to_low_idx, BM_G.train_scale_factor,
                                device, n_dims, squash)
                     # Calculate G's loss based on this output
-                    if pix_loss.item() > 0.01:
+                    if pix_loss.item() > 0.003:
                         g_cost += -fake_output.mean() + pix_distance * pix_loss
                     else:
                         g_cost += -fake_output.mean()
@@ -303,7 +305,7 @@ if __name__ == '__main__':
 
                 with torch.no_grad():  # only for plotting
                     save_differences(netG, BM_G.random_batch_for_fake(
-                                     6, random.choice(g_slices)).detach(),
+                                     batch_size_G_for_D, random.choice(g_slices)).detach(),
                                      progress_dir, 'running slices',
                                      BM_G.train_scale_factor, masks_45)
             i += 1
@@ -312,7 +314,7 @@ if __name__ == '__main__':
         if (epoch % 3) == 0:
             torch.save(netG.state_dict(), PATH_G)
             torch.save(netD.state_dict(), PATH_D)
-            wandb.save(PATH_G)
-            wandb.save(PATH_D)
+            # wandb.save(PATH_G)
+            # wandb.save(PATH_D)
 
     print('finished training')
