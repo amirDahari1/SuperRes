@@ -305,7 +305,7 @@ if __name__ == '__main__':
                     save_differences(netG, BM_G.random_batch_for_fake(
                                      6, random.choice(g_slices)).detach(),
                                      progress_dir, 'running slices',
-                                     BM_G.train_scale_factor)
+                                     BM_G.train_scale_factor, masks_45)
             i += 1
             print(i, j)
 
