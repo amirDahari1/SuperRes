@@ -57,7 +57,7 @@ def forty_five_deg_masks(batch_size, phases, high_l):
     # create the masks
     mask1 = torch.zeros((batch_size, phases, *[high_l]*3), dtype=torch.bool)
     mask2 = torch.zeros(mask1.size(), dtype=torch.bool)
-    over_sqrt_2 = high_l//math.sqrt(2)  # high_l in the diagonal
+    over_sqrt_2 = int(high_l/math.sqrt(2))  # high_l in the diagonal
     for i in range(over_sqrt_2):  # make the two masks along the z axis
         mask1[..., i, i, :] = True
         mask2[..., i, -1 - i, :] = True

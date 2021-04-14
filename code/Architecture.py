@@ -288,10 +288,10 @@ if __name__ == '__main__':
                     else:
                         g_cost += -fake_output.mean()
 
-                    # Calculate gradients for G
-                    g_cost.backward()
-                    # Update G
-                    optimizerG.step()
+                # Calculate gradients for G
+                g_cost.backward()
+                # Update G
+                optimizerG.step()
                 wandb.log({"pixel distance": pix_loss})
                 wandb.log({"wass": wass})
                 wandb.log({"real": output_real, "fake": output_fake})
