@@ -51,7 +51,7 @@ forty_five_deg = True
 
 # Root directory for dataset
 dataroot = "data/"
-D_image_path = 'Segmented_separator2D.tif'
+D_image_path = 'Segmented_2D_more_pore.tif'
 G_image_path = 'lower_res_separator_3d.tif'
 D_image = dataroot + D_image_path
 G_image = dataroot + G_image_path
