@@ -51,8 +51,8 @@ forty_five_deg = True
 
 # Root directory for dataset
 dataroot = "data/"
-D_image_path = 'separator_2D_more_pore.tif'
-G_image_path = 'lower_res_separator_3d.tif'
+D_image_path = 'train_cube_sofc.tif'
+G_image_path = 'test_cube_sofc.tif'
 D_image = dataroot + D_image_path
 G_image = dataroot + G_image_path
 
@@ -142,8 +142,8 @@ if __name__ == '__main__':
     nc_d = len(BM_D.phases)
 
     # Create the generator
-    netG = Networks.generator(ngpu, wg, nc_g, nc_d, n_res_blocks, n_dims).to(
-        device)
+    netG = Networks.generator(ngpu, wg, nc_g, nc_d, n_res_blocks, n_dims,
+                              BM_G.scale_factor).to(device)
     wandb.watch(netG, log='all')
 
     # Handle multi-gpu if desired
@@ -180,7 +180,7 @@ if __name__ == '__main__':
                                                           g_slice)
         # down sample:
         low_res_im = LearnTools.down_sample_for_g_input(
-            before_down_sampling, to_low_idx, BM_G.train_scale_factor,
+            before_down_sampling, to_low_idx, BM_G.scale_factor,
             device, n_dims, squash)
 
         # Generate fake image batch with G
@@ -283,16 +283,13 @@ if __name__ == '__main__':
                     fake_output = netD(fake_slices).view(-1)
                     # get the pixel-wise-distance loss
                     pix_loss = LearnTools.pixel_wise_distance(low_res,
-                               fake_for_g, to_low_idx, BM_G.train_scale_factor,
+                               fake_for_g, to_low_idx, BM_G.scale_factor,
                                device, n_dims, squash)
                     # Calculate G's loss based on this output
                     if pix_loss.item() > 0.003:
                         g_cost += -fake_output.mean() + pix_distance * pix_loss
                     else:
-                        if k == 3 and forty_five_deg:
-                            g_cost += -fake_output.mean() * 10
-                        else:
-                            g_cost += -fake_output.mean()
+                        g_cost += -fake_output.mean()
 
 
 
@@ -313,7 +310,7 @@ if __name__ == '__main__':
                     save_differences(netG, BM_G.random_batch_for_fake(
                                      batch_size_G_for_D, random.choice(g_slices)).detach(),
                                      progress_dir, 'running slices',
-                                     BM_G.train_scale_factor, masks_45)
+                                     BM_G.scale_factor, masks_45)
             i += 1
             print(i, j)
 
