@@ -5,6 +5,7 @@ import copy
 import math
 smaller_cube = False
 EPS = 10e-10
+modes = ['bilinear', 'trilinear']
 
 
 def generator(ngpu, wg, nc_g, nc_d, n_res_block, dims, scale_factor):
@@ -95,8 +96,8 @@ class Generator3D(nn.Module):
         res = x_first + after_block
         # up sampling using conv resize
         if 4 < cur_scale <= 8:
-            up_sample = nn.Upsample(scale_factor=2)  # TODO maybe
-            # TODO trilinear upsampling?
+            up_sample = nn.Upsample(scale_factor=2, mode=modes[1])  # TODO
+            # maybe TODO trilinear upsampling?
             res = nn.ReLU()(self.bn_resize_0(self.conv_resize_0(up_sample(
                 res))))
             cur_scale /= 2
@@ -105,8 +106,8 @@ class Generator3D(nn.Module):
             res = nn.ReLU()(self.bn_trans(self.conv_trans(res)))
             cur_scale /= 2
         # last up sample using conv resize:
-        up_sample = nn.Upsample(scale_factor=cur_scale)  # TODO maybe
-        # TODO trilinear upsampling?
+        up_sample = nn.Upsample(scale_factor=cur_scale, mode=modes[1])  # TODO
+        # maybe TODO trilinear upsampling?
         super_res = nn.ReLU()(self.bn_resize(self.conv_resize(up_sample(res))))
         # another convolution before the end:
         bf_end = self.conv_bf_end(super_res)
