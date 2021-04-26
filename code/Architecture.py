@@ -43,11 +43,12 @@ PATH_D = 'progress/' + progress_dir + '/d_weights.pth'
 eta_file = 'eta.npy'
 
 # G and D slices to choose from
-g_slices = [0]
-d_slices = [0]
+g_batch_slices = [0]  # in 3D different views of the cube, better to keep it as
+# 0..
+d_batch_slices = [0, 1]  # im D image is 3D, than this has an impact
 
 # adding 45 degree angle instead of z axis slices (TODO in addition)
-forty_five_deg = True
+forty_five_deg = False
 
 # Root directory for dataset
 dataroot = "data/"
@@ -175,7 +176,7 @@ if __name__ == '__main__':
         :return: the generated image from G
         """
         # Generate batch of g input
-        g_slice = random.choice(g_slices)
+        g_slice = random.choice(g_batch_slices)
         before_down_sampling = BM_G.random_batch_for_fake(batch_size_G_for_D,
                                                           g_slice)
         # down sample:
@@ -235,7 +236,7 @@ if __name__ == '__main__':
                 # Train with all-real batch
                 netD.zero_grad()
                 # Batch of real high res for D
-                d_slice = random.choice(d_slices)
+                d_slice = random.choice(d_batch_slices)
                 high_res = BM_D.random_batch_for_real(batch_size_D, d_slice)
 
                 # Forward pass real batch through D
@@ -308,7 +309,8 @@ if __name__ == '__main__':
 
                 with torch.no_grad():  # only for plotting
                     save_differences(netG, BM_G.random_batch_for_fake(
-                                     batch_size_G_for_D, random.choice(g_slices)).detach(),
+                                     batch_size_G_for_D, random.choice(
+                                      g_batch_slices)).detach(),
                                      progress_dir, 'running slices',
                                      BM_G.scale_factor, masks_45)
             i += 1

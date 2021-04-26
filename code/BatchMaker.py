@@ -25,7 +25,7 @@ class BatchMaker:
     Makes and saves training and test batch images.
     """
 
-    def __init__(self, device, path=NMC_PATH, dims=3, crop=False):
+    def __init__(self, device, path=NMC_PATH, dims=3, crop=True):
         """
         :param path: the path of the tif file (TODO make it more general)
         :param dims: number of dimensions for the batches (2 or 3)
@@ -35,12 +35,15 @@ class BatchMaker:
         self.path = path
         self.dims = dims  # if G is 3D to 3D or 2D to 2D
         self.device = device
-        self.im_3d = imread(path)
-        self.dim_im = len(self.im_3d.shape)  # the dimension of the image
-        self.phases = np.unique(self.im_3d)  # the unique values in image
+        self.im = imread(path)
+        self.dim_im = len(self.im.shape)  # the dimension of the image
+        self.phases = np.unique(self.im)  # the unique values in image
         if crop:  # crop the image in the edges:
-            self.im_3d = self.im_3d[CROP:-CROP, CROP:-CROP, CROP:-CROP]
-        self.im_ohe = ImageTools.one_hot_encoding(self.im_3d, self.phases)
+            if self.dim_im == 3:
+                self.im = self.im[CROP:-CROP, CROP:-CROP, CROP:-CROP]
+            else:
+                self.im = self.im[CROP:-CROP, CROP:-CROP]
+        self.im_ohe = ImageTools.one_hot_encoding(self.im, self.phases)
         if self.dims == 3:
             self.low_l, self.high_l = LOW_L_3D, HIGH_L_3D
         else:  # dims = 2
