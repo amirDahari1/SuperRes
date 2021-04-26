@@ -112,7 +112,7 @@ def weights_init(m):
 
 
 def save_differences(network_g, high_res_im, save_dir, filename,
-                     scale_factor, masks):
+                     scale_factor, masks, with_deg=False):
     """
     Saves the image of the differences between the high-res real and the
     generated images that are supposed to be similar.
@@ -121,13 +121,14 @@ def save_differences(network_g, high_res_im, save_dir, filename,
                                                        to_low_idx,
                                                        scale_factor, device,
                                                        n_dims, squash)
-    g_output = network_g(low_res_input)
-    slices_45 = LearnTools.forty_five_deg_slices(masks, g_output)
-    g_output = g_output.detach().cpu()
-    slices_45 = slices_45.detach().cpu()
-    ImageTools.plot_fake_difference(high_res_im.detach().cpu(),
-                                    low_res_input.detach().cpu(), g_output,
-                                    slices_45, save_dir, filename)
+    g_output = network_g(low_res_input).detach().cpu()
+    images = [high_res_im.detach().cpu(),
+              low_res_input.detach().cpu(), g_output]
+    if with_deg:
+        slices_45 = LearnTools.forty_five_deg_slices(masks, g_output)
+        images.append(slices_45.detach().cpu())
+    ImageTools.plot_fake_difference(images, save_dir, filename, with_deg)
+
 
 
 if __name__ == '__main__':

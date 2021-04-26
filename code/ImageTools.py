@@ -19,38 +19,38 @@ def show_grey_image(image, title):
     # plt.show()
 
 
-def plot_fake_difference(high_res, input_to_g, output_from_g,
-                         slices_45, save_dir, filename):
+def plot_fake_difference(images, save_dir, filename, with_deg=False):
     # first move everything to numpy
     # rand_sim = np.array(input_to_g[:, 2, :, :])
-    images = [high_res, input_to_g, output_from_g, slices_45]
     images = [np.array(image) for image in images]
     images[2] = fractions_to_ohe(images[2])  # the output from g needs to ohe
-    images[3] = fractions_to_ohe(images[3])  # also the slices
+    if with_deg:
+        images[3] = fractions_to_ohe(images[3])  # also the slices
     images = [one_hot_decoding(image) for image in images]
-    save_three_by_two_grey(images[0], images[1], images[2], images[3],
-                           save_dir + ' ' + filename, save_dir, filename)
+    save_three_by_two_grey(images, save_dir + ' ' + filename, save_dir,
+                           filename, with_deg)
 
 
-def save_three_by_two_grey(top_images, middle_images, bottom_images,
-                           slices_45, title, save_dir, filename):
-    f, axarr = plt.subplots(5, 3)
-    images = [top_images, middle_images, bottom_images, slices_45]
-    axarr[0,0].imshow(images[0][0, 4, :, :], cmap='gray', vmin=0, vmax=255)
-    axarr[0,1].imshow(images[0][1, 4, :, :], cmap='gray', vmin=0, vmax=255)
-    axarr[0,2].imshow(images[0][2, 4, :, :], cmap='gray', vmin=0, vmax=255)
-    axarr[1, 0].imshow(images[1][0, 4, :, :], cmap='gray', vmin=0, vmax=255)
-    axarr[1, 1].imshow(images[1][1, 4, :, :], cmap='gray', vmin=0, vmax=255)
-    axarr[1, 2].imshow(images[1][2, 4, :, :], cmap='gray', vmin=0, vmax=255)
-    axarr[2, 0].imshow(images[2][0, 4, :, :], cmap='gray', vmin=0, vmax=255)
-    axarr[2, 1].imshow(images[2][1, 4, :, :], cmap='gray', vmin=0, vmax=255)
-    axarr[2, 2].imshow(images[2][2, 4, :, :], cmap='gray', vmin=0, vmax=255)
-    axarr[3, 0].imshow(images[3][0, :, :], cmap='gray', vmin=0, vmax=255)
-    axarr[3, 1].imshow(images[3][1, :, :], cmap='gray', vmin=0, vmax=255)
-    axarr[3, 2].imshow(images[3][5, :, :], cmap='gray', vmin=0, vmax=255)
-    axarr[4, 0].imshow(images[2][0, :, :, 4], cmap='gray', vmin=0, vmax=255)
-    axarr[4, 1].imshow(images[2][1, :, :, 4], cmap='gray', vmin=0, vmax=255)
-    axarr[4, 2].imshow(images[2][2, :, :, 4], cmap='gray', vmin=0, vmax=255)
+def save_three_by_two_grey(images, title, save_dir, filename, with_deg=False):
+    if with_deg:
+        f, axarr = plt.subplots(5, 3)
+    else:
+        f, axarr = plt.subplots(3, 3)
+    for i in range(3):
+        for j in range(3):
+            length_im = images[i].shape[1]
+            middle = int(length_im/2)
+            axarr[i, j].imshow(images[i][j, middle, :, :], cmap='gray', vmin=0,
+                               vmax=255)
+            axarr[i, j].set_xticks([0, length_im-1])
+            axarr[i, j].set_yticks([0, length_im-1])
+    if with_deg:
+        for j in range(3):  # showing 45 deg slices
+            axarr[3, j].imshow(images[3][j, :, :], cmap='gray', vmin=0,
+                               vmax=255)
+        for j in range(3):  # showing xy slices from 'above'
+            axarr[4, j].imshow(images[2][j, :, :, 4], cmap='gray', vmin=0,
+                               vmax=255)
     plt.suptitle(title)
     wandb.log({"running slices": plt})
     plt.savefig(progress_dir + save_dir + '/' + filename + '.png')

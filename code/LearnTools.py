@@ -21,7 +21,7 @@ def return_args(parser):
     parser.add_argument("--squash_phases", default=False, action="store_true",
                         help="All material phases in low res are the same.")
     parser.add_argument('-phases_idx', '--phases_low_res_idx', nargs='+',
-                        type=int, default=[1])
+                        type=int, default=[1, 2])
     parser.add_argument('-d_dimensions', '--d_dimensions_to_check', nargs='+',
                         type=int, default=[0, 1, 2])
     parser.add_argument('-wd', '--widthD', type=int, default=9,
