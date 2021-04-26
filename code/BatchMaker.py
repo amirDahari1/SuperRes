@@ -8,10 +8,8 @@ import ImageTools
 
 perms = [[1, 2, 3], [2, 1, 3], [3, 1, 2]]  # permutations for a 4d array.
 perms_3d = np.array(perms) + 1 # permutations for a 5d array.
-LOW_L_2D = 32  # the low resolution number of pixels LOW_RESxLOW_RES
-HIGH_L_2D = 128  # the high resolution number of pixels HIGH_RESxHIGH_RES
 CROP = 4  # crop pixels in each dimension when choosing train slices
-LOW_L_3D = 45  # length of low resolution 3d
+# LOW_L_3D = 45  # length of low resolution 3d
 HIGH_L_3D = 64  # length of high resolution 3d
 
 if os.getcwd().endswith('code'):
@@ -25,13 +23,15 @@ class BatchMaker:
     Makes and saves training and test batch images.
     """
 
-    def __init__(self, device, path=NMC_PATH, dims=3, crop=True):
+    def __init__(self, device, path=NMC_PATH, sf=4, dims=3, crop=True):
         """
         :param path: the path of the tif file (TODO make it more general)
+        :param sf: the scale factor between low and high res.
         :param dims: number of dimensions for the batches (2 or 3)
         :param device: the device that the image is on.
         :param crop: if to crop the image at the edges
         """
+        self.scale_factor = sf
         self.path = path
         self.dims = dims  # if G is 3D to 3D or 2D to 2D
         self.device = device
@@ -44,11 +44,10 @@ class BatchMaker:
             else:
                 self.im = self.im[CROP:-CROP, CROP:-CROP]
         self.im_ohe = ImageTools.one_hot_encoding(self.im, self.phases)
-        if self.dims == 3:
-            self.low_l, self.high_l = LOW_L_3D, HIGH_L_3D
-        else:  # dims = 2
-            self.low_l, self.high_l = LOW_L_2D, HIGH_L_2D
-        self.scale_factor = self.high_l/self.low_l
+        self.low_l, self.high_l = int(HIGH_L_3D/self.scale_factor), HIGH_L_3D
+        if self.dims == 2:
+            self.low_l, self.high_l = self.low_l*2, self.high_l*2
+
 
     def random_batch_for_real(self, batch_size, dim_chosen):
         return self.random_batch2d(batch_size, dim_chosen)

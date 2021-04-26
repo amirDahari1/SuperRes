@@ -33,7 +33,7 @@ progress_dir, wd, wg = args.directory, args.widthD, args.widthG
 n_res_blocks, pix_distance = args.n_res_blocks, args.pixel_coefficient_distance
 num_epochs, g_update, n_dims = args.num_epochs, args.g_update, args.n_dims
 squash, phases_to_low = args.squash_phases, args.phases_low_res_idx
-D_dimensions_to_check = args.d_dimensions_to_check
+D_dimensions_to_check, scale_f = args.d_dimensions_to_check, args.scale_factor
 
 if not os.path.exists(ImageTools.progress_dir + progress_dir):
     os.makedirs(ImageTools.progress_dir + progress_dir)
@@ -137,8 +137,8 @@ if __name__ == '__main__':
                entity='tldr-group')
 
     # The batch makers for D and G:
-    BM_D = BatchMaker(device, path=D_image, dims=n_dims)
-    BM_G = BatchMaker(device, path=G_image, dims=n_dims)
+    BM_D = BatchMaker(device, path=D_image, sf=scale_f, dims=n_dims)
+    BM_G = BatchMaker(device, path=G_image, sf=scale_f, dims=n_dims)
 
     nc_d = len(BM_D.phases)
 
