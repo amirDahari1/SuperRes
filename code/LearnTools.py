@@ -16,7 +16,7 @@ def return_args(parser):
     parser.add_argument('-d', '--directory', type=str, default='default',
                         help='Stores the progress output in the \
                         directory name given')
-    parser.add_argument('-sf', '--scale_factor', type=int, default=4,
+    parser.add_argument('-sf', '--scale_factor', type=float, default=4,
                         help='scale factor between high res and low res.')
     parser.add_argument("--squash_phases", default=False, action="store_true",
                         help="All material phases in low res are the same.")
