@@ -24,19 +24,24 @@ class BatchMaker:
     """
     # TODO batches without down-sampling (has to do with Architecture.py file)
 
-    def __init__(self, device, path=NMC_PATH, sf=4, dims=3, crop=False):
+    def __init__(self, device, path=NMC_PATH, sf=4, dims=3, crop=False,
+                 rot_and_mir = True):
         """
         :param path: the path of the tif file (TODO make it more general)
         :param sf: the scale factor between low and high res.
         :param dims: number of dimensions for the batches (2 or 3)
         :param device: the device that the image is on.
         :param crop: if to crop the image at the edges
+        :param rot_and_mir: if True, the input is a stack of 2D images to
+        rotate and mirror for another 8 configurations
         """
         self.scale_factor = sf
         self.path = path
         self.dims = dims  # if G is 3D to 3D or 2D to 2D
         self.device = device
         self.im = imread(path)
+        if rot_and_mir:
+            self.rotate_and_mirror()
         self.dim_im = len(self.im.shape)  # the dimension of the image
         self.phases = np.unique(self.im)  # the unique values in image
         if crop:  # crop the image in the edges:
@@ -56,10 +61,16 @@ class BatchMaker:
         90deg rotations and mirrors of the images.
         """
         num_ims = self.im.shape[0]
+        flip_im = np.flip(self.im, -1)
         res = np.zeros((num_ims*8, *self.im.shape[1:]), dtype=self.im.dtype)
-        # for k in np.arange(4):  # for each 90 deg rotation
-        #     rot_ims =
-
+        for k in np.arange(4):  # for each 90 deg rotation
+            first_i, second_i = 2*k*num_ims, (2*k+1)*num_ims
+            # rotation images of original image:
+            res[first_i:second_i, ...] = np.rot90(self.im, k, [-2, -1])
+            # rotation images of flipped image:
+            res[second_i:second_i + num_ims, ...] = np.rot90(flip_im, k,
+                                                             [-2, -1])
+        self.im = res
 
     def random_batch_for_real(self, batch_size, dim_chosen):
         return self.random_batch2d(batch_size, dim_chosen)
