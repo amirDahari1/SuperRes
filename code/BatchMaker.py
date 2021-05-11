@@ -49,6 +49,13 @@ class BatchMaker:
         if self.dims == 2:
             self.low_l, self.high_l = self.low_l*2, self.high_l*2
 
+    def rotate_and_mirror(self):
+        """
+        Given a stack of 2D images, in the form of num_images X width X heigth
+        return a num_images*8 X width X height stack, with all 8 different
+        90deg rotations and mirrors of the images.
+        """
+
 
     def random_batch_for_real(self, batch_size, dim_chosen):
         return self.random_batch2d(batch_size, dim_chosen)
@@ -106,16 +113,16 @@ class BatchMaker:
         image.
         """
         # the starting pixels of the other dimensions:
-        s_ind = np.random.randint(np.array(self.im_ohe.shape[1:]) -
+        s_ind = np.random.randint(np.array(self.im_ohe.shape[2:]) -
                                   self.high_l)
         e_ind = s_ind + self.high_l
         if self.dim_im == 2:  # the image is just 2D
             return self.im_ohe[:, s_ind[0]:e_ind[0], s_ind[0]:e_ind[0]]
         slice_chosen = np.random.randint(np.array(self.im_ohe.shape[1:]))
         if dim_chosen == 0:
-            res_image = self.im_ohe[:, slice_chosen[0], s_ind[1]:e_ind[1],
-                                    s_ind[2]:e_ind[2]]
-        elif dim_chosen == 1:
+            res_image = self.im_ohe[:, slice_chosen[0], s_ind[0]:e_ind[0],
+                                    s_ind[1]:e_ind[1]]
+        elif dim_chosen == 1:  # TODO: s_ind now returns error for this!
             res_image = self.im_ohe[:, s_ind[0]:e_ind[0], slice_chosen[1],
                                     s_ind[2]:e_ind[2]]
         else:  # dim_chosen == 2
