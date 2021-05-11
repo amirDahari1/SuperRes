@@ -207,7 +207,7 @@ if __name__ == '__main__':
             # the new batch size feeding D:
             batch_size_new = batch_size_G_for_D * BM_G.high_l
             # reshaping for the correct size of D's input
-            return fake_slices_for_D.view(batch_size_new, nc_d,
+            return fake_slices_for_D.reshape(batch_size_new, nc_d,
                                              BM_G.high_l, BM_G.high_l)
         else:  # same 2d slices are fed into D
             return fake_image

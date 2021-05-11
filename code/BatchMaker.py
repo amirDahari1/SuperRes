@@ -24,7 +24,7 @@ class BatchMaker:
     """
     # TODO batches without down-sampling (has to do with Architecture.py file)
 
-    def __init__(self, device, path=NMC_PATH, sf=4, dims=3, crop=True):
+    def __init__(self, device, path=NMC_PATH, sf=4, dims=3, crop=False):
         """
         :param path: the path of the tif file (TODO make it more general)
         :param sf: the scale factor between low and high res.
@@ -55,6 +55,10 @@ class BatchMaker:
         return a num_images*8 X width X height stack, with all 8 different
         90deg rotations and mirrors of the images.
         """
+        num_ims = self.im.shape[0]
+        res = np.zeros((num_ims*8, *self.im.shape[1:]), dtype=self.im.dtype)
+        # for k in np.arange(4):  # for each 90 deg rotation
+        #     rot_ims =
 
 
     def random_batch_for_real(self, batch_size, dim_chosen):
