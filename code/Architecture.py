@@ -53,8 +53,8 @@ forty_five_deg = False
 
 # Root directory for dataset
 dataroot = "data/"
-D_image_path = 'train_cube_sofc.tif'
-G_image_path = 'test_cube_sofc.tif'
+D_image_path = 'nmc_crop_facets.tif'
+G_image_path = 'nmc_crop.tif'
 D_image = dataroot + D_image_path
 G_image = dataroot + G_image_path
 
