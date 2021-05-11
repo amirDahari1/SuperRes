@@ -171,8 +171,8 @@ def calc_and_save_eta(steps, time, start, i, epoch, num_epochs, filename):
     ETA = rem / progress * elap
     hrs = int(ETA / 3600)
     minutes = int((ETA / 3600 % 1) * 60)
-    save_res = np.array([epoch, num_epochs, i, steps, hrs, minutes])
-    np.save(progress_dir + filename, save_res)
+    # save_res = np.array([epoch, num_epochs, i, steps, hrs, minutes])
+    # np.save(progress_dir + filename, save_res)
     print('[%d/%d][%d/%d]\tETA: %d hrs %d mins'
           % (epoch, num_epochs, i, steps,
              hrs, minutes))

@@ -34,6 +34,7 @@ n_res_blocks, pix_distance = args.n_res_blocks, args.pixel_coefficient_distance
 num_epochs, g_update, n_dims = args.num_epochs, args.g_update, args.n_dims
 squash, phases_to_low = args.squash_phases, args.phases_low_res_idx
 D_dimensions_to_check, scale_f = args.d_dimensions_to_check, args.scale_factor
+rotation = args.no_rotation
 
 if not os.path.exists(ImageTools.progress_dir + progress_dir):
     os.makedirs(ImageTools.progress_dir + progress_dir)
@@ -139,8 +140,10 @@ if __name__ == '__main__':
                entity='tldr-group')
 
     # The batch makers for D and G:
-    BM_D = BatchMaker(device, path=D_image, sf=scale_f, dims=n_dims)
-    BM_G = BatchMaker(device, path=G_image, sf=scale_f, dims=n_dims)
+    BM_D = BatchMaker(device, path=D_image, sf=scale_f, dims=n_dims,
+                      rot_and_mir=rotation)
+    BM_G = BatchMaker(device, path=G_image, sf=scale_f, dims=n_dims,
+                      rot_and_mir=False)
 
     nc_d = len(BM_D.phases)
 
@@ -321,7 +324,7 @@ if __name__ == '__main__':
         if (epoch % 3) == 0:
             torch.save(netG.state_dict(), PATH_G)
             torch.save(netD.state_dict(), PATH_D)
-            # wandb.save(PATH_G)
-            # wandb.save(PATH_D)
+            wandb.save(PATH_G)
+            wandb.save(PATH_D)
 
     print('finished training')

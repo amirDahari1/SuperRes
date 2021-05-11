@@ -25,7 +25,7 @@ class BatchMaker:
     # TODO batches without down-sampling (has to do with Architecture.py file)
 
     def __init__(self, device, path=NMC_PATH, sf=4, dims=3, crop=False,
-                 rot_and_mir = True):
+                 rot_and_mir=True):
         """
         :param path: the path of the tif file (TODO make it more general)
         :param sf: the scale factor between low and high res.
