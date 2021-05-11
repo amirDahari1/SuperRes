@@ -45,7 +45,8 @@ eta_file = 'eta.npy'
 # G and D slices to choose from
 g_batch_slices = [0]  # in 3D different views of the cube, better to keep it as
 # 0..
-d_batch_slices = [0, 1]  # im D image is 3D, than this has an impact
+d_batch_slices = [0]  # if D image is 3D, this has no impact, if it is a
+# stack of 2D images (phasesXnum_imagesXwidthXhigth), then 0 should be chosen.
 
 # adding 45 degree angle instead of z axis slices (TODO in addition)
 forty_five_deg = False
@@ -206,7 +207,7 @@ if __name__ == '__main__':
             # the new batch size feeding D:
             batch_size_new = batch_size_G_for_D * BM_G.high_l
             # reshaping for the correct size of D's input
-            return fake_slices_for_D.reshape(batch_size_new, nc_d,
+            return fake_slices_for_D.view(batch_size_new, nc_d,
                                              BM_G.high_l, BM_G.high_l)
         else:  # same 2d slices are fed into D
             return fake_image

@@ -135,7 +135,7 @@ def calc_gradient_penalty(netD, real_data, fake_data, batch_size, l, device,
 
 
 def down_sample(high_res_multi_phase, mat_idx, scale_factor, device, n_dims,
-                squash=True):
+                squash=False):
     """
     :param high_res_multi_phase: the high resolution image to downsample.
     :param mat_idx: the indices of phases to downsample.
@@ -168,7 +168,7 @@ def down_sample(high_res_multi_phase, mat_idx, scale_factor, device, n_dims,
 
 
 def down_sample_for_g_input(high_res_multi_phase, mat_idx, scale_factor,
-                            device, n_dims, squash=True):
+                            device, n_dims, squash=False):
     """
     :return: a down-sample image of the high resolution image for the input
     of G.
