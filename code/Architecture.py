@@ -86,7 +86,7 @@ if squash:
 else:
     nc_g = 1 + to_low_idx.size()[0]  # channel for pore plus number of
     # material phases to low res.
-nc_d = 3  # three phases for the discriminator input
+nc_d = 2  # three phases for the discriminator input
 
 # number of iterations in each epoch
 epoch_iterations = 10000//batch_size_G
