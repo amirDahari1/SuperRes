@@ -35,6 +35,7 @@ num_epochs, g_update, n_dims = args.num_epochs, args.g_update, args.n_dims
 squash, phases_to_low = args.squash_phases, args.phases_low_res_idx
 D_dimensions_to_check, scale_f = args.d_dimensions_to_check, args.scale_factor
 rotation = args.no_rotation
+print(rotation)
 
 if not os.path.exists(ImageTools.progress_dir + progress_dir):
     os.makedirs(ImageTools.progress_dir + progress_dir)
@@ -184,6 +185,7 @@ if __name__ == '__main__':
         g_slice = random.choice(g_batch_slices)
         before_down_sampling = BM_G.random_batch_for_fake(batch_size_G_for_D,
                                                           g_slice)
+
         # down sample:
         low_res_im = LearnTools.down_sample_for_g_input(
             before_down_sampling, to_low_idx, BM_G.scale_factor,

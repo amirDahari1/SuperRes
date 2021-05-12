@@ -136,8 +136,8 @@ class BatchMaker:
             return self.im_ohe[:, s_ind[0]:e_ind[0], s_ind[0]:e_ind[0]]
         slice_chosen = np.random.randint(np.array(self.im_ohe.shape[1:]))
         if dim_chosen == 0:
-            res_image = self.im_ohe[:, slice_chosen[0], s_ind[0]:e_ind[0],
-                                    s_ind[1]:e_ind[1]]
+            res_image = self.im_ohe[:, slice_chosen[0], s_ind[1]:e_ind[1],
+                                    s_ind[2]:e_ind[2]]
         elif dim_chosen == 1:  # TODO: s_ind now returns error for this!
             res_image = self.im_ohe[:, s_ind[0]:e_ind[0], slice_chosen[1],
                                     s_ind[2]:e_ind[2]]
