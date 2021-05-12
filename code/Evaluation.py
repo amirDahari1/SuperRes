@@ -18,6 +18,7 @@ num_epochs, g_update, n_dims = args.num_epochs, args.g_update, args.n_dims
 squash, phases_to_low = args.squash_phases, args.phases_low_res_idx
 D_dimensions_to_check, scale_f = args.d_dimensions_to_check, args.scale_factor
 
+
 # progress_main_dir = 'progress/' + progress_dir
 progress_main_dir = 'progress'
 # path_to_g_weights = progress_main_dir + '/g_weights.pth'
@@ -46,6 +47,7 @@ else:
     nc_g = 1 + to_low_idx.size()[0]  # channel for pore plus number of
     # material phases to low res.
 nc_d = 3  # three phases for the discriminator input
+
 
 BM = BatchMaker.BatchMaker(path=G_image_path, device=device, rot_and_mir=False)
 G_net = Networks.generator(ngpu, wg, nc_g, nc_d, n_res_blocks, n_dims,
@@ -83,7 +85,8 @@ def save_tif_3d(network_g, high_res_im, grey_idx, device, filename,
 with torch.no_grad():  # save the images
     im_3d = BM.all_image_batch()
     if crop_to_cube:
-        min_d = min(im_3d.size()[2:])//3
+        min_d = 128
         im_3d = im_3d[:, :, :min_d, :min_d, :min_d]
     save_tif_3d(G_net, im_3d, to_low_idx, device, file_name,
                 mask=False)
+    
