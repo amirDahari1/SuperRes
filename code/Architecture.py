@@ -35,6 +35,7 @@ num_epochs, g_update, n_dims = args.num_epochs, args.g_update, args.n_dims
 squash, phases_to_low = args.squash_phases, args.phases_low_res_idx
 D_dimensions_to_check, scale_f = args.d_dimensions_to_check, args.scale_factor
 rotation = args.no_rotation
+print(rotation)
 
 if not os.path.exists(ImageTools.progress_dir + progress_dir):
     os.makedirs(ImageTools.progress_dir + progress_dir)
@@ -46,16 +47,16 @@ eta_file = 'eta.npy'
 # G and D slices to choose from
 g_batch_slices = [0]  # in 3D different views of the cube, better to keep it as
 # 0..
-d_batch_slices = [0]  # if D image is 3D, this has no impact, if it is a
-# stack of 2D images (phasesXnum_imagesXwidthXhigth), then 0 should be chosen.
+d_batch_slices = [0, 1]  # if it is a stack of 2D images (
+# phasesXnum_imagesXwidthXhigth), then 0 should be chosen.
 
 # adding 45 degree angle instead of z axis slices (TODO in addition)
 forty_five_deg = False
 
 # Root directory for dataset
 dataroot = "data/"
-D_image_path = 'nmc_crop_facets.tif'
-G_image_path = 'nmc_crop.tif'
+D_image_path = 'separator_all_grey.tif'
+G_image_path = 'separator_wo_fibrils.tif'
 D_image = dataroot + D_image_path
 G_image = dataroot + G_image_path
 
@@ -184,6 +185,7 @@ if __name__ == '__main__':
         g_slice = random.choice(g_batch_slices)
         before_down_sampling = BM_G.random_batch_for_fake(batch_size_G_for_D,
                                                           g_slice)
+
         # down sample:
         low_res_im = LearnTools.down_sample_for_g_input(
             before_down_sampling, to_low_idx, BM_G.scale_factor,

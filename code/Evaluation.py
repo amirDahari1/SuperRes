@@ -18,11 +18,14 @@ num_epochs, g_update, n_dims = args.num_epochs, args.g_update, args.n_dims
 squash, phases_to_low = args.squash_phases, args.phases_low_res_idx
 D_dimensions_to_check, scale_f = args.d_dimensions_to_check, args.scale_factor
 
-progress_main_dir = 'progress/' + progress_dir
-path_to_g_weights = progress_main_dir + '/g_weights.pth'
-G_image_path = 'data/test_cube_sofc.tif'
+
+# progress_main_dir = 'progress/' + progress_dir
+progress_main_dir = 'progress'
+# path_to_g_weights = progress_main_dir + '/g_weights.pth'
+path_to_g_weights = progress_main_dir + '/g_weights_after_5k.pth'
+G_image_path = 'data/nmc_crop.tif'
 file_name = 'generated_tif.tif'
-crop_to_cube = True
+crop_to_cube = False
 
 # TODO all of these (ngpu, device, to_low_idx, nc_g..) can go into a
 #  function in LearnTools that Architecture can also use
@@ -45,8 +48,10 @@ else:
     # material phases to low res.
 nc_d = 3  # three phases for the discriminator input
 
-BM = BatchMaker.BatchMaker(path=G_image_path, device=device, sf=scale_f, dims=n_dims, crop=False)
-G_net = Networks.generator(ngpu, wg, nc_g, nc_d, n_res_blocks, n_dims, BM.scale_factor).to(device)
+
+BM = BatchMaker.BatchMaker(path=G_image_path, device=device, rot_and_mir=False)
+G_net = Networks.generator(ngpu, wg, nc_g, nc_d, n_res_blocks, n_dims,
+                           scale_factor=scale_f).to(device)
 G_net.load_state_dict(torch.load(path_to_g_weights, map_location=torch.device(
     device)))
 G_net.eval()
@@ -57,11 +62,10 @@ def save_tif_3d(network_g, high_res_im, grey_idx, device, filename,
     """
         Saves a tif image of the output of G on all of the 3d image high_res_im
     """
-    print(grey_idx)
     print(high_res_im.size())
     low_res_input = LearnTools.down_sample_for_g_input(high_res_im,
                                                        grey_idx,
-                                                       BM.scale_factor,
+                                                       scale_f,
                                                        device, n_dims)
     print(low_res_input.size())
 
