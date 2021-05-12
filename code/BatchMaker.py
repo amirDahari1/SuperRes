@@ -127,8 +127,9 @@ class BatchMaker:
         :return: A random image of size res from the dimension chosen of the
         image.
         """
+        # TODO sampling from an already low-res image
         # the starting pixels of the other dimensions:
-        s_ind = np.random.randint(np.array(self.im_ohe.shape[2:]) -
+        s_ind = np.random.randint(np.array(self.im_ohe.shape[1:]) -
                                   self.high_l)
         e_ind = s_ind + self.high_l
         if self.dim_im == 2:  # the image is just 2D
