@@ -51,7 +51,7 @@ d_batch_slices = [0, 1]  # if it is a stack of 2D images (
 # phasesXnum_imagesXwidthXhigth), then 0 should be chosen.
 
 # adding 45 degree angle instead of z axis slices (TODO in addition)
-forty_five_deg = False
+forty_five_deg = True
 
 # Root directory for dataset
 dataroot = "data/"
@@ -240,6 +240,7 @@ if __name__ == '__main__':
                 if not LearnTools.to_slice(k, forty_five_deg,
                                            D_dimensions_to_check):
                     continue
+
                 # Train with all-real batch
                 netD.zero_grad()
                 # Batch of real high res for D
@@ -319,7 +320,8 @@ if __name__ == '__main__':
                                      batch_size_G_for_D, random.choice(
                                       g_batch_slices)).detach(),
                                      progress_dir, 'running slices',
-                                     BM_G.scale_factor, masks_45)
+                                     BM_G.scale_factor, masks_45,
+                                     forty_five_deg)
             i += 1
             print(i, j)
 
