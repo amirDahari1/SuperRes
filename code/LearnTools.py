@@ -59,13 +59,34 @@ def forty_five_deg_masks(batch_size, phases, high_l):
     z-axis of the 3d (returns masks for both slices of 45 degrees).
     """
     # create the masks
-    mask1 = torch.zeros((batch_size, phases, *[high_l]*3), dtype=torch.bool)
-    mask2 = torch.zeros(mask1.size(), dtype=torch.bool)
+    # mask1 = torch.zeros((batch_size, phases, *[high_l]*3), dtype=torch.bool)
+    # mask2 = torch.zeros(mask1.size(), dtype=torch.bool)
     over_sqrt_2 = int(high_l/math.sqrt(2))  # high_l in the diagonal
-    for i in range(over_sqrt_2):  # make the two masks along the z axis
-        mask1[..., i, i, :] = True
-        mask2[..., i, -1 - i, :] = True
-    return [mask1, mask2]
+    # for i in range(over_sqrt_2):  # make the two masks along the z axis
+    #     mask1[..., i, i, :] = True
+    #     mask2[..., i, -1 - i, :] = True
+    # return [mask1, mask2]
+
+    masks = []
+    for m in range(high_l - over_sqrt_2):
+        mask1 = torch.zeros((batch_size, phases, *[high_l] * 3),
+                            dtype=torch.bool)
+        mask2 = torch.zeros(mask1.size(), dtype=torch.bool)
+        mask3 = torch.zeros(mask1.size(), dtype=torch.bool)
+        mask4 = torch.zeros(mask1.size(), dtype=torch.bool)
+        if m == 0:
+            for i in range(over_sqrt_2):
+                mask1[..., m + i, i, :] = True
+                mask3[..., i + m, -1 - i, :] = True
+            masks.extend([mask1, mask3])
+        else:
+            for i in range(over_sqrt_2):
+                mask1[..., m + i, i, :] = True
+                mask2[..., i, m + i, :] = True
+                mask3[..., i + m, -1 - i, :] = True
+                mask4[..., i, -1 - (i + m), :] = True
+            masks.extend([mask1, mask2, mask3, mask4])
+    return masks
 
 
 def to_slice(k, forty_five_deg, D_dimensions_to_check):

@@ -1,5 +1,3 @@
-import matplotlib.pyplot as plt
-
 import LearnTools
 import Networks
 from BatchMaker import *
@@ -35,7 +33,6 @@ num_epochs, g_update, n_dims = args.num_epochs, args.g_update, args.n_dims
 squash, phases_to_low = args.squash_phases, args.phases_low_res_idx
 D_dimensions_to_check, scale_f = args.d_dimensions_to_check, args.scale_factor
 rotation = args.no_rotation
-print(rotation)
 
 if not os.path.exists(ImageTools.progress_dir + progress_dir):
     os.makedirs(ImageTools.progress_dir + progress_dir)
@@ -131,7 +128,6 @@ def save_differences(network_g, high_res_im, save_dir, filename,
         slices_45 = LearnTools.forty_five_deg_slices(masks, g_output)
         images.append(slices_45.detach().cpu())
     ImageTools.plot_fake_difference(images, save_dir, filename, with_deg)
-
 
 
 if __name__ == '__main__':
@@ -255,6 +251,13 @@ if __name__ == '__main__':
 
                 # Classify all fake batch with D
                 output_fake = netD(fake_slices).view(-1).mean()
+
+                if k == 0:
+                    wandb.log({"yz_d_fake": output_fake.item})
+                elif k == 1:
+                    wandb.log({"xz_d_fake": output_fake.item})
+                elif k == 2:
+                    wandb.log({"45_deg_d_fake": output_fake.item})
 
                 min_batch = min(high_res.size()[0], fake_slices.size()[0])
                 # Calculate gradient penalty
