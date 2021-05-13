@@ -20,6 +20,8 @@ def return_args(parser):
                         help='scale factor between high res and low res.')
     parser.add_argument("--squash_phases", default=False, action="store_true",
                         help="All material phases in low res are the same.")
+    parser.add_argument("--anisotropic", default=False, action="store_true",
+                        help="The material is anisotropic (requires dif Ds).")
     parser.add_argument("--no_rotation", default=True, action="store_false",
                         help="Does not create rotation for the BM.")
     parser.add_argument('-phases_idx', '--phases_low_res_idx', nargs='+',
@@ -139,7 +141,6 @@ def calc_gradient_penalty(netD, real_data, fake_data, batch_size, l, device,
     num_images = real_data.size()[0]
     alpha = alpha.expand(batch_size, int(real_data.numel() /
                                          batch_size)).contiguous()
-    # print(alpha.shape)
     alpha = alpha.view(num_images, nc, l, l)
 
     # create interpolate dataset

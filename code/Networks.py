@@ -1,11 +1,41 @@
+import numpy as np
 import torch.nn as nn
 from torch.nn.functional import interpolate
 import torch
+import torch.optim as optim
 import copy
 import math
 smaller_cube = False
 EPS = 10e-10
 modes = ['bilinear', 'trilinear']
+
+def return_D_nets(ngpu, wd, nc_d, n_dims, device, lr, beta1, anisotropic):
+    D_nets = []
+    D_optimisers = []
+    if anisotropic:
+        for _ in np.arange(n_dims):
+            # Create the Discriminator
+            netD = discriminator(ngpu, wd, nc_d, n_dims).to(device)
+            # Handle multi-gpu if desired
+            if (device.type == 'cuda') and (ngpu > 1):
+                netD = nn.DataParallel(netD, list(range(ngpu)))
+            optimiserD = optim.Adam(netD.parameters(), lr=lr,
+                                    betas=(beta1, 0.999))
+            D_nets.append(netD)
+            D_optimisers.append(optimiserD)
+
+    else:  # isotropic
+        # Create the Discriminator
+        netD = discriminator(ngpu, wd, nc_d, n_dims).to(device)
+        # Handle multi-gpu if desired
+        if (device.type == 'cuda') and (ngpu > 1):
+            netD = nn.DataParallel(netD, list(range(ngpu)))
+        optimiserD = optim.Adam(netD.parameters(), lr=lr,
+                                betas=(beta1, 0.999))
+        D_nets = [netD]*n_dims  # same network, different pointers
+        D_optimisers = [optimiserD]*n_dims  # same optimiser, different
+        # pointers
+    return D_nets, D_optimisers
 
 
 def generator(ngpu, wg, nc_g, nc_d, n_res_block, dims, scale_factor):

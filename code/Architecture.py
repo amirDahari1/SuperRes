@@ -1,3 +1,5 @@
+import matplotlib.pyplot as plt
+
 import LearnTools
 import Networks
 from BatchMaker import *
@@ -32,7 +34,7 @@ n_res_blocks, pix_distance = args.n_res_blocks, args.pixel_coefficient_distance
 num_epochs, g_update, n_dims = args.num_epochs, args.g_update, args.n_dims
 squash, phases_to_low = args.squash_phases, args.phases_low_res_idx
 D_dimensions_to_check, scale_f = args.d_dimensions_to_check, args.scale_factor
-rotation = args.no_rotation
+rotation, anisotropic = args.no_rotation, args.anisotropic
 
 if not os.path.exists(ImageTools.progress_dir + progress_dir):
     os.makedirs(ImageTools.progress_dir + progress_dir)
@@ -153,12 +155,9 @@ if __name__ == '__main__':
     if (device.type == 'cuda') and (ngpu > 1):
         netG = nn.DataParallel(netG, list(range(ngpu)))
 
-    # Create the Discriminator
-    netD = Networks.discriminator(ngpu, wd, nc_d, n_dims).to(device)
-
-    # Handle multi-gpu if desired
-    if (device.type == 'cuda') and (ngpu > 1):
-        netD = nn.DataParallel(netD, list(range(ngpu)))
+    D_nets, D_optimisers = Networks.return_D_nets(ngpu, wd, nc_d, n_dims,
+                                                device,
+                                    lr, beta1, anisotropic)
 
     # Apply the weights_init function to randomly initialize all weights
     #  to mean=0, stdev=0.2.
@@ -168,8 +167,7 @@ if __name__ == '__main__':
     masks_45 = LearnTools.forty_five_deg_masks(batch_size_G_for_D,
                                                nc_d, BM_D.high_l)
 
-    # Setup Adam optimizers for both G and D
-    optimizerD = optim.Adam(netD.parameters(), lr=lr, betas=(beta1, 0.999))
+    # Setup Adam optimizers for G
     optimizerG = optim.Adam(netG.parameters(), lr=lr, betas=(beta1, 0.999))
 
     def generate_fake_image(detach_output=True):
@@ -232,6 +230,7 @@ if __name__ == '__main__':
             _, fake_for_d = generate_fake_image(detach_output=True)
 
             for k in range(math.comb(n_dims, 2)):
+                netD, optimizerD = D_nets[k], D_optimisers[k]
                 # only look at slices from the right directions:
                 if not LearnTools.to_slice(k, forty_five_deg,
                                            D_dimensions_to_check):
@@ -240,7 +239,8 @@ if __name__ == '__main__':
                 # Train with all-real batch
                 netD.zero_grad()
                 # Batch of real high res for D
-                d_slice = random.choice(d_batch_slices)
+                # d_slice = random.choice(d_batch_slices)
+                d_slice = k  # TODO see how to do this nicely..
                 high_res = BM_D.random_batch_for_real(batch_size_D, d_slice)
 
                 # Forward pass real batch through D
@@ -251,13 +251,6 @@ if __name__ == '__main__':
 
                 # Classify all fake batch with D
                 output_fake = netD(fake_slices).view(-1).mean()
-
-                if k == 0:
-                    wandb.log({"yz_d_fake": output_fake.item()})
-                elif k == 1:
-                    wandb.log({"xz_d_fake": output_fake.item()})
-                elif k == 2:
-                    wandb.log({"45_deg_d_fake": output_fake.item()})
 
                 min_batch = min(high_res.size()[0], fake_slices.size()[0])
                 # Calculate gradient penalty
@@ -286,6 +279,7 @@ if __name__ == '__main__':
                 g_cost = 0
                 # go through each axis
                 for k in range(math.comb(n_dims, 2)):
+                    netD, optimizerD = D_nets[k], D_optimisers[k]
                     # only look at slices from the right directions:
                     if not LearnTools.to_slice(k, forty_five_deg,
                                                D_dimensions_to_check):
@@ -330,8 +324,6 @@ if __name__ == '__main__':
 
         if (epoch % 3) == 0:
             torch.save(netG.state_dict(), PATH_G)
-            torch.save(netD.state_dict(), PATH_D)
             wandb.save(PATH_G)
-            wandb.save(PATH_D)
 
     print('finished training')
