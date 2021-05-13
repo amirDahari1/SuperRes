@@ -253,11 +253,11 @@ if __name__ == '__main__':
                 output_fake = netD(fake_slices).view(-1).mean()
 
                 if k == 0:
-                    wandb.log({"yz_d_fake": output_fake.item})
+                    wandb.log({"yz_d_fake": output_fake.item()})
                 elif k == 1:
-                    wandb.log({"xz_d_fake": output_fake.item})
+                    wandb.log({"xz_d_fake": output_fake.item()})
                 elif k == 2:
-                    wandb.log({"45_deg_d_fake": output_fake.item})
+                    wandb.log({"45_deg_d_fake": output_fake.item()})
 
                 min_batch = min(high_res.size()[0], fake_slices.size()[0])
                 # Calculate gradient penalty
