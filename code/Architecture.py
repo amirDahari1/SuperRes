@@ -46,11 +46,11 @@ eta_file = 'eta.npy'
 # G and D slices to choose from
 g_batch_slices = [0]  # in 3D different views of the cube, better to keep it as
 # 0..
-d_batch_slices = [2]  # if it is a stack of 2D images (
+d_batch_slices = [0, 1]  # if it is a stack of 2D images (
 # phasesXnum_imagesXwidthXhigth), then 0 should be chosen.
 
 # adding 45 degree angle instead of z axis slices (TODO in addition)
-forty_five_deg = False
+forty_five_deg = True
 
 # Root directory for dataset
 dataroot = "data/"
@@ -286,16 +286,24 @@ if __name__ == '__main__':
                         continue
                     fake_slices = take_fake_slices(fake_for_g, k)
                     # perform a forward pass of all-fake batch through D
-                    fake_output = netD(fake_slices).view(-1)
+                    fake_output = netD(fake_slices).view(-1).mean()
+
+                    if k == 0:
+                        wandb.log({'yz_slice': fake_output})
+                    if k == 1:
+                        wandb.log({'xz_slice': fake_output})
+                    if k == 2 and forty_five_deg:
+                        wandb.log({'deg_slice': fake_output})
+
                     # get the pixel-wise-distance loss
                     pix_loss = LearnTools.pixel_wise_distance(low_res,
                                fake_for_g, to_low_idx, BM_G.scale_factor,
                                device, n_dims, squash)
                     # Calculate G's loss based on this output
                     if pix_loss.item() > 0.003:
-                        g_cost += -fake_output.mean() + pix_distance * pix_loss
+                        g_cost += -fake_output + pix_distance * pix_loss
                     else:
-                        g_cost += -fake_output.mean()
+                        g_cost += -fake_output
 
 
 

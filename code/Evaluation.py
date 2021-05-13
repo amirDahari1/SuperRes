@@ -24,6 +24,7 @@ progress_main_dir = 'progress/separator'
 # path_to_g_weights = progress_main_dir + '/g_weights.pth'
 path_to_g_weights = progress_main_dir + '/g_weights.pth'
 G_image_path = 'data/separator_wo_fibrils.tif'
+D_image_path = 'data/separator_all_grey.tif'
 file_name = 'generated_tif.tif'
 crop_to_cube = True
 
@@ -49,7 +50,10 @@ else:
 nc_d = 2  # three phases for the discriminator input
 
 
-BM = BatchMaker.BatchMaker(path=G_image_path, device=device, rot_and_mir=False)
+BM_G = BatchMaker.BatchMaker(path=G_image_path, device=device,
+                            rot_and_mir=False)
+BM_D = BatchMaker.BatchMaker(path=D_image_path, device=device,
+                            rot_and_mir=False)
 G_net = Networks.generator(ngpu, wg, nc_g, nc_d, n_res_blocks, n_dims,
                            scale_factor=scale_f).to(device)
 G_net.load_state_dict(torch.load(path_to_g_weights, map_location=torch.device(
@@ -57,7 +61,8 @@ G_net.load_state_dict(torch.load(path_to_g_weights, map_location=torch.device(
 G_net.eval()
 
 
-def save_tif_3d(network_g, high_res_im, grey_idx, device, filename,
+def save_tif_3d(network_g, high_res_im, original_im, grey_idx, device,
+                filename,
                 mask=False):
     """
         Saves a tif image of the output of G on all of the 3d image high_res_im
@@ -77,16 +82,18 @@ def save_tif_3d(network_g, high_res_im, grey_idx, device, filename,
         'uint8')
     imsave(progress_main_dir + '/low_res' + filename,
            low_res_grey)
-    high_res_im = ImageTools.one_hot_decoding(high_res_im.cpu()).astype('uint8')
+    high_res_im = ImageTools.one_hot_decoding(original_im.cpu()).astype('uint8')
     imsave(progress_main_dir + '/' + filename + '-original',
            high_res_im)
 
 
 with torch.no_grad():  # save the images
-    im_3d = BM.all_image_batch()
+    im_3d = BM_G.all_image_batch()
+    orig_im_3d = BM_D.all_image_batch()
     if crop_to_cube:
         min_d = 128
         im_3d = im_3d[:, :, :min_d, :min_d, :min_d]
-    save_tif_3d(G_net, im_3d, to_low_idx, device, file_name,
+        orig_im_3d = orig_im_3d[:, :, :min_d, :min_d, :min_d]
+    save_tif_3d(G_net, im_3d, orig_im_3d, to_low_idx, device, file_name,
                 mask=False)
     
