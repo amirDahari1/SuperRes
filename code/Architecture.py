@@ -239,8 +239,8 @@ if __name__ == '__main__':
                 # Train with all-real batch
                 netD.zero_grad()
                 # Batch of real high res for D
-                # d_slice = random.choice(d_batch_slices)
-                d_slice = k  # TODO see how to do this nicely..
+                d_slice = random.choice(d_batch_slices)
+                # d_slice = k  # TODO see how to do this nicely..
                 high_res = BM_D.random_batch_for_real(batch_size_D, d_slice)
 
                 # Forward pass real batch through D
