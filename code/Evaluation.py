@@ -20,13 +20,16 @@ D_dimensions_to_check, scale_f = args.d_dimensions_to_check, args.scale_factor
 
 
 # progress_main_dir = 'progress/' + progress_dir
-progress_main_dir = 'progress/separator'
+progress_main_dir = 'progress'
 # path_to_g_weights = progress_main_dir + '/g_weights.pth'
-path_to_g_weights = progress_main_dir + '/g_weights.pth'
-G_image_path = 'data/separator_wo_fibrils.tif'
-D_image_path = 'data/separator_all_grey.tif'
+path_to_g_weights = progress_main_dir + '/g_weights_after_7k.pth'
+# G_image_path = 'data/separator_wo_fibrils.tif'
+G_image_path = 'data/nmc_crop.tif'
+# D_image_path = 'data/separator_all_grey.tif'
+D_image_path = 'data/nmc_crop.tif'
+
 file_name = 'generated_tif.tif'
-crop_to_cube = True
+crop_to_cube = False
 
 # TODO all of these (ngpu, device, to_low_idx, nc_g..) can go into a
 #  function in LearnTools that Architecture can also use
@@ -47,7 +50,7 @@ if squash:
 else:
     nc_g = 1 + to_low_idx.size()[0]  # channel for pore plus number of
     # material phases to low res.
-nc_d = 2  # three phases for the discriminator input
+nc_d = 3  # three phases for the discriminator input
 
 
 BM_G = BatchMaker.BatchMaker(path=G_image_path, device=device,
