@@ -294,7 +294,7 @@ if __name__ == '__main__':
                         wandb.log({'xz_slice': fake_output})
                     if k == 2 and forty_five_deg:
                         wandb.log({'deg_slice': fake_output})
-                        fake_output = fake_output * 2
+                        fake_output = fake_output * 100
 
                     # get the pixel-wise-distance loss
                     pix_loss = LearnTools.pixel_wise_distance(low_res,
