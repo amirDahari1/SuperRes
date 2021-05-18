@@ -5,9 +5,10 @@ import torch
 import torch.optim as optim
 import copy
 import math
-smaller_cube = False
+smaller_cube = True
 EPS = 10e-10
 modes = ['bilinear', 'trilinear']
+
 
 def return_D_nets(ngpu, wd, nc_d, n_dims, device, lr, beta1, anisotropic):
     D_nets = []
