@@ -22,13 +22,13 @@ D_dimensions_to_check, scale_f = args.d_dimensions_to_check, args.scale_factor
 # progress_main_dir = 'progress/' + progress_dir
 progress_main_dir = 'progress'
 # path_to_g_weights = progress_main_dir + '/g_weights.pth'
-path_to_g_weights = progress_main_dir + '/g_weights_after_5k.pth'
+path_to_g_weights = progress_main_dir + '/g_weights_32_4.pth'
 # G_image_path = 'data/separator_wo_fibrils.tif'
 G_image_path = 'data/nmc_crop.tif'
 # D_image_path = 'data/separator_all_grey.tif'
 D_image_path = 'data/nmc_crop.tif'
 
-file_name = 'generated_tif.tif'
+file_name = 'generated_tif2.tif'
 crop_to_cube = False
 
 # TODO all of these (ngpu, device, to_low_idx, nc_g..) can go into a

@@ -22,8 +22,8 @@ def return_args(parser):
                         help="All material phases in low res are the same.")
     parser.add_argument("--anisotropic", default=False, action="store_true",
                         help="The material is anisotropic (requires dif Ds).")
-    parser.add_argument("--no_rotation", default=True, action="store_false",
-                        help="Does not create rotation for the BM.")
+    parser.add_argument("--with_rotation", default=False, action="store_true",
+                        help="create rotations and mirrors for the BM.")
     parser.add_argument('-phases_idx', '--phases_low_res_idx', nargs='+',
                         type=int, default=[1, 2])
     parser.add_argument('-d_dimensions', '--d_dimensions_to_check', nargs='+',
