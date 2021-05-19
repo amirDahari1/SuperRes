@@ -5,7 +5,7 @@ import torch
 import torch.optim as optim
 import copy
 import math
-smaller_cube = True
+smaller_cube = False
 EPS = 10e-10
 modes = ['bilinear', 'trilinear']
 

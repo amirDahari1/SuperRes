@@ -34,7 +34,7 @@ n_res_blocks, pix_distance = args.n_res_blocks, args.pixel_coefficient_distance
 num_epochs, g_update, n_dims = args.num_epochs, args.g_update, args.n_dims
 squash, phases_to_low = args.squash_phases, args.phases_low_res_idx
 D_dimensions_to_check, scale_f = args.d_dimensions_to_check, args.scale_factor
-rotation, anisotropic = args.no_rotation, args.anisotropic
+rotation, anisotropic = args.with_rotation, args.anisotropic
 
 if not os.path.exists(ImageTools.progress_dir + progress_dir):
     os.makedirs(ImageTools.progress_dir + progress_dir)
@@ -85,7 +85,7 @@ if squash:
 else:
     nc_g = 1 + to_low_idx.size()[0]  # channel for pore plus number of
     # material phases to low res.
-nc_d = 2  # three phases for the discriminator input
+# nc_d = 3  # three phases for the discriminator input
 
 # number of iterations in each epoch
 epoch_iterations = 10000//batch_size_G

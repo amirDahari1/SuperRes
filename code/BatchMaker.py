@@ -10,7 +10,7 @@ perms = [[1, 2, 3], [2, 1, 3], [3, 1, 2]]  # permutations for a 4d array.
 perms_3d = np.array(perms) + 1 # permutations for a 5d array.
 CROP = 4  # crop pixels in each dimension when choosing train slices
 # LOW_L_3D = 45  # length of low resolution 3d
-HIGH_L_3D = 32  # length of high resolution 3d
+HIGH_L_3D = 64  # length of high resolution 3d
 
 if os.getcwd().endswith('code'):
     os.chdir('..')  # current directory from /SuperRes/code to SuperRes/
