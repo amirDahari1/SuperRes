@@ -46,7 +46,7 @@ eta_file = 'eta.npy'
 # G and D slices to choose from
 g_batch_slices = [0]  # in 3D different views of the cube, better to keep it as
 # 0..
-d_batch_slices = [0]  # if it is a stack of 2D images (
+d_batch_slices = [0, 1]  # if it is a stack of 2D images (
 # phasesXnum_imagesXwidthXhigth), then 0 should be chosen.
 
 # adding 45 degree angle instead of z axis slices (TODO in addition)
@@ -54,7 +54,7 @@ forty_five_deg = False
 
 # Root directory for dataset
 dataroot = "data/"
-D_image_path = 'nmc_crop_facets.tif'
+D_image_path = 'nmc_crop.tif'
 G_image_path = 'nmc_crop.tif'
 D_image = dataroot + D_image_path
 G_image = dataroot + G_image_path
