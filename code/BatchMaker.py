@@ -5,6 +5,9 @@ import os
 import torch
 import torch.utils.data
 import ImageTools
+import math
+from PIL import Image
+import matplotlib.pyplot as plt
 
 perms = [[1, 2, 3], [2, 1, 3], [3, 1, 2]]  # permutations for a 4d array.
 perms_3d = np.array(perms) + 1 # permutations for a 5d array.
@@ -54,22 +57,36 @@ class BatchMaker:
         if self.dims == 2:
             self.low_l, self.high_l = self.low_l*2, self.high_l*2
 
-    def rotate_and_mirror(self):
+    def rotate_and_mirror(self, rot_angle=5):
         """
         Given a stack of 2D images, in the form of num_images X width X heigth
         return a num_images*8 X width X height stack, with all 8 different
         90deg rotations and mirrors of the images.
         """
         num_ims = self.im.shape[0]
-        flip_im = np.flip(self.im, -1)
-        res = np.zeros((num_ims*8, *self.im.shape[1:]), dtype=self.im.dtype)
-        for k in np.arange(4):  # for each 90 deg rotation
-            first_i, second_i = 2*k*num_ims, (2*k+1)*num_ims
-            # rotation images of original image:
-            res[first_i:second_i, ...] = np.rot90(self.im, k, [-2, -1])
-            # rotation images of flipped image:
-            res[second_i:second_i + num_ims, ...] = np.rot90(flip_im, k,
-                                                             [-2, -1])
+        # how many rotations:
+        rotations = int(360/rot_angle)
+        # where to cut the img in both sides s.t. it will always contain img:
+        cut_len = int(math.ceil(self.im.shape[-1]/(2*math.sqrt(2)+4)))
+        flip_im = np.flip(self.im, -1)  # taking all image mirrors
+        res = np.zeros((num_ims*2*rotations, *np.array(self.im.shape[1:]) -
+                                              2 * cut_len),
+                       dtype=self.im.dtype)
+        for i in range(num_ims):
+            im_pil = Image.fromarray(self.im[i])
+            im_pil_flip = Image.fromarray(flip_im[i])
+            for j in range(rotations):
+                res[2*i*rotations+j, ...] = np.array(im_pil.rotate(
+                    rot_angle*j))[cut_len:-cut_len, cut_len:-cut_len]
+                res[(2*i+1)*rotations+j, ...] = np.array(im_pil_flip.rotate(
+                    rot_angle*j))[cut_len:-cut_len, cut_len:-cut_len]
+        # for k in np.arange(4):  # for each 90 deg rotation
+        #     first_i, second_i = 2*k*num_ims, (2*k+1)*num_ims
+        #     # rotation images of original image:
+        #     res[first_i:second_i, ...] = np.rot90(self.im, k, [-2, -1])
+        #     # rotation images of flipped image:
+        #     res[second_i:second_i + num_ims, ...] = np.rot90(flip_im, k,
+        #                                                      [-2, -1])
         self.im = res
 
     def random_batch_for_real(self, batch_size, dim_chosen):
