@@ -47,7 +47,7 @@ eta_file = 'eta.npy'
 g_batch_slices = [0]  # in 3D different views of the cube, better to keep it as
 # 0..
 d_batch_slices = [0, 1]  # if it is a stack of 2D images (
-# phasesXnum_imagesXwidthXhigth), then 0 should be chosen.
+# phases X num_images X widthXhigth), then 0 should be chosen.
 
 # adding 45 degree angle instead of z axis slices (TODO in addition)
 forty_five_deg = False
