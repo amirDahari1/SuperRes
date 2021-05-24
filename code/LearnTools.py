@@ -18,6 +18,9 @@ def return_args(parser):
                         directory name given')
     parser.add_argument('-sf', '--scale_factor', type=float, default=4,
                         help='scale factor between high res and low res.')
+    parser.add_argument("--down_sample", default=False, action="store_true",
+                        help="Down samples the input for G for testing "
+                             "purposes.")
     parser.add_argument("--squash_phases", default=False, action="store_true",
                         help="All material phases in low res are the same.")
     parser.add_argument("--anisotropic", default=False, action="store_true",

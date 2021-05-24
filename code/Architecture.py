@@ -35,6 +35,7 @@ num_epochs, g_update, n_dims = args.num_epochs, args.g_update, args.n_dims
 squash, phases_to_low = args.squash_phases, args.phases_low_res_idx
 D_dimensions_to_check, scale_f = args.d_dimensions_to_check, args.scale_factor
 rotation, anisotropic = args.with_rotation, args.anisotropic
+down_sample = args.down_sample
 
 if not os.path.exists(ImageTools.progress_dir + progress_dir):
     os.makedirs(ImageTools.progress_dir + progress_dir)
@@ -46,7 +47,7 @@ eta_file = 'eta.npy'
 # G and D slices to choose from
 g_batch_slices = [0]  # in 3D different views of the cube, better to keep it as
 # 0..
-d_batch_slices = [0, 1]  # if it is a stack of 2D images (
+d_batch_slices = [0]  # if it is a stack of 2D images (
 # phases X num_images X widthXhigth), then 0 should be chosen.
 
 # adding 45 degree angle instead of z axis slices (TODO in addition)
@@ -113,19 +114,20 @@ def weights_init(m):
         nn.init.constant_(m.bias.data, 0)
 
 
-def save_differences(network_g, high_res_im, save_dir, filename,
+def save_differences(network_g, input_to_g, save_dir, filename,
                      scale_factor, masks, with_deg=False):
     """
     Saves the image of the differences between the high-res real and the
     generated images that are supposed to be similar.
     """
-    low_res_input = LearnTools.down_sample_for_g_input(high_res_im,
-                                                       to_low_idx,
-                                                       scale_factor, device,
-                                                       n_dims, squash)
-    g_output = network_g(low_res_input).detach().cpu()
-    images = [high_res_im.detach().cpu(),
-              low_res_input.detach().cpu(), g_output]
+    images = [input_to_g.clone().detach().cpu()]
+    if down_sample:
+        input_to_g = LearnTools.down_sample_for_g_input(input_to_g,
+                                                        to_low_idx,
+                                                        scale_factor, device,
+                                                        n_dims, squash)
+    g_output = network_g(input_to_g).detach().cpu()
+    images = images + [input_to_g.detach().cpu(), g_output]
     if with_deg:
         slices_45 = LearnTools.forty_five_deg_slices(masks, g_output)
         images.append(slices_45.detach().cpu())
@@ -140,9 +142,9 @@ if __name__ == '__main__':
 
     # The batch makers for D and G:
     BM_D = BatchMaker(device, path=D_image, sf=scale_f, dims=n_dims,
-                      rot_and_mir=rotation)
+                      low_res=False, rot_and_mir=rotation)
     BM_G = BatchMaker(device, path=G_image, sf=scale_f, dims=n_dims,
-                      rot_and_mir=False)
+                      low_res=not down_sample, rot_and_mir=False)
 
     nc_d = len(BM_D.phases)
 
@@ -172,24 +174,26 @@ if __name__ == '__main__':
 
     def generate_fake_image(detach_output=True):
         """
+        :param down_sample: if to down-sample the input to G from BM_G.
         :param detach_output: to detach the tensor output from gradient memory.
         :return: the generated image from G
         """
         # Generate batch of g input
         g_slice = random.choice(g_batch_slices)
-        before_down_sampling = BM_G.random_batch_for_fake(batch_size_G_for_D,
+        input_to_G = BM_G.random_batch_for_fake(batch_size_G_for_D,
                                                           g_slice)
 
         # down sample:
-        low_res_im = LearnTools.down_sample_for_g_input(
-            before_down_sampling, to_low_idx, BM_G.scale_factor,
-            device, n_dims, squash)
+        if down_sample:
+            input_to_G = LearnTools.down_sample_for_g_input(
+                input_to_G, to_low_idx, BM_G.scale_factor,
+                device, n_dims, squash)
 
         # Generate fake image batch with G
         if detach_output:
-            return low_res_im, netG(low_res_im).detach()
+            return input_to_G, netG(input_to_G).detach()
         else:
-            return low_res_im, netG(low_res_im)
+            return input_to_G, netG(input_to_G)
 
     def take_fake_slices(fake_image, perm_idx):
         """

@@ -28,7 +28,7 @@ class BatchMaker:
     # TODO batches without down-sampling (has to do with Architecture.py file)
 
     def __init__(self, device, path=NMC_PATH, sf=4, dims=3, crop=False,
-                 rot_and_mir=True):
+                 low_res=False, rot_and_mir=True):
         """
         :param path: the path of the tif file (TODO make it more general)
         :param sf: the scale factor between low and high res.
@@ -53,9 +53,11 @@ class BatchMaker:
             else:
                 self.im = self.im[CROP:-CROP, CROP:-CROP]
         self.im_ohe = ImageTools.one_hot_encoding(self.im, self.phases)
-        self.low_l, self.high_l = int(HIGH_L_3D/self.scale_factor), HIGH_L_3D
+        self.high_l = int(HIGH_L_3D/self.scale_factor), HIGH_L_3D
+        if low_res:
+            self.high_l = int(HIGH_L_3D/self.scale_factor)
         if self.dims == 2:
-            self.low_l, self.high_l = self.low_l*2, self.high_l*2
+            self.high_l = self.high_l*2
 
     def rotate_and_mirror(self, rot_angle=5):
         """
