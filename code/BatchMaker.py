@@ -53,7 +53,7 @@ class BatchMaker:
             else:
                 self.im = self.im[CROP:-CROP, CROP:-CROP]
         self.im_ohe = ImageTools.one_hot_encoding(self.im, self.phases)
-        self.high_l = int(HIGH_L_3D/self.scale_factor), HIGH_L_3D
+        self.high_l = HIGH_L_3D
         if low_res:
             self.high_l = int(HIGH_L_3D/self.scale_factor)
         if self.dims == 2:
