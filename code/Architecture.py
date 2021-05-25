@@ -49,6 +49,9 @@ g_batch_slices = [0]  # in 3D different views of the cube, better to keep it as
 # 0..
 d_batch_slices = [0]  # if it is a stack of 2D images (
 # phases X num_images X widthXhigth), then 0 should be chosen.
+if 1 in d_batch_slices or 2 in d_batch_slices:
+    print('Warning: all dimensions chosen to slice with D have to be larger '
+          'than the sample length size.')
 
 # adding 45 degree angle instead of z axis slices (TODO in addition)
 forty_five_deg = False
@@ -305,7 +308,7 @@ if __name__ == '__main__':
                                fake_for_g, to_low_idx, BM_G.scale_factor,
                                device, n_dims, squash)
                     # Calculate G's loss based on this output
-                    if pix_loss.item() > 0.003:
+                    if pix_loss.item() > 0.005:
                         g_cost += -fake_output + pix_distance * pix_loss
                     else:
                         g_cost += -fake_output
