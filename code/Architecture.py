@@ -58,10 +58,12 @@ forty_five_deg = False
 
 # Root directory for dataset
 dataroot = "data/"
-D_image_path = 'large_slice_nmc.tif'
-G_image_path = 'downsample_vol_train_nmc.tif'
-D_image = dataroot + D_image_path
-G_image = dataroot + G_image_path
+D_image_path_0 = dataroot + 'separator_rods_slices.tif'
+D_image_path_1 = dataroot + 'separator_rods_slices.tif'
+D_image_path_2 = dataroot + 'separator_speckles_slices.tif'
+G_image_path = dataroot + 'separator_wo_fibrils.tif'
+D_images = [D_image_path_0, D_image_path_1, D_image_path_2]
+G_image = G_image_path
 
 # Number of workers for dataloader
 workers = 2
@@ -89,7 +91,7 @@ if squash:
 else:
     nc_g = 1 + to_low_idx.size()[0]  # channel for pore plus number of
     # material phases to low res.
-# nc_d = 3  # three phases for the discriminator input
+nc_d = 2  # three phases for the discriminator input
 
 # number of iterations in each epoch
 epoch_iterations = 10000//batch_size_G
@@ -144,12 +146,12 @@ if __name__ == '__main__':
                entity='tldr-group')
 
     # The batch makers for D and G:
-    BM_D = BatchMaker(device, path=D_image, sf=scale_f, dims=n_dims,
-                      stack=True, low_res=False, rot_and_mir=rotation)
+    D_BMs, D_nets, D_optimisers = Networks.return_D_nets(ngpu, wd, nc_d,
+                                  n_dims, device, lr, beta1, anisotropic,
+                                  D_images, scale_f, rotation)
+
     BM_G = BatchMaker(device, path=G_image, sf=scale_f, dims=n_dims,
                       stack=False, low_res=not down_sample, rot_and_mir=False)
-
-    nc_d = len(BM_D.phases)
 
     # Create the generator
     netG = Networks.generator(ngpu, wg, nc_g, nc_d, n_res_blocks, n_dims,
@@ -160,17 +162,13 @@ if __name__ == '__main__':
     if (device.type == 'cuda') and (ngpu > 1):
         netG = nn.DataParallel(netG, list(range(ngpu)))
 
-    D_nets, D_optimisers = Networks.return_D_nets(ngpu, wd, nc_d, n_dims,
-                                                device,
-                                    lr, beta1, anisotropic)
-
     # Apply the weights_init function to randomly initialize all weights
     #  to mean=0, stdev=0.2.
     # netG.apply(weights_init)
     # netD.apply(weights_init)
     # masks for 45 degree angle
     masks_45 = LearnTools.forty_five_deg_masks(batch_size_G_for_D,
-                                               nc_d, BM_D.high_l)
+                                               nc_d, D_BMs[0].high_l)
 
     # Setup Adam optimizers for G
     optimizerG = optim.Adam(netG.parameters(), lr=lr, betas=(beta1, 0.999))
@@ -211,10 +209,10 @@ if __name__ == '__main__':
             # of images to feed D (each time different axis)
             fake_slices_for_D = fake_image.permute(0, perm[0], 1, *perm[1:])
             # the new batch size feeding D:
-            batch_size_new = batch_size_G_for_D * BM_D.high_l
+            batch_size_new = batch_size_G_for_D * D_BMs[0].high_l
             # reshaping for the correct size of D's input
             return fake_slices_for_D.reshape(batch_size_new, nc_d,
-                                             BM_D.high_l, BM_D.high_l)
+                                             D_BMs[0].high_l, D_BMs[0].high_l)
         else:  # same 2d slices are fed into D
             return fake_image
 
@@ -237,7 +235,7 @@ if __name__ == '__main__':
             _, fake_for_d = generate_fake_image(detach_output=True)
 
             for k in range(math.comb(n_dims, 2)):
-                netD, optimizerD = D_nets[k], D_optimisers[k]
+                BM_D, netD, optimizerD = D_BMs[k], D_nets[k], D_optimisers[k]
                 # only look at slices from the right directions:
                 if not LearnTools.to_slice(k, forty_five_deg,
                                            D_dimensions_to_check):

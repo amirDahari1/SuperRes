@@ -5,16 +5,23 @@ import torch
 import torch.optim as optim
 import copy
 import math
+from BatchMaker import *
 smaller_cube = False
 EPS = 10e-10
 modes = ['bilinear', 'trilinear']
 
 
-def return_D_nets(ngpu, wd, nc_d, n_dims, device, lr, beta1, anisotropic):
+def return_D_nets(ngpu, wd, nc_d, n_dims, device, lr, beta1, anisotropic,
+                  D_images, scale_f, rotation):
     D_nets = []
     D_optimisers = []
+    D_BMs = []
     if anisotropic:
-        for _ in np.arange(n_dims):
+        rotation = [False, False, True]  # TODO change this to be general!!
+        for i in np.arange(n_dims):
+            BM_D = BatchMaker(device, path=D_images[i], sf=scale_f,
+                              dims=n_dims, stack=True, low_res=False,
+                              rot_and_mir=rotation[i])
             # Create the Discriminator
             netD = discriminator(ngpu, wd, nc_d, n_dims).to(device)
             # Handle multi-gpu if desired
@@ -22,10 +29,15 @@ def return_D_nets(ngpu, wd, nc_d, n_dims, device, lr, beta1, anisotropic):
                 netD = nn.DataParallel(netD, list(range(ngpu)))
             optimiserD = optim.Adam(netD.parameters(), lr=lr,
                                     betas=(beta1, 0.999))
+            D_BMs.append(BM_D)
             D_nets.append(netD)
             D_optimisers.append(optimiserD)
 
     else:  # isotropic
+        # Create the batch maker
+        BM_D = BatchMaker(device, path=D_images[0], sf=scale_f,
+                          dims=n_dims, stack=True, low_res=False,
+                          rot_and_mir=rotation)
         # Create the Discriminator
         netD = discriminator(ngpu, wd, nc_d, n_dims).to(device)
         # Handle multi-gpu if desired
@@ -33,10 +45,11 @@ def return_D_nets(ngpu, wd, nc_d, n_dims, device, lr, beta1, anisotropic):
             netD = nn.DataParallel(netD, list(range(ngpu)))
         optimiserD = optim.Adam(netD.parameters(), lr=lr,
                                 betas=(beta1, 0.999))
+        D_BMs = [BM_D]*n_dims  # same batch maker, different pointers
         D_nets = [netD]*n_dims  # same network, different pointers
         D_optimisers = [optimiserD]*n_dims  # same optimiser, different
         # pointers
-    return D_nets, D_optimisers
+    return D_BMs, D_nets, D_optimisers
 
 
 def generator(ngpu, wg, nc_g, nc_d, n_res_block, dims, scale_factor):
