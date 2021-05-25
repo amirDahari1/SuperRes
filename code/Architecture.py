@@ -37,6 +37,9 @@ D_dimensions_to_check, scale_f = args.d_dimensions_to_check, args.scale_factor
 rotation, anisotropic = args.with_rotation, args.anisotropic
 down_sample = args.down_sample
 
+if anisotropic:  # each D needs more time to train..
+    g_update *= 3
+
 if not os.path.exists(ImageTools.progress_dir + progress_dir):
     os.makedirs(ImageTools.progress_dir + progress_dir)
 
