@@ -27,7 +27,8 @@ class BatchMaker:
     """
     # TODO batches without down-sampling (has to do with Architecture.py file)
 
-    def __init__(self, device, path=NMC_PATH, sf=4, dims=3, crop=False,
+    def __init__(self, device, path=NMC_PATH, sf=4, dims=3,
+                 stack=True, crop=False,
                  low_res=False, rot_and_mir=True):
         """
         :param path: the path of the tif file (TODO make it more general)
@@ -42,6 +43,7 @@ class BatchMaker:
         self.path = path
         self.dims = dims  # if G is 3D to 3D or 2D to 2D
         self.device = device
+        self.stack = stack
         self.im = imread(path)
         if rot_and_mir:
             self.rotate_and_mirror()
@@ -134,20 +136,29 @@ class BatchMaker:
         """
         # TODO sampling from an already low-res image
         # the starting pixels of the other dimensions:
-        e_ind = np.random.randint(np.array(self.im_ohe.shape[1:]))
-        s_ind = e_ind - self.high_l  # TODO warning somehow when it is going
+        if self.stack:
+            s_ind = np.random.randint(np.array(self.im_ohe.shape[2:]) -
+                                      self.high_l)
+            e_ind = s_ind + self.high_l
+            slice_chosen = np.random.randint(self.im_ohe.shape[1])
+            return self.im_ohe[:, slice_chosen, s_ind[0]:e_ind[0],
+                                    s_ind[1]:e_ind[1]]
+        s_ind = np.random.randint(np.array(self.im_ohe.shape[1:]) -
+                                  self.high_l)
+        e_ind = s_ind + self.high_l  # TODO warning somehow when it is going
         # TODO to be an error
+        slice_chosen = np.random.randint(np.array(self.im_ohe.shape[1:]))
         if self.dim_im == 2:  # the image is just 2D
             return self.im_ohe[:, s_ind[0]:e_ind[0], s_ind[0]:e_ind[0]]
         if dim_chosen == 0:
-            res_image = self.im_ohe[:, e_ind[0], s_ind[1]:e_ind[1],
+            res_image = self.im_ohe[:, slice_chosen[0], s_ind[1]:e_ind[1],
                                     s_ind[2]:e_ind[2]]
         elif dim_chosen == 1:  # TODO: s_ind now returns error for this!
-            res_image = self.im_ohe[:, s_ind[0]:e_ind[0], e_ind[1],
+            res_image = self.im_ohe[:, s_ind[0]:e_ind[0], slice_chosen[1],
                                     s_ind[2]:e_ind[2]]
         else:  # dim_chosen == 2
             res_image = self.im_ohe[:, s_ind[0]:e_ind[0], s_ind[1]:e_ind[1],
-                                    e_ind[2]]
+                                    slice_chosen[2]]
         return res_image
 
     def all_image_batch(self):

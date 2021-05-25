@@ -145,9 +145,9 @@ if __name__ == '__main__':
 
     # The batch makers for D and G:
     BM_D = BatchMaker(device, path=D_image, sf=scale_f, dims=n_dims,
-                      low_res=False, rot_and_mir=rotation)
+                      stack=True, low_res=False, rot_and_mir=rotation)
     BM_G = BatchMaker(device, path=G_image, sf=scale_f, dims=n_dims,
-                      low_res=not down_sample, rot_and_mir=False)
+                      stack=False, low_res=not down_sample, rot_and_mir=False)
 
     nc_d = len(BM_D.phases)
 
@@ -211,10 +211,10 @@ if __name__ == '__main__':
             # of images to feed D (each time different axis)
             fake_slices_for_D = fake_image.permute(0, perm[0], 1, *perm[1:])
             # the new batch size feeding D:
-            batch_size_new = batch_size_G_for_D * BM_G.high_l
+            batch_size_new = batch_size_G_for_D * BM_D.high_l
             # reshaping for the correct size of D's input
             return fake_slices_for_D.reshape(batch_size_new, nc_d,
-                                             BM_G.high_l, BM_G.high_l)
+                                             BM_D.high_l, BM_D.high_l)
         else:  # same 2d slices are fed into D
             return fake_image
 
