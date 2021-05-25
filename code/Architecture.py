@@ -55,8 +55,8 @@ forty_five_deg = False
 
 # Root directory for dataset
 dataroot = "data/"
-D_image_path = 'nmc_crop.tif'
-G_image_path = 'nmc_crop.tif'
+D_image_path = 'large_slice_nmc.tif'
+G_image_path = 'downsample_vol_train_nmc.tif'
 D_image = dataroot + D_image_path
 G_image = dataroot + G_image_path
 
