@@ -126,11 +126,6 @@ def save_differences(network_g, input_to_g, save_dir, filename,
     generated images that are supposed to be similar.
     """
     images = [input_to_g.clone().detach().cpu()]
-    if down_sample:
-        input_to_g = LearnTools.down_sample_for_g_input(input_to_g,
-                                                        to_low_idx,
-                                                        scale_factor, device,
-                                                        n_dims, squash)
     g_output = network_g(input_to_g).detach().cpu()
     images = images + [input_to_g.detach().cpu(), g_output]
     if with_deg:
@@ -150,8 +145,10 @@ if __name__ == '__main__':
                                   n_dims, device, lr, beta1, anisotropic,
                                   D_images, scale_f, rotation)
 
-    BM_G = BatchMaker(device, path=G_image, sf=scale_f, dims=n_dims,
-                      stack=False, low_res=not down_sample, rot_and_mir=False)
+    BM_G = BatchMaker(device=device, to_low_idx=to_low_idx, path=G_image,
+                      sf=scale_f, dims=n_dims, stack=False,
+                      down_sample=down_sample, low_res=not down_sample,
+                      rot_and_mir=False, squash=squash)
 
     # Create the generator
     netG = Networks.generator(ngpu, wg, nc_g, nc_d, n_res_blocks, n_dims,
@@ -175,7 +172,6 @@ if __name__ == '__main__':
 
     def generate_fake_image(detach_output=True):
         """
-        :param down_sample: if to down-sample the input to G from BM_G.
         :param detach_output: to detach the tensor output from gradient memory.
         :return: the generated image from G
         """
@@ -183,12 +179,6 @@ if __name__ == '__main__':
         g_slice = random.choice(g_batch_slices)
         input_to_G = BM_G.random_batch_for_fake(batch_size_G_for_D,
                                                           g_slice)
-
-        # down sample:
-        if down_sample:
-            input_to_G = LearnTools.down_sample_for_g_input(
-                input_to_G, to_low_idx, BM_G.scale_factor,
-                device, n_dims, squash)
 
         # Generate fake image batch with G
         if detach_output:

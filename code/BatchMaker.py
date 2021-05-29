@@ -56,6 +56,8 @@ class BatchMaker:
             else:
                 self.im = self.im[CROP:-CROP, CROP:-CROP]
         self.im_ohe = ImageTools.one_hot_encoding(self.im, self.phases)
+        # move to float tensor and to device:
+        self.im_ohe = torch.FloatTensor(self.im_ohe).to(self.device)
         self.high_l = HIGH_L_3D
         if down_sample:
             self.down_sample_im(to_low_idx, squash)
@@ -66,8 +68,8 @@ class BatchMaker:
 
     def down_sample_im(self, to_low_idx, squash=False):
         """
-            :return: a down-sample image of the high resolution image for the input
-            of G.
+        :return: a down-sample image of the high resolution image for the input
+        of G.
         """
         material_low_res = LearnTools.down_sample(self.im_ohe,
                                                   to_low_idx,
@@ -76,19 +78,19 @@ class BatchMaker:
                                                   squash)
         # add a tiny bit of noise for all the 0.5 voxels so there will not
         # be a bias in either way:
-        material_low_res += torch.rand(torch_nmc.size())-0.5)/100
+        material_low_res += (torch.rand(material_low_res.size(),
+                                        device=self.device)-0.5)/100
         # threshold at 0.5:
         material_low_res = torch.where(material_low_res > 0.5, 1., 0.)
         # make the pore channel:
         if squash:  # material_low_res already in one channel
-            pore_phase = torch.ones(size=material_low_res.size()).to(device) - \
-                         material_low_res  # TODO problem: material is not 0 or
-            # TODO 1 so also pore phase is not 0 or 1
+            pore_phase = torch.ones(size=material_low_res.size(),
+                                    device=self.device) - material_low_res
         else:  # material_low_res can be in multiple channels
             sum_of_low_res = torch.sum(material_low_res, dim=1).unsqueeze(
                 dim=1)
-            pore_phase = torch.ones(size=sum_of_low_res.size()).to(
-                device) - sum_of_low_res
+            pore_phase = torch.ones(size=sum_of_low_res.size(),
+                                    device=self.device) - sum_of_low_res
         # concat pore and material:
         return torch.cat((pore_phase, material_low_res), dim=1)
 
@@ -124,12 +126,13 @@ class BatchMaker:
         :return: A batch of high resolution images,
         along the dimension chosen (0->x,1->y,2->z) in the 3d tif image.
         """
-        res = np.zeros((batch_size, len(self.phases),
-                        *self.high_l * np.ones(self.dims, dtype=int)))
+        res = torch.zeros((batch_size, len(self.phases),
+                        *self.high_l * np.ones(self.dims, dtype=int)),
+                          dtype=self.im_ohe.dtype, device=self.device)
         for i in range(batch_size):
             res[i, ...] = self.generate_a_random_image3d(dim_chosen)
         # return a torch tensor:
-        return torch.FloatTensor(res).to(self.device)
+        return res
 
     def generate_a_random_image3d(self, dim_chosen):
         """
@@ -145,19 +148,20 @@ class BatchMaker:
         res_image = self.im_ohe[:, s_ind[0]:e_ind[0], s_ind[1]:e_ind[1],
                                 s_ind[2]:e_ind[2]]
         # for different view, change the cube around..
-        return res_image.transpose(0, *perms[dim_chosen])
+        return res_image.permute(0, *perms[dim_chosen])
 
     def random_batch2d(self, batch_size, dim_chosen):
         """
         :return: A batch of high resolution images, TODO 2d function
         along the dimension chosen (0->x,1->y,2->z) in the 3d tif image.
         """
-        res = np.zeros((batch_size, len(self.phases), self.high_l,
-                        self.high_l))
+        res = torch.zeros((batch_size, len(self.phases), self.high_l,
+                          self.high_l), dtype=self.im_ohe.dtype,
+                          device=self.device)
         for i in range(batch_size):
             res[i, :, :, :] = self.generate_a_random_image2d(dim_chosen)
         # return a torch tensor:
-        return torch.FloatTensor(res).to(self.device)
+        return res
 
     def generate_a_random_image2d(self, dim_chosen):
         """
@@ -197,7 +201,7 @@ class BatchMaker:
         :return: the 3d image ready to be fed into the G with dimensions
         1xCxDxHxW or 1xCxHxW
         """
-        return torch.FloatTensor(self.im_ohe).to(self.device).unsqueeze(0)
+        return self.im_ohe.unsqueeze(0)
 
 
 def main():
