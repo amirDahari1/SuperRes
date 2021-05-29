@@ -5,6 +5,7 @@ import os
 import torch
 import torch.utils.data
 import ImageTools
+import LearnTools
 import math
 from PIL import Image
 import matplotlib.pyplot as plt
@@ -27,9 +28,9 @@ class BatchMaker:
     """
     # TODO batches without down-sampling (has to do with Architecture.py file)
 
-    def __init__(self, device, path=NMC_PATH, sf=4, dims=3,
-                 stack=True, crop=False,
-                 low_res=False, rot_and_mir=True):
+    def __init__(self, device, to_low_idx, path=NMC_PATH, sf=4, dims=3,
+                 stack=True, crop=False, down_sample=False,
+                 low_res=False, rot_and_mir=True, squash=False):
         """
         :param path: the path of the tif file (TODO make it more general)
         :param sf: the scale factor between low and high res.
@@ -56,10 +57,40 @@ class BatchMaker:
                 self.im = self.im[CROP:-CROP, CROP:-CROP]
         self.im_ohe = ImageTools.one_hot_encoding(self.im, self.phases)
         self.high_l = HIGH_L_3D
+        if down_sample:
+            self.down_sample_im(to_low_idx, squash)
         if low_res:
             self.high_l = int(HIGH_L_3D/self.scale_factor)
         if self.dims == 2:
             self.high_l = self.high_l*2
+
+    def down_sample_im(self, to_low_idx, squash=False):
+        """
+            :return: a down-sample image of the high resolution image for the input
+            of G.
+        """
+        material_low_res = LearnTools.down_sample(self.im_ohe,
+                                                  to_low_idx,
+                                                  self.scale_factor,
+                                                  self.device, self.dims,
+                                                  squash)
+        # add a tiny bit of noise for all the 0.5 voxels so there will not
+        # be a bias in either way:
+        material_low_res += torch.rand(torch_nmc.size())-0.5)/100
+        # threshold at 0.5:
+        material_low_res = torch.where(material_low_res > 0.5, 1., 0.)
+        # make the pore channel:
+        if squash:  # material_low_res already in one channel
+            pore_phase = torch.ones(size=material_low_res.size()).to(device) - \
+                         material_low_res  # TODO problem: material is not 0 or
+            # TODO 1 so also pore phase is not 0 or 1
+        else:  # material_low_res can be in multiple channels
+            sum_of_low_res = torch.sum(material_low_res, dim=1).unsqueeze(
+                dim=1)
+            pore_phase = torch.ones(size=sum_of_low_res.size()).to(
+                device) - sum_of_low_res
+        # concat pore and material:
+        return torch.cat((pore_phase, material_low_res), dim=1)
 
     def rotate_and_mirror(self):
         """

@@ -183,30 +183,8 @@ def down_sample(high_res_multi_phase, mat_idx, scale_factor, device, n_dims,
     material_low_res = interpolate(material_phases,
                                    scale_factor=1/scale_factor,
                                    mode=modes[n_dims - 2])
-    # make the pore channel:
-    if squash:  # material_low_res already in one channel
-        pore_phase = torch.ones(size=material_low_res.size()).to(device) - \
-                     material_low_res
-    else:  # material_low_res can be in multiple channels
-        sum_of_low_res = torch.sum(material_low_res, dim=1).unsqueeze(dim=1)
-        pore_phase = torch.ones(size=sum_of_low_res.size()).to(
-            device) - sum_of_low_res
-    return pore_phase, material_low_res
 
-
-def down_sample_for_g_input(high_res_multi_phase, mat_idx, scale_factor,
-                            device, n_dims, squash=False):
-    """
-    :return: a down-sample image of the high resolution image for the input
-    of G.
-    """
-    pore_phase, material_low_res = down_sample(high_res_multi_phase, mat_idx,
-                                               scale_factor, device, n_dims,
-                                               squash)
-    # threshold at 0.5:
-    material_low_res = torch.where(material_low_res > 0.5, 1., 0.)
-    # concat pore and material:
-    return torch.cat((pore_phase, material_low_res), dim=1)
+    return material_low_res
 
 
 def logistic_function(x, k, x0):
@@ -226,7 +204,7 @@ def down_sample_for_similarity_check(generated_im, mat_idx, scale_factor,
     check with the low res input, no threshold (logistic function instead)
     for differentiability.
     """
-    _, material_low_res = down_sample(generated_im, mat_idx, scale_factor,
+    material_low_res = down_sample(generated_im, mat_idx, scale_factor,
                                       device, n_dims, squash)
     return logistic_function(material_low_res, k_logistic, threshold)
 

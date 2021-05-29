@@ -66,22 +66,6 @@ def cbd_to_pore(im_with_cbd):
     return res
 
 
-def down_sample(orig_image_tensor):
-    """
-    Average pool twice, then assigns 128 to values closer to 128 and 0 to
-    values closer to 0 (Assumes 2 phases!)
-    """
-    max_im = np.max(np.array(orig_image_tensor))
-    image_tensor = torch.FloatTensor(np.copy(orig_image_tensor))
-    image_tensor = torch.nn.AvgPool2d(2, 2)(image_tensor)
-    image_tensor = torch.nn.AvgPool2d(2, 2)(image_tensor)
-    # threshold in the middle - arbitrary choice
-    image_array = np.array(image_tensor)
-    image_array[image_array > max_im/2] = max_im
-    image_array[image_array <= max_im/2] = 0
-    return torch.FloatTensor(image_array)
-
-
 def one_hot_encoding(image, phases):
     """
     :param image: a [depth, height, width] 3d image
