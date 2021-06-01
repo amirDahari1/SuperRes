@@ -56,7 +56,7 @@ class BatchMaker:
                 self.im = self.im[CROP:-CROP, CROP:-CROP]
         self.im = ImageTools.one_hot_encoding(self.im, self.phases)
         # move to float tensor and to device:
-        self.im = torch.FloatTensor(self.im).to(self.device)
+        self.im = torch.HalfTensor(self.im).to(self.device)
         self.high_l = HIGH_L_3D
         if down_sample:
             self.im = self.down_sample_im(to_low_idx, squash)
@@ -64,6 +64,7 @@ class BatchMaker:
             self.high_l = int(HIGH_L_3D/self.scale_factor)
         if self.dims == 2:
             self.high_l = self.high_l*2
+        self.im = torch.FloatTensor(self.im)
 
     def down_sample_im(self, to_low_idx, squash=False):
         """
