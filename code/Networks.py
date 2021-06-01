@@ -11,7 +11,7 @@ EPS = 10e-10
 modes = ['bilinear', 'trilinear']
 
 
-def return_D_nets(ngpu, wd, nc_d, n_dims, device, lr, beta1, anisotropic,
+def return_D_nets(ngpu, wd, n_dims, device, lr, beta1, anisotropic,
                   D_images, scale_f, rotation):
     D_nets = []
     D_optimisers = []
@@ -22,6 +22,7 @@ def return_D_nets(ngpu, wd, nc_d, n_dims, device, lr, beta1, anisotropic,
             BM_D = BatchMaker(device, path=D_images[i], sf=scale_f,
                               dims=n_dims, stack=True, low_res=False,
                               rot_and_mir=rotation[i])
+            nc_d = len(BM_D.phases)
             # Create the Discriminator
             netD = discriminator(ngpu, wd, nc_d, n_dims).to(device)
             # Handle multi-gpu if desired
@@ -39,6 +40,7 @@ def return_D_nets(ngpu, wd, nc_d, n_dims, device, lr, beta1, anisotropic,
                           dims=n_dims, stack=True, low_res=False,
                           rot_and_mir=rotation)
         # Create the Discriminator
+        nc_d = len(BM_D.phases)
         netD = discriminator(ngpu, wd, nc_d, n_dims).to(device)
         # Handle multi-gpu if desired
         if (device.type == 'cuda') and (ngpu > 1):

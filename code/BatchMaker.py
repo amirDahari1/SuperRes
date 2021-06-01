@@ -26,9 +26,8 @@ class BatchMaker:
     """
     Makes and saves training and test batch images.
     """
-    # TODO batches without down-sampling (has to do with Architecture.py file)
 
-    def __init__(self, device, to_low_idx, path=NMC_PATH, sf=4, dims=3,
+    def __init__(self, device, to_low_idx=False, path=NMC_PATH, sf=4, dims=3,
                  stack=True, crop=False, down_sample=False,
                  low_res=False, rot_and_mir=True, squash=False):
         """
@@ -55,12 +54,12 @@ class BatchMaker:
                 self.im = self.im[CROP:-CROP, CROP:-CROP, CROP:-CROP]
             else:
                 self.im = self.im[CROP:-CROP, CROP:-CROP]
-        self.im_ohe = ImageTools.one_hot_encoding(self.im, self.phases)
+        self.im = ImageTools.one_hot_encoding(self.im, self.phases)
         # move to float tensor and to device:
-        self.im_ohe = torch.FloatTensor(self.im_ohe).to(self.device)
+        self.im = torch.FloatTensor(self.im).to(self.device)
         self.high_l = HIGH_L_3D
         if down_sample:
-            self.down_sample_im(to_low_idx, squash)
+            self.im = self.down_sample_im(to_low_idx, squash)
         if low_res:
             self.high_l = int(HIGH_L_3D/self.scale_factor)
         if self.dims == 2:
@@ -71,7 +70,7 @@ class BatchMaker:
         :return: a down-sample image of the high resolution image for the input
         of G.
         """
-        material_low_res = LearnTools.down_sample(self.im_ohe,
+        material_low_res = LearnTools.down_sample(self.im.unsqueeze(0),
                                                   to_low_idx,
                                                   self.scale_factor,
                                                   self.device, self.dims,
@@ -92,7 +91,7 @@ class BatchMaker:
             pore_phase = torch.ones(size=sum_of_low_res.size(),
                                     device=self.device) - sum_of_low_res
         # concat pore and material:
-        return torch.cat((pore_phase, material_low_res), dim=1)
+        return torch.cat((pore_phase, material_low_res), dim=1).squeeze(0)
 
     def rotate_and_mirror(self):
         """
@@ -128,7 +127,7 @@ class BatchMaker:
         """
         res = torch.zeros((batch_size, len(self.phases),
                         *self.high_l * np.ones(self.dims, dtype=int)),
-                          dtype=self.im_ohe.dtype, device=self.device)
+                          dtype=self.im.dtype, device=self.device)
         for i in range(batch_size):
             res[i, ...] = self.generate_a_random_image3d(dim_chosen)
         # return a torch tensor:
@@ -143,9 +142,9 @@ class BatchMaker:
         """
         h_r = self.high_l
         # starting voxels
-        s_ind = np.random.randint(np.array(self.im_ohe.shape[1:]) - h_r)
+        s_ind = np.random.randint(np.array(self.im.shape[1:]) - h_r)
         e_ind = s_ind + h_r  # the end indices
-        res_image = self.im_ohe[:, s_ind[0]:e_ind[0], s_ind[1]:e_ind[1],
+        res_image = self.im[:, s_ind[0]:e_ind[0], s_ind[1]:e_ind[1],
                                 s_ind[2]:e_ind[2]]
         # for different view, change the cube around..
         return res_image.permute(0, *perms[dim_chosen])
@@ -156,7 +155,7 @@ class BatchMaker:
         along the dimension chosen (0->x,1->y,2->z) in the 3d tif image.
         """
         res = torch.zeros((batch_size, len(self.phases), self.high_l,
-                          self.high_l), dtype=self.im_ohe.dtype,
+                          self.high_l), dtype=self.im.dtype,
                           device=self.device)
         for i in range(batch_size):
             res[i, :, :, :] = self.generate_a_random_image2d(dim_chosen)
@@ -172,27 +171,27 @@ class BatchMaker:
         # TODO sampling from an already low-res image
         # the starting pixels of the other dimensions:
         if self.stack:
-            s_ind = np.random.randint(np.array(self.im_ohe.shape[2:]) -
+            s_ind = np.random.randint(np.array(self.im.shape[2:]) -
                                       self.high_l)
             e_ind = s_ind + self.high_l
-            slice_chosen = np.random.randint(self.im_ohe.shape[1])
-            return self.im_ohe[:, slice_chosen, s_ind[0]:e_ind[0],
+            slice_chosen = np.random.randint(self.im.shape[1])
+            return self.im[:, slice_chosen, s_ind[0]:e_ind[0],
                                     s_ind[1]:e_ind[1]]
-        s_ind = np.random.randint(np.array(self.im_ohe.shape[1:]) -
+        s_ind = np.random.randint(np.array(self.im.shape[1:]) -
                                   self.high_l)
         e_ind = s_ind + self.high_l  # TODO warning somehow when it is going
         # TODO to be an error
-        slice_chosen = np.random.randint(np.array(self.im_ohe.shape[1:]))
+        slice_chosen = np.random.randint(np.array(self.im.shape[1:]))
         if self.dim_im == 2:  # the image is just 2D
-            return self.im_ohe[:, s_ind[0]:e_ind[0], s_ind[0]:e_ind[0]]
+            return self.im[:, s_ind[0]:e_ind[0], s_ind[0]:e_ind[0]]
         if dim_chosen == 0:
-            res_image = self.im_ohe[:, slice_chosen[0], s_ind[1]:e_ind[1],
+            res_image = self.im[:, slice_chosen[0], s_ind[1]:e_ind[1],
                                     s_ind[2]:e_ind[2]]
         elif dim_chosen == 1:  # TODO: s_ind now returns error for this!
-            res_image = self.im_ohe[:, s_ind[0]:e_ind[0], slice_chosen[1],
+            res_image = self.im[:, s_ind[0]:e_ind[0], slice_chosen[1],
                                     s_ind[2]:e_ind[2]]
         else:  # dim_chosen == 2
-            res_image = self.im_ohe[:, s_ind[0]:e_ind[0], s_ind[1]:e_ind[1],
+            res_image = self.im[:, s_ind[0]:e_ind[0], s_ind[1]:e_ind[1],
                                     slice_chosen[2]]
         return res_image
 
@@ -201,13 +200,13 @@ class BatchMaker:
         :return: the 3d image ready to be fed into the G with dimensions
         1xCxDxHxW or 1xCxHxW
         """
-        return self.im_ohe.unsqueeze(0)
+        return self.im.unsqueeze(0)
 
 
 def main():
     BM = BatchMaker('cpu')
     cubes = BM.random_batch3d(8, 0)
-    print(BM.im_ohe.shape)
+    print(BM.im.shape)
     print(cubes.size())
 
 

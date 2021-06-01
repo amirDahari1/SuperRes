@@ -101,9 +101,6 @@ with torch.no_grad():  # save the images
     #     im_3d = im_3d[:, :, :min_d, :min_d, :min_d]
         # orig_im_3d = orig_im_3d[:, :, :min_d, :min_d, :min_d]
     # save_tif_3d(G_net, im_3d, to_low_idx, device, file_name)
-    if down_sample:
-        im_3d = LearnTools.down_sample_for_g_input(im_3d, to_low_idx, scale_f,
-                                                   device, n_dims)
     nz1, nz2, nz3 = 256, 256, 256
     im_3d = im_3d[..., :nz1, :nz2, :nz3].to(device)
     step_len = 32

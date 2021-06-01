@@ -58,11 +58,14 @@ forty_five_deg = False
 
 # Root directory for dataset
 dataroot = "data/"
-D_image_path_0 = dataroot + 'separator_rods_slices.tif'
-D_image_path_1 = dataroot + 'separator_rods_slices.tif'
-D_image_path_2 = dataroot + 'separator_speckles_slices.tif'
-G_image_path = dataroot + 'separator_wo_fibrils.tif'
-D_images = [D_image_path_0, D_image_path_1, D_image_path_2]
+# D_image_path_0 = dataroot + 'separator_rods_slices.tif'
+# D_image_path_1 = dataroot + 'separator_rods_slices.tif'
+# D_image_path_2 = dataroot + 'separator_speckles_slices.tif'
+D_image_path = dataroot + 'slice_2048_nmc.tif'
+# G_image_path = dataroot + 'separator_wo_fibrils.tif'
+G_image_path = dataroot + 'new_vol_1024.tif'
+# D_images = [D_image_path_0, D_image_path_1, D_image_path_2]
+D_images = [D_image_path]
 G_image = G_image_path
 
 # Number of workers for dataloader
@@ -91,7 +94,6 @@ if squash:
 else:
     nc_g = 1 + to_low_idx.size()[0]  # channel for pore plus number of
     # material phases to low res.
-nc_d = 2  # three phases for the discriminator input
 
 # number of iterations in each epoch
 epoch_iterations = 10000//batch_size_G
@@ -141,9 +143,11 @@ if __name__ == '__main__':
                entity='tldr-group')
 
     # The batch makers for D and G:
-    D_BMs, D_nets, D_optimisers = Networks.return_D_nets(ngpu, wd, nc_d,
-                                  n_dims, device, lr, beta1, anisotropic,
-                                  D_images, scale_f, rotation)
+    D_BMs, D_nets, D_optimisers = Networks.return_D_nets(ngpu, wd, n_dims,
+                                           device, lr, beta1, anisotropic,
+                                           D_images, scale_f, rotation)
+    # Number of HR number of phases:
+    nc_d = len(D_BMs[0].phases)
 
     BM_G = BatchMaker(device=device, to_low_idx=to_low_idx, path=G_image,
                       sf=scale_f, dims=n_dims, stack=False,
