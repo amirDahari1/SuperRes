@@ -73,11 +73,11 @@ def one_hot_encoding(image, phases):
     :return: a one-hot encoding of image.
     """
     im_shape = image.shape
-    res = np.zeros((len(phases), ) + im_shape)
+    res = np.zeros((len(phases), ) + im_shape, dtype=image.dtype)
     # create one channel per phase for one hot encoding
     for count, phase in enumerate(phases):
-        image_copy = np.zeros(im_shape)  # just an encoding for one
-        # channel
+        image_copy = np.zeros(im_shape, dtype=image.dtype)  # just an encoding
+        # for one channel
         image_copy[image == phase] = 1
         res[count, ...] = image_copy
     return res
