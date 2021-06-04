@@ -161,7 +161,7 @@ def calc_gradient_penalty(netD, real_data, fake_data, batch_size, l, device,
     return gradient_penalty
 
 
-def down_sample(high_res_multi_phase, mat_idx, scale_factor, device, n_dims,
+def down_sample(high_res_multi_phase, mat_idx, scale_factor, n_dims,
                 squash=False):
     """
     :param high_res_multi_phase: the high resolution image to downsample.
@@ -198,14 +198,14 @@ def logistic_function(x, k, x0):
 
 
 def down_sample_for_similarity_check(generated_im, mat_idx, scale_factor,
-                                     device, n_dims, squash=True):
+                                     n_dims, squash=True):
     """
     :return: down sample images of the generated image for the similarity
     check with the low res input, no threshold (logistic function instead)
     for differentiability.
     """
     material_low_res = down_sample(generated_im, mat_idx, scale_factor,
-                                      device, n_dims, squash)
+                                   n_dims, squash)
     return logistic_function(material_low_res, k_logistic, threshold)
 
 
@@ -220,7 +220,7 @@ def pixel_wise_distance(low_res_im, generated_im, mat_idx,
     # all low res phases which are not pore are to be matched:
     low_res_mat = low_res_im[:, 1:]
     down_sample_im = down_sample_for_similarity_check(generated_im, mat_idx,
-                                                      scale_factor, device,
+                                                      scale_factor,
                                                       n_dims, squash)
     if separator:  # no punishment for making more material where pore is in
         # low_res

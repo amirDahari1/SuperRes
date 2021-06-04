@@ -31,14 +31,21 @@ class BatchMaker:
                  stack=True, crop=False, down_sample=False,
                  low_res=False, rot_and_mir=True, squash=False):
         """
+        :param device: the device that the image is on.
+        :param to_low_idx: the indices of the phases to be down-sampled.
         :param path: the path of the tif file (TODO make it more general)
         :param sf: the scale factor between low and high res.
         :param dims: number of dimensions for the batches (2 or 3)
-        :param device: the device that the image is on.
-        :param crop: if to crop the image at the edges
-        :param rot_and_mir: if True, the input is a stack of 2D images to
-        rotate and mirror for another 8 configurations
+        :param stack: if the data is a stack of 2D images
+        :param crop: if to crop the image at the edges.
+        :param down_sample: whether to down-sample the data or not.
+        :param rot_and_mir: if True, the stack of 2D images will rotate and
+        mirror for another 8 configurations
+        :param squash: whether to squash all phases (other than pore) to one phase.
         """
+        # down-sample parameters:
+        self.down_sample, self.to_low_idx, self.squash = down_sample, \
+                                                         to_low_idx, squash
         self.scale_factor = sf
         self.path = path
         self.dims = dims  # if G is 3D to 3D or 2D to 2D
@@ -55,27 +62,20 @@ class BatchMaker:
             else:
                 self.im = self.im[CROP:-CROP, CROP:-CROP]
         self.im = ImageTools.one_hot_encoding(self.im, self.phases)
-        # move to float tensor and to device:
-        self.im = torch.HalfTensor(self.im).to(self.device)
         self.high_l = HIGH_L_3D
-        if down_sample:
-            self.im = self.down_sample_im(to_low_idx, squash)
         if low_res:
             self.high_l = int(HIGH_L_3D/self.scale_factor)
         if self.dims == 2:
             self.high_l = self.high_l*2
-        self.im = self.im.float()
 
-    def down_sample_im(self, to_low_idx, squash=False):
+    def down_sample_im(self, image):
         """
         :return: a down-sample image of the high resolution image for the input
         of G.
         """
-        material_low_res = LearnTools.down_sample(self.im.unsqueeze(0),
-                                                  to_low_idx,
-                                                  self.scale_factor,
-                                                  self.device, self.dims,
-                                                  squash)
+        material_low_res = LearnTools.down_sample(torch.FloatTensor(
+            image).to(self.device), self.to_low_idx, self.scale_factor,
+                                                  self.dims, self.squash)
         # add a tiny bit of noise for all the 0.5 voxels so there will not
         # be a bias in either way:
         material_low_res += (torch.rand(material_low_res.size(),
@@ -83,7 +83,7 @@ class BatchMaker:
         # threshold at 0.5:
         material_low_res = torch.where(material_low_res > 0.5, 1., 0.)
         # make the pore channel:
-        if squash:  # material_low_res already in one channel
+        if self.squash:  # material_low_res already in one channel
             pore_phase = torch.ones(size=material_low_res.size(),
                                     device=self.device) - material_low_res
         else:  # material_low_res can be in multiple channels
@@ -126,13 +126,15 @@ class BatchMaker:
         :return: A batch of high resolution images,
         along the dimension chosen (0->x,1->y,2->z) in the 3d tif image.
         """
-        res = torch.zeros((batch_size, len(self.phases),
+        res = np.zeros((batch_size, len(self.phases),
                         *self.high_l * np.ones(self.dims, dtype=int)),
-                          dtype=self.im.dtype, device=self.device)
+                          dtype=self.im.dtype)
         for i in range(batch_size):
             res[i, ...] = self.generate_a_random_image3d(dim_chosen)
         # return a torch tensor:
-        return res
+        if self.down_sample:
+            return self.down_sample_im(res)
+        return torch.FloatTensor(res).to(device=self.device)
 
     def generate_a_random_image3d(self, dim_chosen):
         """
@@ -148,20 +150,21 @@ class BatchMaker:
         res_image = self.im[:, s_ind[0]:e_ind[0], s_ind[1]:e_ind[1],
                                 s_ind[2]:e_ind[2]]
         # for different view, change the cube around..
-        return res_image.permute(0, *perms[dim_chosen])
+        return res_image.transpose(0, *perms[dim_chosen])
 
     def random_batch2d(self, batch_size, dim_chosen):
         """
         :return: A batch of high resolution images, TODO 2d function
         along the dimension chosen (0->x,1->y,2->z) in the 3d tif image.
         """
-        res = torch.zeros((batch_size, len(self.phases), self.high_l,
-                          self.high_l), dtype=self.im.dtype,
-                          device=self.device)
+        res = np.zeros((batch_size, len(self.phases), self.high_l,
+                          self.high_l), dtype=self.im.dtype)
         for i in range(batch_size):
             res[i, :, :, :] = self.generate_a_random_image2d(dim_chosen)
         # return a torch tensor:
-        return res
+        if self.down_sample:
+            return self.down_sample_im(res)
+        return torch.FloatTensor(res).to(device=self.device)
 
     def generate_a_random_image2d(self, dim_chosen):
         """
