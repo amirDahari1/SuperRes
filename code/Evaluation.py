@@ -5,7 +5,8 @@ import ImageTools
 import argparse
 import torch
 import numpy as np
-from tifffile import imsave
+from tifffile import imsave, imread
+from torch.nn.functional import interpolate
 import wandb
 
 # Parsing arguments:
@@ -20,7 +21,7 @@ squash = args.squash_phases
 D_dimensions_to_check, scale_f = args.d_dimensions_to_check, args.scale_factor
 
 phases_to_low = [1]
-down_sample = True
+down_sample = False
 
 # progress_main_dir = 'progress/' + progress_dir
 progress_main_dir = 'progress'
@@ -31,6 +32,7 @@ G_image_path = 'data/separator_wo_fibrils.tif'
 
 file_name = 'generated_tif.tif'
 crop_to_cube = False
+down_sample_without_memory = False
 
 # TODO all of these (ngpu, device, to_low_idx, nc_g..) can go into a
 #  function in LearnTools that Architecture can also use
@@ -55,7 +57,7 @@ nc_d = 2  # three phases for the discriminator input
 
 
 BM_G = BatchMaker.BatchMaker(path=G_image_path, device=device,
-                            rot_and_mir=False, low_res=not down_sample)
+                             to_low_idx=to_low_idx, rot_and_mir=False)
 G_net = Networks.generator(ngpu, wg, nc_g, nc_d, n_res_blocks, n_dims,
                            scale_factor=scale_f).to(device)
 G_net.load_state_dict(torch.load(path_to_g_weights, map_location=torch.device(
@@ -63,30 +65,17 @@ G_net.load_state_dict(torch.load(path_to_g_weights, map_location=torch.device(
 G_net.eval()
 
 
-def save_tif_3d(network_g, input_to_g, grey_idx, device,
-                filename):
-    """
-        Saves a tif image of the output of G on all of the 3d image high_res_im
-    """
-    print(input_to_g.size())
-    if down_sample:
-        input_to_g = LearnTools.down_sample_for_g_input(input_to_g,
-                                                       grey_idx,
-                                                       scale_f,
-                                                       device, n_dims)
-    print(input_to_g.size())
-
-    g_output = network_g(input_to_g).detach().cpu()
-    g_output = ImageTools.fractions_to_ohe(g_output)
-    g_output_grey = ImageTools.one_hot_decoding(g_output).astype('uint8')
-    imsave(progress_main_dir + '/' + filename, g_output_grey)
-    low_res_grey = ImageTools.one_hot_decoding(input_to_g.cpu()).astype(
-        'uint8')
-    imsave(progress_main_dir + '/low_res' + filename,
-           low_res_grey)
-    # high_res_im = ImageTools.one_hot_decoding(original_im.cpu()).astype('uint8')
-    # imsave(progress_main_dir + '/' + filename + '-original',
-    #        high_res_im)
+def down_sample_wo_memory(path):
+    high_res_vol = imread(path)
+    ohe_hr_vol = ImageTools.one_hot_encoding(high_res_vol,
+                                             np.unique(high_res_vol))
+    material_phases = torch.index_select(torch.tensor(ohe_hr_vol), 1,
+                                         to_low_idx)
+    mat_phase_double = material_phases.double()
+    mat_low_res = interpolate(mat_phase_double, scale_factor=1 / 4,
+                              mode='trilinear')
+    mat_low_res += (torch.rand(mat_low_res.size()) - 0.5) / 100
+    return torch.where(mat_low_res > 0.5, 1., 0.)
 
 
 with torch.no_grad():  # save the images
@@ -94,6 +83,8 @@ with torch.no_grad():  # save the images
     wandb.init(project='SuperRes', name='making large volume',
                entity='tldr-group')
 
+    if down_sample_without_memory:
+        im_3d = down_sample_wo_memory(path=G_image_path)
     im_3d = BM_G.all_image_batch()
     # orig_im_3d = BM_D.all_image_batch()
     # if crop_to_cube:
@@ -157,4 +148,4 @@ with torch.no_grad():  # save the images
             first_img_stack.append(res1)
     img = np.concatenate(first_img_stack, axis=0)
     imsave(progress_main_dir + '/' + file_name, img)
-    # np.save('large_vol_g_2_nmc', img)
+    # np.save('large_new_vol_nmc', img)
