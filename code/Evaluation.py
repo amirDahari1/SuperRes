@@ -69,13 +69,18 @@ def down_sample_wo_memory(path):
     high_res_vol = imread(path)
     ohe_hr_vol = ImageTools.one_hot_encoding(high_res_vol,
                                              np.unique(high_res_vol))
+    ohe_hr_vol = np.expand_dims(ohe_hr_vol, axis=0)
     material_phases = torch.index_select(torch.tensor(ohe_hr_vol), 1,
                                          to_low_idx)
-    mat_phase_double = material_phases.double()
+    mat_phase_double = material_phases.float()
     mat_low_res = interpolate(mat_phase_double, scale_factor=1 / 4,
                               mode='trilinear')
     mat_low_res += (torch.rand(mat_low_res.size()) - 0.5) / 100
-    return torch.where(mat_low_res > 0.5, 1., 0.)
+    mat_low_res = torch.where(mat_low_res > 0.5, 1., 0.)
+    pore_phase = torch.ones(size=mat_low_res.size(),
+                            device=device) - mat_low_res
+    return torch.cat((pore_phase, mat_low_res), dim=1)
+
 
 
 with torch.no_grad():  # save the images
@@ -85,7 +90,8 @@ with torch.no_grad():  # save the images
 
     if down_sample_without_memory:
         im_3d = down_sample_wo_memory(path=G_image_path)
-    im_3d = BM_G.all_image_batch()
+    else:
+        im_3d = torch.FloatTensor(BM_G.im, device=device).unsqueeze(0)
     # orig_im_3d = BM_D.all_image_batch()
     # if crop_to_cube:
     #     min_d = 128
