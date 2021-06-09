@@ -1,39 +1,109 @@
+import numpy as np
 import torch.nn as nn
 from torch.nn.functional import interpolate
 import torch
+import torch.optim as optim
+import copy
+import math
+from BatchMaker import *
+smaller_cube = False
+EPS = 10e-10
+modes = ['bilinear', 'trilinear']
 
 
-def generator(ngpu, wg, nc_g, nc_d, n_res_block, dims):
+def return_D_nets(ngpu, wd, n_dims, device, lr, beta1, anisotropic,
+                  D_images, scale_f, rotation):
+    D_nets = []
+    D_optimisers = []
+    D_BMs = []
+    if anisotropic:
+        rotation = [False, False, True]  # TODO change this to be general!!
+        for i in np.arange(n_dims):
+            BM_D = BatchMaker(device, path=D_images[i], sf=scale_f,
+                              dims=n_dims, stack=True, low_res=False,
+                              rot_and_mir=rotation[i])
+            nc_d = len(BM_D.phases)
+            # Create the Discriminator
+            netD = discriminator(ngpu, wd, nc_d, n_dims).to(device)
+            # Handle multi-gpu if desired
+            if (device.type == 'cuda') and (ngpu > 1):
+                netD = nn.DataParallel(netD, list(range(ngpu)))
+            optimiserD = optim.Adam(netD.parameters(), lr=lr,
+                                    betas=(beta1, 0.999))
+            D_BMs.append(BM_D)
+            D_nets.append(netD)
+            D_optimisers.append(optimiserD)
+
+    else:  # isotropic
+        # Create the batch maker
+        BM_D = BatchMaker(device, path=D_images[0], sf=scale_f,
+                          dims=n_dims, stack=True, low_res=False,
+                          rot_and_mir=rotation)
+        # Create the Discriminator
+        nc_d = len(BM_D.phases)
+        netD = discriminator(ngpu, wd, nc_d, n_dims).to(device)
+        # Handle multi-gpu if desired
+        if (device.type == 'cuda') and (ngpu > 1):
+            netD = nn.DataParallel(netD, list(range(ngpu)))
+        optimiserD = optim.Adam(netD.parameters(), lr=lr,
+                                betas=(beta1, 0.999))
+        D_BMs = [BM_D]*n_dims  # same batch maker, different pointers
+        D_nets = [netD]*n_dims  # same network, different pointers
+        D_optimisers = [optimiserD]*n_dims  # same optimiser, different
+        # pointers
+    return D_BMs, D_nets, D_optimisers
+
+
+def generator(ngpu, wg, nc_g, nc_d, n_res_block, dims, scale_factor):
     if dims == 3:
-        return Generator3D(ngpu, wg, nc_g, nc_d, n_res_block)
+        return Generator3D(ngpu, wg, nc_g, nc_d, n_res_block, scale_factor)
     else:  # dims == 2
         return Generator2D(ngpu, wg, nc_g, nc_d, n_res_block)
 
 
 # Generator Code
 class Generator3D(nn.Module):
-    def __init__(self, ngpu, wg, nc_g, nc_d, n_res_blocks):
+    def __init__(self, ngpu, wg, nc_g, nc_d, n_res_blocks, scale_factor):
         super(Generator3D, self).__init__()
+        self.scale_factor = scale_factor
         self.n_res_blocks = n_res_blocks
         self.ngpu = ngpu
+        # how to change the channels depends on the number of layers
+        sf_c = int(math.log(self.scale_factor - EPS, 2))
+        wg_sf = wg + sf_c
         # first convolution, making many channels
-        self.conv_minus_1 = nn.Conv3d(nc_g, 2 ** wg, 3, 1, 1)
-        self.bn_minus_1 = nn.BatchNorm3d(2**wg)
+        self.conv_minus_1 = nn.Conv3d(nc_g, 2 ** (wg_sf-1), 3, stride=1,
+                                      padding=1, padding_mode='replicate')
+        self.bn_minus_1 = nn.BatchNorm3d(2**(wg_sf - 1))
 
-        self.conv_res = nn.ModuleList([nn.Conv3d(2 ** wg, 2 ** wg, 3, 1, 1)
+        self.conv_res = nn.ModuleList([nn.Conv3d(2 ** (wg_sf - 1), 2 ** (wg_sf - 1), 3,
+                                                 stride=1, padding=1,
+                                                 padding_mode='replicate')
                                        for _ in range(self.n_res_blocks*2)])
-        self.bn_res = nn.ModuleList([nn.BatchNorm3d(2 ** wg)
+        self.bn_res = nn.ModuleList([nn.BatchNorm3d(2 ** (wg_sf - 1))
                                      for _ in range(self.n_res_blocks*2)])
-        # transpose convolution:
-        self.conv_trans_1 = nn.ConvTranspose3d(2 ** wg, 2 ** (wg - 1), 4, 2, 1)
-        self.bn1 = nn.BatchNorm3d(2 ** (wg - 1))
-        # convolution resize:
-        self.up_sample = nn.Upsample(scale_factor=2)
-        self.conv_resize = nn.Conv3d(2 ** (wg - 1), 2 ** (wg - 2), 3, 1, 1)
-        self.bn_resize = nn.BatchNorm3d(2 ** (wg - 2))
-        self.conv_bf_end = nn.Conv3d(2 ** (wg - 2), nc_d, 3, 1, 1)
-        self.conv_concat = nn.Conv3d(nc_d+nc_g, nc_d, 1, 1, 0)
 
+        # convolution resize before t-conv (if scale-ratio > 4):
+        if self.scale_factor > 4:
+            self.conv_resize_0 = nn.Conv3d(2 ** (wg_sf - 1), 2 ** (wg_sf - 2), 3,
+                                           stride=1,
+                                           padding=1, padding_mode='replicate')
+            self.bn_resize_0 = nn.BatchNorm3d(2 ** (wg_sf - 2))
+            wg_sf -= 1
+        # transpose convolution:
+        if self.scale_factor > 2:
+            self.conv_trans = nn.ConvTranspose3d(2 ** (wg_sf - 1),
+                                             2 ** (wg_sf - 2), 4, 2, 1)
+            self.bn_trans = nn.BatchNorm3d(2 ** (wg_sf - 2))
+            wg_sf -= 1
+        # convolution resize:
+        self.conv_resize = nn.Conv3d(2 ** (wg_sf - 1), 2 ** (wg_sf - 2),
+                                     3, stride=1, padding=1,
+                                     padding_mode='replicate')
+        self.bn_resize = nn.BatchNorm3d(2 ** (wg_sf - 2))
+        self.conv_bf_end = nn.Conv3d(2 ** (wg_sf - 2), nc_d, 3, stride=1,
+                                     padding=1, padding_mode='replicate')
+        # self.conv_concat = nn.Conv3d(nc_d+nc_g, nc_d, 1, 1, 0)
 
     @staticmethod
     def res_block(x, bn_out, conv_out, bn_in, conv_in):
@@ -48,7 +118,7 @@ class Generator3D(nn.Module):
         x_side = bn_out(conv_out(nn.ReLU()(bn_in(conv_in(x)))))
         return nn.ReLU()(x + x_side)
 
-    def forward(self, x, mask=False):
+    def forward(self, x):
         """
         forward pass of x
         :param x: input
@@ -56,6 +126,8 @@ class Generator3D(nn.Module):
         convolutions) and the up-sampled original image.
         :return: the output of the forward pass.
         """
+        cur_scale = copy.copy(self.scale_factor)  # current scale factor of
+        # the image on the forward run.
         # x after the first run for many channels:
         x_first = nn.ReLU()(self.bn_minus_1(self.conv_minus_1(x)))
         # first residual block:
@@ -67,19 +139,26 @@ class Generator3D(nn.Module):
                                          self.conv_res[i], self.bn_res[i+1],
                                          self.conv_res[i+1])
         # skip connection to the end after all the blocks:
-        after_res = x_first + after_block
-        # first up sampling using transpose convolution
-        up_1 = nn.ReLU()(self.bn1(self.conv_trans_1(after_res)))
-        # second up sample using conv resize:
-        up_2 = nn.ReLU()(self.bn_resize(self.conv_resize(self.up_sample(
-            up_1))))
+        res = x_first + after_block
+        # up sampling using conv resize
+        if 4 < cur_scale <= 8:
+            up_sample = nn.Upsample(scale_factor=2, mode=modes[1])  # TODO
+            # maybe TODO trilinear upsampling?
+            res = nn.ReLU()(self.bn_resize_0(self.conv_resize_0(up_sample(
+                res))))
+            cur_scale /= 2
+        # up sampling using transpose convolution
+        if 2 < cur_scale <= 4:
+            res = nn.ReLU()(self.bn_trans(self.conv_trans(res)))
+            cur_scale /= 2
+        # last up sample using conv resize:
+        up_sample = nn.Upsample(scale_factor=cur_scale, mode=modes[1])  # TODO
+        # maybe TODO trilinear upsampling?
+        super_res = nn.ReLU()(self.bn_resize(self.conv_resize(up_sample(res))))
         # another convolution before the end:
-        bf_end = self.conv_bf_end(up_2)
+        bf_end = self.conv_bf_end(super_res)
         # softmax of the phase dimension:
         return nn.Softmax(dim=1)(bf_end)
-
-    def return_scale_factor(self, high_res_length):
-        return (high_res_length / 4) / high_res_length
 
 
 def discriminator(ngpu, wd, nc_d, dims):
@@ -104,12 +183,16 @@ class Discriminator3d(nn.Module):
         self.conv4 = nn.Conv2d(2 ** (wd - 1), 2 ** wd, 4, 2, 1)
         # fifth convolution, input is 256x4x4
         self.conv5 = nn.Conv2d(2 ** wd, 1, 4, 2, 0)
+        # for smaller cube
+        self.conv_early = nn.Conv2d(2**(wd-1), 1, 4, 2, 0)
 
     def forward(self, x):
         x = nn.ReLU()(self.conv0(x))
         # x = nn.ReLU()(self.conv1(x))
         x = nn.ReLU()(self.conv2(x))
         x = nn.ReLU()(self.conv3(x))
+        if smaller_cube:
+            return self.conv_early(x)
         x = nn.ReLU()(self.conv4(x))
         return self.conv5(x)
 

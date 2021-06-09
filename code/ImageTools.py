@@ -1,7 +1,7 @@
 from matplotlib import pyplot as plt
 import numpy as np
 import torch
-
+import wandb
 
 LOW_RES = 16
 HIGH_RES = 64
@@ -10,7 +10,7 @@ N_SAMPLES = 10000
 progress_dir = 'progress/'
 
 
-def show_grey_image(image, title, wandb):
+def show_grey_image(image, title):
     """
     Plots the image in grey scale, assuming the image is 1 channel of 0-255
     """
@@ -19,37 +19,40 @@ def show_grey_image(image, title, wandb):
     # plt.show()
 
 
-def plot_fake_difference(high_res, input_to_g, output_from_g, save_dir,
-                         filename, wandb):
+def plot_fake_difference(images, save_dir, filename, with_deg=False):
     # first move everything to numpy
     # rand_sim = np.array(input_to_g[:, 2, :, :])
-    images = [high_res, input_to_g, output_from_g]
     images = [np.array(image) for image in images]
     images[2] = fractions_to_ohe(images[2])  # the output from g needs to ohe
+    if with_deg:
+        images[3] = fractions_to_ohe(images[3])  # also the slices
     images = [one_hot_decoding(image) for image in images]
-    save_three_by_two_grey(images[0], images[1], images[2],
-                           save_dir + ' ' + filename, save_dir, filename,
-                           wandb)
+    save_three_by_two_grey(images, save_dir + ' ' + filename, save_dir,
+                           filename, with_deg)
 
 
-def save_three_by_two_grey(top_images, middle_images, bottom_images, title,
-                           save_dir, filename, wandb):
-    f, axarr = plt.subplots(3, 3)
-    images = [top_images, middle_images, bottom_images]
-    for i in range(len(images)):
-        if len(images[i].shape) > 3:
-            images[i] = images[i][:, 0, :, :]
-    axarr[0,0].imshow(images[0][0, :, :], cmap='gray', vmin=0, vmax=255)
-    axarr[0,1].imshow(images[0][1, :, :], cmap='gray', vmin=0, vmax=255)
-    axarr[0,2].imshow(images[0][2, :, :], cmap='gray', vmin=0, vmax=255)
-    axarr[1, 0].imshow(images[1][0, :, :], cmap='gray', vmin=0, vmax=255)
-    axarr[1, 1].imshow(images[1][1, :, :], cmap='gray', vmin=0, vmax=255)
-    axarr[1, 2].imshow(images[1][2, :, :], cmap='gray', vmin=0, vmax=255)
-    axarr[2, 0].imshow(images[2][0, :, :], cmap='gray', vmin=0, vmax=255)
-    axarr[2, 1].imshow(images[2][1, :, :], cmap='gray', vmin=0, vmax=255)
-    axarr[2, 2].imshow(images[2][2, :, :], cmap='gray', vmin=0, vmax=255)
+def save_three_by_two_grey(images, title, save_dir, filename, with_deg=False):
+    if with_deg:
+        f, axarr = plt.subplots(5, 3)
+    else:
+        f, axarr = plt.subplots(4, 3)
+    for i in range(3):
+        for j in range(3):
+            length_im = images[i].shape[1]
+            middle = int(length_im/2)
+            axarr[i, j].imshow(images[i][j, middle, :, :], cmap='gray', vmin=0,
+                               vmax=255)
+            axarr[i, j].set_xticks([0, length_im-1])
+            axarr[i, j].set_yticks([0, length_im-1])
+    for j in range(3):  # showing xy slices from 'above'
+        axarr[3, j].imshow(images[2][j, :, :, 4], cmap='gray', vmin=0,
+                           vmax=255)
+    if with_deg:
+        for j in range(3):  # showing 45 deg slices
+            axarr[4, j].imshow(images[3][j, :, :], cmap='gray', vmin=0,
+                               vmax=255)
     plt.suptitle(title)
-    wandb.log({"examples": [wandb.Image(plt, caption="Running Examples")]})
+    wandb.log({"running slices": plt})
     plt.savefig(progress_dir + save_dir + '/' + filename + '.png')
     plt.close()
 
@@ -63,22 +66,6 @@ def cbd_to_pore(im_with_cbd):
     return res
 
 
-def down_sample(orig_image_tensor):
-    """
-    Average pool twice, then assigns 128 to values closer to 128 and 0 to
-    values closer to 0 (Assumes 2 phases!)
-    """
-    max_im = np.max(np.array(orig_image_tensor))
-    image_tensor = torch.FloatTensor(np.copy(orig_image_tensor))
-    image_tensor = torch.nn.AvgPool2d(2, 2)(image_tensor)
-    image_tensor = torch.nn.AvgPool2d(2, 2)(image_tensor)
-    # threshold in the middle - arbitrary choice
-    image_array = np.array(image_tensor)
-    image_array[image_array > max_im/2] = max_im
-    image_array[image_array <= max_im/2] = 0
-    return torch.FloatTensor(image_array)
-
-
 def one_hot_encoding(image, phases):
     """
     :param image: a [depth, height, width] 3d image
@@ -86,13 +73,13 @@ def one_hot_encoding(image, phases):
     :return: a one-hot encoding of image.
     """
     im_shape = image.shape
-    res = np.zeros((len(phases), ) + im_shape)
+    res = np.zeros((len(phases), ) + im_shape, dtype=image.dtype)
     # create one channel per phase for one hot encoding
     for count, phase in enumerate(phases):
-        image_copy = np.zeros(im_shape)  # just an encoding for one
-        # channel
+        image_copy = np.zeros(im_shape, dtype=image.dtype)  # just an encoding
+        # for one channel
         image_copy[image == phase] = 1
-        res[count, :, :, :] = image_copy
+        res[count, ...] = image_copy
     return res
 
 
@@ -168,8 +155,8 @@ def calc_and_save_eta(steps, time, start, i, epoch, num_epochs, filename):
     ETA = rem / progress * elap
     hrs = int(ETA / 3600)
     minutes = int((ETA / 3600 % 1) * 60)
-    save_res = np.array([epoch, num_epochs, i, steps, hrs, minutes])
-    np.save(progress_dir + filename, save_res)
+    # save_res = np.array([epoch, num_epochs, i, steps, hrs, minutes])
+    # np.save(progress_dir + filename, save_res)
     print('[%d/%d][%d/%d]\tETA: %d hrs %d mins'
           % (epoch, num_epochs, i, steps,
              hrs, minutes))
