@@ -52,7 +52,6 @@ class BatchMaker:
         self.device = device
         self.stack = stack
         self.im = imread(path)
-        print('got to upload ' + path)
         if rot_and_mir:
             self.rotate_and_mirror()
         self.dim_im = len(self.im.shape)  # the dimension of the image
@@ -63,7 +62,6 @@ class BatchMaker:
             else:
                 self.im = self.im[CROP:-CROP, CROP:-CROP]
         self.im = ImageTools.one_hot_encoding(self.im, self.phases)
-        print('got to make ohe of image')
         self.high_l = HIGH_L_3D
         if low_res:
             self.high_l = int(HIGH_L_3D/self.scale_factor)
