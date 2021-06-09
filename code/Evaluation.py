@@ -72,7 +72,7 @@ def down_sample_wo_memory(path):
     ohe_hr_vol = np.expand_dims(ohe_hr_vol, axis=0)
     material_phases = torch.index_select(torch.tensor(ohe_hr_vol), 1,
                                          to_low_idx)
-    mat_phase_double = material_phases.float()
+    mat_phase_double = material_phases.double()
     mat_low_res = interpolate(mat_phase_double, scale_factor=1 / 4,
                               mode='trilinear')
     mat_low_res += (torch.rand(mat_low_res.size()) - 0.5) / 100
@@ -91,7 +91,7 @@ with torch.no_grad():  # save the images
     if down_sample_without_memory:
         im_3d = down_sample_wo_memory(path=G_image_path)
     else:
-        im_3d = torch.FloatTensor(BM_G.im, device=device).unsqueeze(0)
+        im_3d = BM_G.all_image_batch()
     # orig_im_3d = BM_D.all_image_batch()
     # if crop_to_cube:
     #     min_d = 128
