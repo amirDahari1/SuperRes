@@ -206,7 +206,7 @@ class BatchMaker:
         :return: the 3d image ready to be fed into the G with dimensions
         1xCxDxHxW or 1xCxHxW
         """
-        return torch.FloatTensor(self.im.to(self.device)).unsqueeze(0)
+        return torch.FloatTensor(self.im).to(self.device).unsqueeze(0)
 
 
 def main():
