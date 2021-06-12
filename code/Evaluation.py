@@ -92,8 +92,6 @@ with torch.no_grad():  # save the images
         im_3d = down_sample_wo_memory(path=G_image_path)
     else:
         im_3d = BM_G.all_image_batch()
-    print(BM_G.im.shape)
-    print(im_3d.size())
     # orig_im_3d = BM_D.all_image_batch()
     # if crop_to_cube:
     #     min_d = 128
@@ -126,16 +124,15 @@ with torch.no_grad():  # save the images
                     print(k)
                     third_lr_vec = second_lr_vec[..., :,
                                                  :, k * step:k * step + step_len]
-                    print(third_lr_vec.size())
                     g_output = G_net(third_lr_vec).detach().cpu()
                     g_output = ImageTools.fractions_to_ohe(g_output)
                     g_output_grey = ImageTools.one_hot_decoding(
                         g_output).astype('uint8').squeeze()
-                    if k == 0:
+                    if k == 0:  # keep the beginning
                         g_output_grey = g_output_grey[:, :, :-high_overlap]
-                    elif k == last_ind3:
+                    elif k == last_ind3:  # keep the middle+end
                         g_output_grey = g_output_grey[:, :, high_overlap:]
-                    else:
+                    else:  # keep the middle
                         g_output_grey = g_output_grey[:, :, high_overlap:
                                                       - high_overlap]
                     third_img_stack.append(np.uint8(g_output_grey))
