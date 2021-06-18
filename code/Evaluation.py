@@ -55,8 +55,6 @@ else:
     # material phases to low res.
 nc_d = 2  # three phases for the discriminator input
 
-
-
 G_net = Networks.generator(ngpu, wg, nc_g, nc_d, n_res_blocks, n_dims,
                            scale_factor=scale_f).to(device)
 G_net.load_state_dict(torch.load(path_to_g_weights, map_location=torch.device(
@@ -73,7 +71,7 @@ def down_sample_wo_memory(path, step_length, step_size):
     ohe_hr_vol = ImageTools.one_hot_encoding(high_res_vol,
                                              np.unique(high_res_vol))
     ohe_hr_vol = np.expand_dims(ohe_hr_vol, axis=0)
-    material_phases = torch.index_select(torch.tensor(ohe_hr_vol), 1,
+    material_phases = torch.index_select(torch.tensor(ohe_hr_vol).to(device), 1,
                                          to_low_idx)
     mat_phase_double = material_phases.double()
     mat_low_res = interpolate(mat_phase_double, scale_factor=1 / scale_f,
