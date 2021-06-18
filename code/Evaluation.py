@@ -27,8 +27,8 @@ progress_main_dir = 'progress/' + progress_dir
 # progress_main_dir = 'progress'
 path_to_g_weights = progress_main_dir + '/g_weights.pth'
 # path_to_g_weights = progress_main_dir + '/g_weights_large_slice.pth'
-# G_image_path = 'data/separator_wo_fibrils.tif'
-G_image_path = 'data/new_vol_down_sample.tif'
+G_image_path = 'data/separator_wo_fibrils.tif'
+# G_image_path = 'data/new_vol_down_sample.tif'
 
 file_name = 'generated_tif.tif'
 crop_to_cube = False
