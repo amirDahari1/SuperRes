@@ -32,7 +32,7 @@ G_image_path = 'data/new_vol_down_sample.tif'
 
 file_name = 'generated_tif.tif'
 crop_to_cube = False
-down_sample_without_memory = False
+down_sample_without_memory = True
 
 # TODO all of these (ngpu, device, to_low_idx, nc_g..) can go into a
 #  function in LearnTools that Architecture can also use
@@ -56,24 +56,27 @@ else:
 nc_d = 3  # three phases for the discriminator input
 
 
-BM_G = BatchMaker.BatchMaker(path=G_image_path, device=device,
-                             to_low_idx=to_low_idx, rot_and_mir=False)
+
 G_net = Networks.generator(ngpu, wg, nc_g, nc_d, n_res_blocks, n_dims,
                            scale_factor=scale_f).to(device)
 G_net.load_state_dict(torch.load(path_to_g_weights, map_location=torch.device(
     device)))
 G_net.eval()
 
+def cut_to_fit_up_sample(image, step_length, step_size):
+    reminder = (np.array(image.shape) - step_length) % step_size
+    return image[..., reminder[0]:,reminder[1]:,reminder[2]:]
 
-def down_sample_wo_memory(path):
+def down_sample_wo_memory(path, step_length, step_size):
     high_res_vol = imread(path)
+    high_res_vol = cut_to_fit_up_sample(high_res_vol, step_length, step_size)
     ohe_hr_vol = ImageTools.one_hot_encoding(high_res_vol,
                                              np.unique(high_res_vol))
     ohe_hr_vol = np.expand_dims(ohe_hr_vol, axis=0)
     material_phases = torch.index_select(torch.tensor(ohe_hr_vol), 1,
                                          to_low_idx)
     mat_phase_double = material_phases.double()
-    mat_low_res = interpolate(mat_phase_double, scale_factor=1 / 4,
+    mat_low_res = interpolate(mat_phase_double, scale_factor=1 / scale_f,
                               mode='trilinear')
     mat_low_res += (torch.rand(mat_low_res.size()) - 0.5) / 100
     mat_low_res = torch.where(mat_low_res > 0.5, 1., 0.)
@@ -88,22 +91,27 @@ with torch.no_grad():  # save the images
     wandb.init(project='SuperRes', name='making large volume',
                entity='tldr-group')
 
+    step_len = 32
+    overlap = 16
+    high_overlap = int(overlap / 2 * scale_f)
+    step = step_len - overlap
+
     if down_sample_without_memory:
-        im_3d = down_sample_wo_memory(path=G_image_path)
+        im_3d = down_sample_wo_memory(path=G_image_path,
+                                      step_length=step_len, step_size=step)
     else:
+        BM_G = BatchMaker.BatchMaker(path=G_image_path, device=device,
+                                     to_low_idx=to_low_idx, rot_and_mir=False)
         im_3d = BM_G.all_image_batch()
+
     # orig_im_3d = BM_D.all_image_batch()
     # if crop_to_cube:
     #     min_d = 128
     #     im_3d = im_3d[:, :, :min_d, :min_d, :min_d]
         # orig_im_3d = orig_im_3d[:, :, :min_d, :min_d, :min_d]
     # save_tif_3d(G_net, im_3d, to_low_idx, device, file_name)
-    nz1, nz2, nz3 = 256, 256, 256
-    im_3d = im_3d[..., :nz1, :nz2, :nz3].to(device)
-    step_len = 32
-    overlap = 16
-    high_overlap = int(overlap/2 * scale_f)
-    step = step_len - overlap
+    nz1, nz2, nz3 = im_3d.size()[-3:].to(device)
+
     first_img_stack = []
     with torch.no_grad():
         last_ind1 = int((nz1-step_len)//step)
@@ -127,7 +135,7 @@ with torch.no_grad():  # save the images
                     g_output = G_net(third_lr_vec).detach().cpu()
                     g_output = ImageTools.fractions_to_ohe(g_output)
                     g_output_grey = ImageTools.one_hot_decoding(
-                        g_output).astype('uint8').squeeze()
+                        g_output).astype('int8').squeeze()
                     if k == 0:  # keep the beginning
                         g_output_grey = g_output_grey[:, :, :-high_overlap]
                     elif k == last_ind3:  # keep the middle+end
@@ -135,7 +143,7 @@ with torch.no_grad():  # save the images
                     else:  # keep the middle
                         g_output_grey = g_output_grey[:, :, high_overlap:
                                                       - high_overlap]
-                    third_img_stack.append(np.uint8(g_output_grey))
+                    third_img_stack.append(np.int8(g_output_grey))
                 res2 = np.concatenate(third_img_stack, axis=2)
                 if j == 0:
                     res2 = res2[:, :-high_overlap, :]
@@ -153,5 +161,7 @@ with torch.no_grad():  # save the images
                 res1 = res1[high_overlap:-high_overlap, :, :]
             first_img_stack.append(res1)
     img = np.concatenate(first_img_stack, axis=0)
+    low_res = np.squeeze(ImageTools.one_hot_decoding(im_3d))
     imsave(progress_main_dir + '/' + file_name, img)
+    imsave(progress_main_dir + '/' + file_name + 'low_res', low_res)
     # np.save('large_new_vol_nmc', img)
