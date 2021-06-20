@@ -159,7 +159,7 @@ with torch.no_grad():  # save the images
                 res1 = res1[high_overlap:-high_overlap, :, :]
             first_img_stack.append(res1)
     img = np.concatenate(first_img_stack, axis=0)
-    low_res = np.squeeze(ImageTools.one_hot_decoding(im_3d))
+    low_res = np.squeeze(ImageTools.one_hot_decoding(im_3d.cpu()))
     imsave(progress_main_dir + '/' + file_name, img)
     imsave(progress_main_dir + '/' + file_name + 'low_res', low_res)
     # np.save('large_new_vol_nmc', img)
