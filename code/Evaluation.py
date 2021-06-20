@@ -108,7 +108,7 @@ with torch.no_grad():  # save the images
     #     im_3d = im_3d[:, :, :min_d, :min_d, :min_d]
         # orig_im_3d = orig_im_3d[:, :, :min_d, :min_d, :min_d]
     # save_tif_3d(G_net, im_3d, to_low_idx, device, file_name)
-    nz1, nz2, nz3 = im_3d.size()[-3:].to(device)
+    nz1, nz2, nz3 = im_3d.size()[-3:]
 
     first_img_stack = []
     with torch.no_grad():
