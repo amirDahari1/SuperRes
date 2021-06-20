@@ -61,13 +61,9 @@ G_net.load_state_dict(torch.load(path_to_g_weights, map_location=torch.device(
     device)))
 G_net.eval()
 
-def cut_to_fit_up_sample(image, step_length, step_size):
-    reminder = (np.array(image.shape) - step_length) % step_size
-    return image[..., reminder[0]:,reminder[1]:,reminder[2]:]
 
-def down_sample_wo_memory(path, step_length, step_size):
+def down_sample_wo_memory(path):
     high_res_vol = imread(path)
-    high_res_vol = cut_to_fit_up_sample(high_res_vol, step_length, step_size)
     ohe_hr_vol = ImageTools.one_hot_encoding(high_res_vol,
                                              np.unique(high_res_vol))
     ohe_hr_vol = np.expand_dims(ohe_hr_vol, axis=0)
@@ -95,8 +91,7 @@ with torch.no_grad():  # save the images
     step = step_len - overlap
 
     if down_sample_without_memory:
-        im_3d = down_sample_wo_memory(path=G_image_path,
-                                      step_length=step_len, step_size=step)
+        im_3d = down_sample_wo_memory(path=G_image_path)
     else:
         BM_G = BatchMaker.BatchMaker(path=G_image_path, device=device,
                                      to_low_idx=to_low_idx, rot_and_mir=False)
@@ -108,28 +103,37 @@ with torch.no_grad():  # save the images
     #     im_3d = im_3d[:, :, :min_d, :min_d, :min_d]
         # orig_im_3d = orig_im_3d[:, :, :min_d, :min_d, :min_d]
     # save_tif_3d(G_net, im_3d, to_low_idx, device, file_name)
-    nz1, nz2, nz3 = im_3d.size()[-3:]
 
+    nz1, nz2, nz3 = im_3d.size()[-3:]
     first_img_stack = []
     with torch.no_grad():
-        last_ind1 = int((nz1-step_len)//step)
+        last_ind1 = int(np.ceil((nz1-step_len)/step))
         for i in range(last_ind1 + 1):
             wandb.log({'large step': i})
             print('i = ' + str(i))
-            first_lr_vec = im_3d[..., i*step:i*step+step_len, :, :]
+            if i == last_ind1:
+                first_lr_vec = im_3d[..., -step_len:, :, :]
+            else:
+                first_lr_vec = im_3d[..., i*step:i*step+step_len, :, :]
             second_img_stack = []
-            last_ind2 = int((nz2-step_len)//step)
+            last_ind2 = int(np.ceil((nz2-step_len)/step))
             for j in range(last_ind2 + 1):
                 print(j)
-                second_lr_vec = first_lr_vec[..., :, j * step:j * step +
-                                                             step_len, :]
+                if j == last_ind2:
+                    second_lr_vec = first_lr_vec[..., :, -step_len:, :]
+                else:
+                    second_lr_vec = first_lr_vec[..., :, j * step:j * step +
+                                                 step_len, :]
                 third_img_stack = []
-                last_ind3 = int((nz3 - step_len) // step)
+                last_ind3 = int(np.ceil((nz3-step_len)/step))
                 for k in range(last_ind3 + 1):
                     wandb.log({'small step': k})
                     print(k)
-                    third_lr_vec = second_lr_vec[..., :,
-                                                 :, k * step:k * step + step_len]
+                    if k == last_ind3:
+                        third_lr_vec = second_lr_vec[..., :, :, -step_len:]
+                    else:
+                        third_lr_vec = second_lr_vec[..., :, :, k * step:k *
+                                                     step + step_len]
                     g_output = G_net(third_lr_vec).detach().cpu()
                     g_output = ImageTools.fractions_to_ohe(g_output)
                     g_output_grey = ImageTools.one_hot_decoding(
@@ -137,7 +141,14 @@ with torch.no_grad():  # save the images
                     if k == 0:  # keep the beginning
                         g_output_grey = g_output_grey[:, :, :-high_overlap]
                     elif k == last_ind3:  # keep the middle+end
-                        g_output_grey = g_output_grey[:, :, high_overlap:]
+                        excess_voxels = int(
+                            ((nz3 - step_len) % step) * scale_f)
+                        if excess_voxels > 0:
+                            g_output_grey = g_output_grey[:, :,
+                                                          -(high_overlap +
+                                                            excess_voxels):]
+                        else:
+                            g_output_grey = g_output_grey[:, :, high_overlap:]
                     else:  # keep the middle
                         g_output_grey = g_output_grey[:, :, high_overlap:
                                                       - high_overlap]
@@ -146,7 +157,11 @@ with torch.no_grad():  # save the images
                 if j == 0:
                     res2 = res2[:, :-high_overlap, :]
                 elif j == last_ind2:
-                    res2 = res2[:, high_overlap:, :]
+                    excess_voxels = int(((nz2 - step_len) % step) * scale_f)
+                    if excess_voxels > 0:
+                        res2 = res2[:, -(high_overlap + excess_voxels):, :]
+                    else:
+                        res2 = res2[:, high_overlap:, :]
                 else:
                     res2 = res2[:, high_overlap:-high_overlap, :]
                 second_img_stack.append(res2)
@@ -154,7 +169,11 @@ with torch.no_grad():  # save the images
             if i == 0:
                 res1 = res1[:-high_overlap, :, :]
             elif i == last_ind1:
-                res1 = res1[high_overlap:, :, :]
+                excess_voxels = int(((nz1 - step_len) % step) * scale_f)
+                if excess_voxels > 0:
+                    res1 = res1[-(high_overlap+excess_voxels):, :, :]
+                else:
+                    res1 = res1[high_overlap:, :, :]
             else:
                 res1 = res1[high_overlap:-high_overlap, :, :]
             first_img_stack.append(res1)
