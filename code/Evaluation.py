@@ -76,7 +76,7 @@ def down_sample_wo_memory(path, step_length, step_size):
     mat_phase_double = material_phases.double()
     mat_low_res = interpolate(mat_phase_double, scale_factor=1 / scale_f,
                               mode='trilinear')
-    mat_low_res += (torch.rand(mat_low_res.size()) - 0.5) / 100
+    mat_low_res += (torch.rand(mat_low_res.size()).to(device) - 0.5) / 100
     mat_low_res = torch.where(mat_low_res > 0.5, 1., 0.)
     pore_phase = torch.ones(size=mat_low_res.size(),
                             device=device) - mat_low_res
