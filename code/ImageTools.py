@@ -41,16 +41,16 @@ def save_three_by_two_grey(images, title, save_dir, filename, with_deg=False):
             length_im = images[i].shape[1]
             middle = int(length_im/2)
             axarr[i, j].imshow(images[i][j, middle, :, :], cmap='gray', vmin=0,
-                               vmax=255)
+                               vmax=2)
             axarr[i, j].set_xticks([0, length_im-1])
             axarr[i, j].set_yticks([0, length_im-1])
     for j in range(3):  # showing xy slices from 'above'
         axarr[3, j].imshow(images[2][j, :, :, 4], cmap='gray', vmin=0,
-                           vmax=255)
+                           vmax=2)
     if with_deg:
         for j in range(3):  # showing 45 deg slices
             axarr[4, j].imshow(images[3][j, :, :], cmap='gray', vmin=0,
-                               vmax=255)
+                               vmax=2)
     plt.suptitle(title)
     wandb.log({"running slices": plt})
     plt.savefig(progress_dir + save_dir + '/' + filename + '.png')
