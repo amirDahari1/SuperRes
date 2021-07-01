@@ -93,7 +93,6 @@ def one_hot_decoding(image):
     np_image = np.array(image)
     im_shape = np_image.shape
     phases = im_shape[1]
-    decodes = [0, 1, 2]
     res = np.zeros([im_shape[0]] + list(im_shape[2:]))
 
     # the assumption is that each pixel has exactly one 1 in its phases
@@ -102,7 +101,7 @@ def one_hot_decoding(image):
         if i == 0:
             continue  # the res is already 0 in all places..
         phase_image = np_image[:, i, ...]
-        res[phase_image == 1] = decodes[i]
+        res[phase_image == 1] = i
     return res
 
 

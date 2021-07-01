@@ -33,6 +33,7 @@ G_image_path = 'data/separator_wo_fibrils.tif'
 file_name = 'generated_tif.tif'
 crop_to_cube = False
 down_sample_without_memory = True
+input_with_noise = False
 
 # TODO all of these (ngpu, device, to_low_idx, nc_g..) can go into a
 #  function in LearnTools that Architecture can also use
@@ -49,11 +50,17 @@ to_low_idx = torch.LongTensor(phases_to_low).to(device)
 
 # Number of channels in the training images. For color images this is 3
 if squash:
-    nc_g = 2
+    if input_with_noise:
+        nc_g = 3
+    else:
+        nc_g = 2
 else:
-    nc_g = 1 + to_low_idx.size()[0]  # channel for pore plus number of
+    if input_with_noise:
+        nc_g = 1 + to_low_idx.size()[0] + 1 # channel for pore plus number of
     # material phases to low res.
-nc_d = 2  # three phases for the discriminator input
+    else:
+        nc_g = 1 + to_low_idx.size()[0]
+nc_d = 3  # three phases for the discriminator input
 
 G_net = Networks.generator(ngpu, wg, nc_g, nc_d, n_res_blocks, n_dims,
                            scale_factor=scale_f).to(device)
@@ -103,6 +110,12 @@ with torch.no_grad():  # save the images
     #     im_3d = im_3d[:, :, :min_d, :min_d, :min_d]
         # orig_im_3d = orig_im_3d[:, :, :min_d, :min_d, :min_d]
     # save_tif_3d(G_net, im_3d, to_low_idx, device, file_name)
+
+    if input_with_noise:
+        input_size = im_3d.size()
+        # make noise channel and concatenate it to input:
+        noise = torch.randn(input_size[0], 1, *input_size[2:], device=device)
+        im_3d = torch.cat((im_3d, noise), dim=1)
 
     nz1, nz2, nz3 = im_3d.size()[-3:]
     first_img_stack = []
