@@ -90,10 +90,10 @@ to_low_idx = torch.LongTensor(phases_to_low).to(device)
 
 # Number of channels in the training images. For color images this is 3
 if squash:
-    nc_g = 2
+    nc_g = 2 + 1
 else:
-    nc_g = 1 + to_low_idx.size()[0]  # channel for pore plus number of
-    # material phases to low res.
+    nc_g = 1 + to_low_idx.size()[0] + 1  # channel for pore plus number of
+    # material phases to low res plus noise channel.
 
 # number of iterations in each epoch
 epoch_iterations = 10000//batch_size_G
@@ -121,14 +121,14 @@ def weights_init(m):
         nn.init.constant_(m.bias.data, 0)
 
 
-def save_differences(network_g, input_to_g, save_dir, filename,
+def save_differences(input_to_g, output_of_g, save_dir, filename,
                      scale_factor, masks, with_deg=False):
     """
     Saves the image of the differences between the high-res real and the
     generated images that are supposed to be similar.
     """
     images = [input_to_g.clone().detach().cpu()]
-    g_output = network_g(input_to_g).detach().cpu()
+    g_output = output_of_g.cpu()
     images = images + [input_to_g.detach().cpu(), g_output]
     if with_deg:
         slices_45 = LearnTools.forty_five_deg_slices(masks, g_output)
@@ -183,7 +183,12 @@ if __name__ == '__main__':
         g_slice = random.choice(g_batch_slices)
         input_to_G = BM_G.random_batch_for_fake(batch_size_G_for_D,
                                                           g_slice)
-
+        input_size = input_to_G.size()
+        # make noise channel and concatenate it to input:
+        noise = torch.randn(input_size[0], 1, *input_size[2:], device=device)
+        input_to_G = torch.cat((input_to_G, noise), dim=1)
+        print(input_to_G.size())
+        print(nc_g)
         # Generate fake image batch with G
         if detach_output:
             return input_to_G, netG(input_to_G).detach()
@@ -321,9 +326,10 @@ if __name__ == '__main__':
                                              epoch, num_epochs, eta_file)
 
                 with torch.no_grad():  # only for plotting
-                    save_differences(netG, BM_G.random_batch_for_fake(
-                                     batch_size_G_for_D, random.choice(
-                                      g_batch_slices)).detach(),
+                    g_input_plot, g_output_plot = generate_fake_image(
+                        detach_output=True)
+                    # plot input without the noise channel
+                    save_differences(g_input_plot[:, :-1], g_output_plot,
                                      progress_dir, 'running slices',
                                      BM_G.scale_factor, masks_45,
                                      forty_five_deg)

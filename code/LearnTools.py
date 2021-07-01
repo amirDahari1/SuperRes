@@ -218,7 +218,7 @@ def pixel_wise_distance(low_res_im, generated_im, mat_idx,
     low resolution image
     """
     # all low res phases which are not pore are to be matched:
-    low_res_mat = low_res_im[:, 1:]
+    low_res_mat = low_res_im[:, 1:-1]
     down_sample_im = down_sample_for_similarity_check(generated_im, mat_idx,
                                                       scale_factor,
                                                       n_dims, squash)
