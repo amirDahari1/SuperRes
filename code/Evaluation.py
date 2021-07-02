@@ -92,8 +92,8 @@ with torch.no_grad():  # save the images
     # wandb.init(project='SuperRes', name='making large volume',
     #            entity='tldr-group')
 
-    step_len = 32
-    overlap = 16
+    step_len = 16
+    overlap = 8
     high_overlap = int(overlap / 2 * scale_f)
     step = step_len - overlap
 
