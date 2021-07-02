@@ -7,7 +7,7 @@ import torch
 import numpy as np
 from tifffile import imsave, imread
 from torch.nn.functional import interpolate
-import wandb
+# import wandb
 
 # Parsing arguments:
 parser = argparse.ArgumentParser()
@@ -89,8 +89,8 @@ def down_sample_wo_memory(path):
 
 with torch.no_grad():  # save the images
     # 1. Start a new run
-    wandb.init(project='SuperRes', name='making large volume',
-               entity='tldr-group')
+    # wandb.init(project='SuperRes', name='making large volume',
+    #            entity='tldr-group')
 
     step_len = 32
     overlap = 16
@@ -123,7 +123,7 @@ with torch.no_grad():  # save the images
     with torch.no_grad():
         last_ind1 = int(np.ceil((nz1-step_len)/step))
         for i in range(last_ind1 + 1):
-            wandb.log({'large step': i})
+            # wandb.log({'large step': i})
             print('i = ' + str(i))
             if i == last_ind1:
                 first_lr_vec = im_3d[..., -step_len:, :, :]
@@ -141,7 +141,7 @@ with torch.no_grad():  # save the images
                 third_img_stack = []
                 last_ind3 = int(np.ceil((nz3-step_len)/step))
                 for k in range(last_ind3 + 1):
-                    wandb.log({'small step': k})
+                    # wandb.log({'small step': k})
                     print(k)
                     if k == last_ind3:
                         third_lr_vec = second_lr_vec[..., :, :, -step_len:]
