@@ -117,7 +117,8 @@ with torch.no_grad():  # save the images
         noise = torch.randn(input_size[0], 1, *input_size[2:], device=device)
         im_3d = torch.cat((im_3d, noise), dim=1)
 
-    nz1, nz2, nz3 = im_3d.size()[-3:]
+    # nz1, nz2, nz3 = im_3d.size()[-3:]
+    nz1, nz2, nz3 = 64, 64, 64
     first_img_stack = []
     with torch.no_grad():
         last_ind1 = int(np.ceil((nz1-step_len)/step))
