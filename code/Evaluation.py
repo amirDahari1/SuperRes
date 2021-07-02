@@ -33,7 +33,7 @@ G_image_path = 'data/separator_wo_fibrils.tif'
 file_name = 'generated_tif.tif'
 crop_to_cube = False
 down_sample_without_memory = True
-input_with_noise = False
+input_with_noise = True
 
 # TODO all of these (ngpu, device, to_low_idx, nc_g..) can go into a
 #  function in LearnTools that Architecture can also use
