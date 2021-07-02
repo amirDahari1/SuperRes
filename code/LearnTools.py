@@ -5,9 +5,8 @@ import math  # just so I don't use numpy by accident
 import numpy as np
 import matplotlib.pyplot as plt
 
-separator = True
+separator = False
 k_logistic = 30  # the logistic function coefficient
-up_sample_factor = 4
 threshold = 0.5
 modes = ['bilinear', 'trilinear']
 
