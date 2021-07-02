@@ -127,7 +127,7 @@ with torch.no_grad():  # save the images
             # wandb.log({'large step': i})
             print('i = ' + str(i))
             if i == last_ind1:
-                first_lr_vec = im_3d[..., -step_len:, :, :]
+                first_lr_vec = im_3d[..., -step_len:nz1, :, :]
             else:
                 first_lr_vec = im_3d[..., i*step:i*step+step_len, :, :]
             second_img_stack = []
@@ -135,7 +135,7 @@ with torch.no_grad():  # save the images
             for j in range(last_ind2 + 1):
                 print(j)
                 if j == last_ind2:
-                    second_lr_vec = first_lr_vec[..., :, -step_len:, :]
+                    second_lr_vec = first_lr_vec[..., :, -step_len:nz2, :]
                 else:
                     second_lr_vec = first_lr_vec[..., :, j * step:j * step +
                                                  step_len, :]
@@ -145,7 +145,7 @@ with torch.no_grad():  # save the images
                     # wandb.log({'small step': k})
                     print(k)
                     if k == last_ind3:
-                        third_lr_vec = second_lr_vec[..., :, :, -step_len:]
+                        third_lr_vec = second_lr_vec[..., :, :, -step_len:nz3]
                     else:
                         third_lr_vec = second_lr_vec[..., :, :, k * step:k *
                                                      step + step_len]
