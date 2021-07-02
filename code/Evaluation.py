@@ -115,7 +115,7 @@ with torch.no_grad():  # save the images
         input_size = im_3d.size()
         # make noise channel and concatenate it to input:
         noise = torch.randn(input_size[0], 1, *input_size[2:], device=device)
-        im_3d = torch.FloatTensor(torch.cat((im_3d, noise), dim=1))
+        im_3d = torch.cat((im_3d, noise), dim=1)
 
     # nz1, nz2, nz3 = im_3d.size()[-3:]
     nz1, nz2, nz3 = 64, 64, 64
