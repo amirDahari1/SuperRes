@@ -34,7 +34,7 @@ file_name = 'generated_tif.tif'
 crop_to_cube = False
 down_sample_without_memory = False
 input_with_noise = False
-all_pore_input = True
+all_pore_input = False
 
 # TODO all of these (ngpu, device, to_low_idx, nc_g..) can go into a
 #  function in LearnTools that Architecture can also use
@@ -201,6 +201,9 @@ with torch.no_grad():  # save the images
             first_img_stack.append(res1)
     img = np.concatenate(first_img_stack, axis=0)
     low_res = np.squeeze(ImageTools.one_hot_decoding(im_3d.cpu()))
-    imsave(progress_main_dir + '/' + file_name + '_pore', img)
+    if all_pore_input:
+        imsave(progress_main_dir + '/' + file_name + '_pore', img)
+    else:
+        imsave(progress_main_dir + '/' + file_name, img)
     imsave(progress_main_dir + '/' + file_name + 'low_res', low_res)
     # np.save('large_new_vol_nmc', img)
