@@ -34,6 +34,7 @@ file_name = 'generated_tif.tif'
 crop_to_cube = False
 down_sample_without_memory = False
 input_with_noise = True
+all_pore_input = True
 
 # TODO all of these (ngpu, device, to_low_idx, nc_g..) can go into a
 #  function in LearnTools that Architecture can also use
@@ -111,12 +112,17 @@ with torch.no_grad():  # save the images
         # orig_im_3d = orig_im_3d[:, :, :min_d, :min_d, :min_d]
     # save_tif_3d(G_net, im_3d, to_low_idx, device, file_name)
 
+    if all_pore_input:
+        im_3d[:] = 0
+        im_3d[:, 0] = 1
+
     if input_with_noise:
         input_size = im_3d.size()
         # make noise channel and concatenate it to input:
         noise = torch.randn(input_size[0], 1, *input_size[2:],
                             device=device, dtype=im_3d.dtype)
         im_3d = torch.cat((im_3d, noise), dim=1)
+
 
     # nz1, nz2, nz3 = im_3d.size()[-3:]
     nz1, nz2, nz3 = 64, 64, 64
