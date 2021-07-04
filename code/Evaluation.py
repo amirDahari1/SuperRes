@@ -33,7 +33,7 @@ G_image_path = 'data/nmc_wo_binder.tif'
 file_name = 'generated_tif.tif'
 crop_to_cube = False
 down_sample_without_memory = False
-input_with_noise = True
+input_with_noise = False
 all_pore_input = True
 
 # TODO all of these (ngpu, device, to_low_idx, nc_g..) can go into a
