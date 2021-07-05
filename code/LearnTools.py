@@ -5,9 +5,8 @@ import math  # just so I don't use numpy by accident
 import numpy as np
 import matplotlib.pyplot as plt
 
-separator = True
+separator = False
 k_logistic = 30  # the logistic function coefficient
-up_sample_factor = 4
 threshold = 0.5
 modes = ['bilinear', 'trilinear']
 
@@ -218,7 +217,7 @@ def pixel_wise_distance(low_res_im, generated_im, mat_idx,
     low resolution image
     """
     # all low res phases which are not pore are to be matched:
-    low_res_mat = low_res_im[:, 1:]
+    low_res_mat = low_res_im[:, 1:-1]
     down_sample_im = down_sample_for_similarity_check(generated_im, mat_idx,
                                                       scale_factor,
                                                       n_dims, squash)

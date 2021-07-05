@@ -41,16 +41,16 @@ def save_three_by_two_grey(images, title, save_dir, filename, with_deg=False):
             length_im = images[i].shape[1]
             middle = int(length_im/2)
             axarr[i, j].imshow(images[i][j, middle, :, :], cmap='gray', vmin=0,
-                               vmax=255)
+                               vmax=2)
             axarr[i, j].set_xticks([0, length_im-1])
             axarr[i, j].set_yticks([0, length_im-1])
     for j in range(3):  # showing xy slices from 'above'
         axarr[3, j].imshow(images[2][j, :, :, 4], cmap='gray', vmin=0,
-                           vmax=255)
+                           vmax=2)
     if with_deg:
         for j in range(3):  # showing 45 deg slices
             axarr[4, j].imshow(images[3][j, :, :], cmap='gray', vmin=0,
-                               vmax=255)
+                               vmax=2)
     plt.suptitle(title)
     wandb.log({"running slices": plt})
     plt.savefig(progress_dir + save_dir + '/' + filename + '.png')
@@ -93,7 +93,6 @@ def one_hot_decoding(image):
     np_image = np.array(image)
     im_shape = np_image.shape
     phases = im_shape[1]
-    decodes = [0, 128, 255]
     res = np.zeros([im_shape[0]] + list(im_shape[2:]))
 
     # the assumption is that each pixel has exactly one 1 in its phases
@@ -102,7 +101,7 @@ def one_hot_decoding(image):
         if i == 0:
             continue  # the res is already 0 in all places..
         phase_image = np_image[:, i, ...]
-        res[phase_image == 1] = decodes[i]
+        res[phase_image == 1] = i
     return res
 
 
