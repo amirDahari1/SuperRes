@@ -5,4 +5,4 @@ Super resolution for microstructure imaging using Generative Adversarial Network
 
 Paper and more information coming out soon!
 
-![](generated_tif (2).gif)
+<img src="./generated_tif (2).gif" alt="My Project GIF" width="500" height="500">
