@@ -59,10 +59,8 @@ forty_five_deg = False
 # Root directory for dataset
 dataroot = "data/"
 
-# D_images = [D_image_path]
 D_images = [dataroot + d_path for d_path in args.d_image_path]
 G_image = dataroot + args.g_image_path
-# G_image = G_image_path
 
 # Number of workers for dataloader
 workers = 2
