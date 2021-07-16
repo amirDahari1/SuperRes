@@ -58,15 +58,11 @@ forty_five_deg = False
 
 # Root directory for dataset
 dataroot = "data/"
-# D_image_path_0 = dataroot + 'separator_rods_slices.tif'
-# D_image_path_1 = dataroot + 'separator_rods_slices.tif'
-# D_image_path_2 = dataroot + 'separator_speckles_slices.tif'
-D_image_path = dataroot + 'slice_2048_nmc.tif'
-# G_image_path = dataroot + 'nmc_wo_binder.tif'
-G_image_path = dataroot + 'new_vol_1024.tif'
-# D_images = [D_image_path_0, D_image_path_1, D_image_path_2]
-D_images = [D_image_path]
-G_image = G_image_path
+
+# D_images = [D_image_path]
+D_images = [dataroot + d_path for d_path in args.d_image_path]
+G_image = dataroot + args.g_image_path
+# G_image = G_image_path
 
 # Number of workers for dataloader
 workers = 2
