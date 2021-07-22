@@ -19,6 +19,7 @@ n_res_blocks, pix_distance = args.n_res_blocks, args.pixel_coefficient_distance
 num_epochs, g_update, n_dims = args.num_epochs, args.g_update, args.n_dims
 squash = args.squash_phases
 D_dimensions_to_check, scale_f = args.d_dimensions_to_check, args.scale_factor
+size_to_evaluate = args.volume_size_to_evaluate
 
 phases_to_low = [1]
 down_sample = False
@@ -123,9 +124,7 @@ with torch.no_grad():  # save the images
                             device=device, dtype=im_3d.dtype)
         im_3d = torch.cat((im_3d, noise), dim=1)
 
-
-    # nz1, nz2, nz3 = im_3d.size()[-3:]
-    nz1, nz2, nz3 = 128, 128, 128
+    nz1, nz2, nz3 = size_to_evaluate
     first_img_stack = []
     with torch.no_grad():
         last_ind1 = int(np.ceil((nz1-step_len)/step))

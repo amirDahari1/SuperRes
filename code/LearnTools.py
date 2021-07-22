@@ -35,6 +35,8 @@ def return_args(parser):
                         type=int, default=[1, 2])
     parser.add_argument('-d_dimensions', '--d_dimensions_to_check', nargs='+',
                         type=int, default=[0, 1, 2])
+    parser.add_argument('-volume_size_to_evaluate', nargs='+', type=int,
+                        default=[128, 128, 128])
     parser.add_argument('-wd', '--widthD', type=int, default=9,
                         help='Hyper-parameter for \
                         the width of the Discriminator network')
