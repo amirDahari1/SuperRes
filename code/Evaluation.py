@@ -20,6 +20,7 @@ num_epochs, g_update, n_dims = args.num_epochs, args.g_update, args.n_dims
 squash = args.squash_phases
 D_dimensions_to_check, scale_f = args.d_dimensions_to_check, args.scale_factor
 size_to_evaluate = args.volume_size_to_evaluate
+g_file_name = args.g_image_path
 
 phases_to_low = [1]
 down_sample = False
@@ -28,7 +29,7 @@ progress_main_dir = 'progress/' + progress_dir
 # progress_main_dir = 'progress'
 path_to_g_weights = progress_main_dir + '/g_weights.pth'
 # path_to_g_weights = progress_main_dir + '/g_weights_large_slice.pth'
-G_image_path = 'data/nmc_wo_binder.tif'
+G_image_path = 'data/' + g_file_name
 # G_image_path = 'data/new_vol_down_sample.tif'
 
 file_name = 'generated_tif.tif'
