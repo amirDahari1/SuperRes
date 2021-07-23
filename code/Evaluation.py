@@ -63,7 +63,7 @@ else:
     # material phases to low res.
     else:
         nc_g = 1 + to_low_idx.size()[0]
-nc_d = 3  # three phases for the discriminator input
+nc_d = 2  # three phases for the discriminator input
 
 G_net = Networks.generator(ngpu, wg, nc_g, nc_d, n_res_blocks, n_dims,
                            scale_factor=scale_f).to(device)
