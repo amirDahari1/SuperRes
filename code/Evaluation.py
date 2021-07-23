@@ -34,8 +34,8 @@ G_image_path = 'data/' + g_file_name
 
 file_name = 'generated_tif.tif'
 crop_to_cube = False
-down_sample_without_memory = False
-input_with_noise = False
+down_sample_without_memory = args.down_sample
+input_with_noise = True
 all_pore_input = False
 
 # TODO all of these (ngpu, device, to_low_idx, nc_g..) can go into a
@@ -84,8 +84,10 @@ def down_sample_wo_memory(path):
                               mode='trilinear')
     mat_low_res += (torch.rand(mat_low_res.size()).to(device) - 0.5) / 100
     mat_low_res = torch.where(mat_low_res > 0.5, 1., 0.)
+    sum_of_low_res = torch.sum(mat_low_res, dim=1).unsqueeze(
+        dim=1)
     pore_phase = torch.ones(size=mat_low_res.size(),
-                            device=device) - mat_low_res
+                            device=device) - sum_of_low_res
     return torch.cat((pore_phase, mat_low_res), dim=1)
 
 
