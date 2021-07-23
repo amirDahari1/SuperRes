@@ -72,8 +72,17 @@ G_net.load_state_dict(torch.load(path_to_g_weights, map_location=torch.device(
 G_net.eval()
 
 
+def crop_to_down_sample(high_res):
+    """
+    If down sample, crops the high resolution image to fit the scale factor.
+    """
+    dims = np.array(high_res.shape)
+    crop_dims = dims - dims % scale_f
+    return high_res[:crop_dims[0], :crop_dims[1], :crop_dims[2]]
+
+
 def down_sample_wo_memory(path):
-    high_res_vol = imread(path)
+    high_res_vol = crop_to_down_sample(imread(path))
     ohe_hr_vol = ImageTools.one_hot_encoding(high_res_vol,
                                              np.unique(high_res_vol))
     ohe_hr_vol = np.expand_dims(ohe_hr_vol, axis=0)
