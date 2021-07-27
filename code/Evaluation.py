@@ -78,7 +78,12 @@ def crop_to_down_sample(high_res):
     If down sample, crops the high resolution image to fit the scale factor.
     """
     dims = np.array(high_res.shape)
-    crop_dims = dims - dims % scale_f
+    crop_dims = []
+    for idx in range(len(dims.shape)):
+        dim = dims[idx]
+        for subtract in range(dim):
+            if np.round((dim - subtract) % scale_f, 5) % scale_f == 0:
+                crop_dims.append(dim - subtract)
     return high_res[:crop_dims[0], :crop_dims[1], :crop_dims[2]]
 
 
