@@ -63,7 +63,8 @@ else:
     # material phases to low res.
     else:
         nc_g = 1 + to_low_idx.size()[0]
-nc_d = 2  # three phases for the discriminator input
+nc_d = 3  # three phases for the discriminator input TODO somehow make this
+# into a flag
 
 G_net = Networks.generator(ngpu, wg, nc_g, nc_d, n_res_blocks, n_dims,
                            scale_factor=scale_f).to(device)
@@ -92,7 +93,9 @@ def down_sample_wo_memory(path):
     mat_low_res = interpolate(mat_phase_double, scale_factor=1 / scale_f,
                               mode='trilinear')
     mat_low_res += (torch.rand(mat_low_res.size()).to(device) - 0.5) / 100
-    mat_low_res = torch.where(mat_low_res > 0.5, 1., 0.)
+    mat_low_res = torch.where(mat_low_res > 0.5, 1., 0.)  # TODO to change
+    # to ImageTools.fractions_to_ohe also here but more importantly also in
+    # the BatchMaker functions of down sampling thresholds.
     sum_of_low_res = torch.sum(mat_low_res, dim=1).unsqueeze(
         dim=1)
     pore_phase = torch.ones(size=mat_low_res.size(),
