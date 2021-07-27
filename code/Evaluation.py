@@ -85,6 +85,7 @@ def crop_to_down_sample(high_res):
             # doing % twice because the number can be 0 from below (%1.6=1.599)
             if np.round((dim - subtract) % scale_f, 5) % scale_f == 0:
                 crop_dims.append(dim - subtract)
+                break
     return high_res[:crop_dims[0], :crop_dims[1], :crop_dims[2]]
 
 
