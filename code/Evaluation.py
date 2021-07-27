@@ -21,8 +21,8 @@ squash = args.squash_phases
 D_dimensions_to_check, scale_f = args.d_dimensions_to_check, args.scale_factor
 size_to_evaluate = args.volume_size_to_evaluate
 g_file_name = args.g_image_path
+phases_to_low = args.phases_low_res_idx
 
-phases_to_low = [1]
 down_sample = False
 
 progress_main_dir = 'progress/' + progress_dir
