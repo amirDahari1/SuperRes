@@ -82,6 +82,7 @@ def crop_to_down_sample(high_res):
     for idx in range(len(dims.shape)):
         dim = dims[idx]
         for subtract in range(dim):
+            # doing % twice because the number can be 0 from below (%1.6=1.599)
             if np.round((dim - subtract) % scale_f, 5) % scale_f == 0:
                 crop_dims.append(dim - subtract)
     return high_res[:crop_dims[0], :crop_dims[1], :crop_dims[2]]
@@ -103,7 +104,7 @@ def down_sample_wo_memory(path):
     # the BatchMaker functions of down sampling thresholds.
     sum_of_low_res = torch.sum(mat_low_res, dim=1).unsqueeze(
         dim=1)
-    pore_phase = torch.ones(size=mat_low_res.size(),
+    pore_phase = torch.ones(size=sum_of_low_res.size(),
                             device=device) - sum_of_low_res
     return torch.cat((pore_phase, mat_low_res), dim=1)
 
