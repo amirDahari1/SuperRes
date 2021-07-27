@@ -80,7 +80,7 @@ def crop_to_down_sample(high_res):
     """
     if one_big_vol:
         max_size = int(220/scale_f)
-        high_res = im_3d[..., :max_size, :max_size, :max_size]
+        high_res = high_res[..., :max_size, :max_size, :max_size]
     dims = np.array(high_res.shape)
     crop_dims = []
     for idx in range(len(dims.shape)):
