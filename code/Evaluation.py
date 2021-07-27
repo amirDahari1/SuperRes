@@ -79,7 +79,7 @@ def crop_to_down_sample(high_res):
     """
     dims = np.array(high_res.shape)
     crop_dims = []
-    for idx in range(len(dims.shape)):
+    for idx in range(len(dims)):
         dim = dims[idx]
         for subtract in range(dim):
             # doing % twice because the number can be 0 from below (%1.6=1.599)
