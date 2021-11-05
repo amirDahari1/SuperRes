@@ -1,4 +1,4 @@
-# SuperRes
+# SuperRes :telescope:
 Welcome to SuperRes! 
 
 To understand the capabilities and theory behind SuperRes, please read our paper:
