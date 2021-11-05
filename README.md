@@ -14,6 +14,18 @@ In very short, SuperRes requires (n >= m):
 To produce an
 - n-phase super-resolution 3D volume of the low-resolution 3D volume, with the fine characteristics and added features of the high-resolution 2D image. 
 
+![](paper_figure_for_github.png)
+
+## Usage
+
+To use SuperRes, simply run
+
+```
+python code/Architecture.py [options] 
+```
+
+with the following options:
+
 
 
 
