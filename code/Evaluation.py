@@ -38,8 +38,6 @@ down_sample_without_memory = args.down_sample
 input_with_noise = True
 all_pore_input = False
 
-# TODO all of these (ngpu, device, to_low_idx, nc_g..) can go into a
-#  function in LearnTools that Architecture can also use
 # Number of GPUs available. Use 0 for CPU mode.
 ngpu = 1
 
@@ -63,8 +61,7 @@ else:
     # material phases to low res.
     else:
         nc_g = 1 + to_low_idx.size()[0]
-nc_d = 3  # three phases for the discriminator input TODO somehow make this
-# into a flag
+nc_d = 3  # three phases for the discriminator input
 
 G_net = Networks.generator(ngpu, wg, nc_g, nc_d, n_res_blocks, n_dims,
                            scale_factor=scale_f).to(device)

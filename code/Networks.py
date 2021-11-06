@@ -12,16 +12,20 @@ modes = ['bilinear', 'trilinear']
 
 
 def return_D_nets(ngpu, wd, n_dims, device, lr, beta1, anisotropic,
-                  D_images, scale_f, rotation):
+                  D_images, scale_f, rotation, rotation_bool):
+    """
+    :return: Returns the batch makers, discriminators, and optimizers for the
+    discriminators. If the material is isotropic, there is 1 discriminator,
+    and if the material is anisotropic, there are 3 discriminators.
+    """
     D_nets = []
     D_optimisers = []
     D_BMs = []
     if anisotropic:
-        rotation = [False, False, True]  # TODO change this to be general!!
         for i in np.arange(n_dims):
             BM_D = BatchMaker(device, path=D_images[i], sf=scale_f,
                               dims=n_dims, stack=True, low_res=False,
-                              rot_and_mir=rotation[i])
+                              rot_and_mir=rotation_bool[i])
             nc_d = len(BM_D.phases)
             # Create the Discriminator
             netD = discriminator(ngpu, wd, nc_d, n_dims).to(device)
@@ -30,6 +34,7 @@ def return_D_nets(ngpu, wd, n_dims, device, lr, beta1, anisotropic,
                 netD = nn.DataParallel(netD, list(range(ngpu)))
             optimiserD = optim.Adam(netD.parameters(), lr=lr,
                                     betas=(beta1, 0.999))
+            # append the BMs, nets and optimisers:
             D_BMs.append(BM_D)
             D_nets.append(netD)
             D_optimisers.append(optimiserD)
@@ -160,7 +165,7 @@ class Generator3D(nn.Module):
 
 
 def discriminator(ngpu, wd, nc_d, dims):
-    if dims == 3:
+    if dims == 3:  # practically always
         return Discriminator3d(ngpu, wd, nc_d)
     else:  # dims == 2
         return Discriminator2d(ngpu, wd, nc_d)
@@ -272,7 +277,6 @@ class Generator2D(nn.Module):
         :return: the output of the forward pass.
         """
         # x after the first run for many channels:
-        # TODO also instead of conv with 1 padding to conv with 0 padding
         x_first = nn.ReLU()(self.bn_minus_1(self.conv_minus_1(x)))
         # first residual block:
         after_block = self.res_block(x_first, self.conv_res[0], self.bn_res[0])
@@ -288,8 +292,6 @@ class Generator2D(nn.Module):
         up_1 = self.up_sample(up_0, self.pixel, self.bn1, self.conv1)
 
         y = self.conv2(up_1)
-
-        # TODO maybe different function in the end?
         return nn.Softmax(dim=1)(y)
 
     def return_scale_factor(self, high_res_length):

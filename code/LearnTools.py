@@ -26,6 +26,10 @@ def return_args(parser):
                         help="The material is anisotropic (requires dif Ds).")
     parser.add_argument("--with_rotation", default=False, action="store_true",
                         help="create rotations and mirrors for the BM.")
+    parser.add_argument('-rotations_bool', nargs='+', type=int,
+                        default=[0, 0, 1], help="If the material is "
+                        "anisotropic, specify which images can be augmented "
+                                                "(rotations and mirrors)")
     parser.add_argument('-g_image_path', type=str, help="Path to the LR "
                         "3D volume")
     parser.add_argument('-d_image_path', nargs='+', type=str, help="Path to "
