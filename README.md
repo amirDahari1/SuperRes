@@ -66,8 +66,12 @@ With the same directory name chosen for training. Specify ```-volume_size_to_eva
 python code/Evaluation.py -d separator_anisotropic -volume_size_to_evaluate 156 75 75 -phases_idx 1 -g_image_path separator_lr_wo_fibrils.tif
 ```
 
+## Development
 
+If you are interested in trying new architectures and view the training outline, see the [code/Architecture.py](code/Architecture.py) file.
 
+To try different CNNs in the GAN, see the [code/Networks.py](code/Networks.py) file.
 
+To add a new preprocessing method e.g for a different training datatype, see [code/BatchMaker.py](code/BatchMaker.py).
 
 
