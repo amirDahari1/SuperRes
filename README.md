@@ -31,19 +31,34 @@ Option | Type | Default | Description
 --- | --- | --- | ---
 -d, --directory | str | 'default' | The name of the directory to save the generator in, under the 'progress' directory.
 -sf, --scale_factor | float | 4 | The scale-factor between the high-res slice and low-res volume.
--g_image_path | str | No default | Path to the low-res 3D volume.
--d_image_path | str | No default | Path to the high-res 2D slice. If the material is anisotropic, 3 paths are needed in the correct order.
+-g_image_path | str | 'nmc_wo_binder.tif' | Relative path to the low-res 3D volume inside [data](data).
+-d_image_path | str | 'sem_image_stack.tif' | Relative path to the high-res 2D slice inside [data](data). If the material is anisotropic, 3 paths are needed in the correct order.
 -phases_idx | int | [1, 2] | The indices of the phases of the low-res input to be compared with the super-res output.
 --anisotropic | boolean - stores true | False | Use this option when the material is anisotropic.
 --with_rotation | boolean - stores true | False | Use this option for data augmentaion (rotations and mirrors) of the high-res input.
 
-More options are available in ```code/LearnTools.py```
+More options are available in [code/LearnTools.py](code/LearnTools.py)
 
 #### Training examples
 
+To train the generator on isotropic material as in Figure 6 in the [paper](https://arxiv.org/abs/2110.11281), run:
+
+```
+python code/Architecture.py -d sem_isotropic --with_rotation -phases_idx 1 -sf 8 -g_image_path nmc_wo_bider.tif -d_image_path sem_image_stack.tif
+```
+
+To train the generator on anisotropic material as in Figure 3, run:
+
+```
+python code/Architecture.py -d separator_anisotropic --anisotropic -phases_idx 1 -sf 4 -g_image_path separator_lr_wo_fibrils.tif -d_image_path separator_rods_slices.tif separator_rods_slices.tif separator_speckles_slices.tif
+```
 
 ### Evaluation
-To evaluate 
+To evaluate and create the large super-resolution volume, run:
+
+```
+python 
+```
 
 
 
