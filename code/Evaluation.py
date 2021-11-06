@@ -110,7 +110,6 @@ def down_sample_wo_memory(path):
     return torch.cat((pore_phase, mat_low_res), dim=1)
 
 
-
 with torch.no_grad():  # save the images
     # 1. Start a new run
     # wandb.init(project='SuperRes', name='making large volume',
@@ -128,13 +127,6 @@ with torch.no_grad():  # save the images
                                      to_low_idx=to_low_idx, rot_and_mir=False)
         im_3d = BM_G.all_image_batch()
 
-    # orig_im_3d = BM_D.all_image_batch()
-    # if crop_to_cube:
-    #     min_d = 128
-    #     im_3d = im_3d[:, :, :min_d, :min_d, :min_d]
-        # orig_im_3d = orig_im_3d[:, :, :min_d, :min_d, :min_d]
-    # save_tif_3d(G_net, im_3d, to_low_idx, device, file_name)
-
     if all_pore_input:
         im_3d[:] = 0
         im_3d[:, 0] = 1
@@ -151,8 +143,7 @@ with torch.no_grad():  # save the images
     with torch.no_grad():
         last_ind1 = int(np.ceil((nz1-step_len)/step))
         for i in range(last_ind1 + 1):
-            # wandb.log({'large step': i})
-            print('i = ' + str(i))
+            print('large step = ' + str(i))
             if i == last_ind1:
                 first_lr_vec = im_3d[..., nz1-step_len:nz1, :, :]
             else:
@@ -160,7 +151,7 @@ with torch.no_grad():  # save the images
             second_img_stack = []
             last_ind2 = int(np.ceil((nz2-step_len)/step))
             for j in range(last_ind2 + 1):
-                print(j)
+                print('middle step = ' + str(j))
                 if j == last_ind2:
                     second_lr_vec = first_lr_vec[..., :, nz2-step_len:nz2, :]
                 else:
@@ -169,8 +160,7 @@ with torch.no_grad():  # save the images
                 third_img_stack = []
                 last_ind3 = int(np.ceil((nz3-step_len)/step))
                 for k in range(last_ind3 + 1):
-                    # wandb.log({'small step': k})
-                    print(k)
+                    print('small step = ' + str(k))
                     if k == last_ind3:
                         third_lr_vec = second_lr_vec[..., :, :,
                                        nz3-step_len:nz3]
@@ -226,5 +216,6 @@ with torch.no_grad():  # save the images
         imsave(progress_main_dir + '/' + file_name + '_pore', img)
     else:
         imsave(progress_main_dir + '/' + file_name, img)
+
+    # also save the low-res input.
     imsave(progress_main_dir + '/' + file_name + 'low_res', low_res)
-    # np.save('large_new_vol_nmc', img)

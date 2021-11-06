@@ -82,7 +82,7 @@ print('device is ' + str(device))
 # the material indices to low-res:
 to_low_idx = torch.LongTensor(phases_to_low).to(device)
 
-# Number of channels in the training images. For color images this is 3
+# Number of channels in the training images.
 if squash:
     nc_g = 2 + 1
 else:
