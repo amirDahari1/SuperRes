@@ -54,11 +54,19 @@ python code/Architecture.py -d separator_anisotropic --anisotropic -phases_idx 1
 ```
 
 ### Evaluation
-To evaluate and create the large super-resolution volume, run:
+To evaluate and create the large super-resolution volume, run
 
 ```
-python 
+python code/Evaluation.py [options]
 ```
+
+With the same directory name chosen for training. Specify ```-volume_size_to_evaluate``` for the size of the low-res volume to be super-resolved. There is no need to specify ```--anisotropic``` here since only the generator is used. For example:
+
+```
+python code/Evaluation.py -d separator_anisotropic -volume_size_to_evaluate 156 75 75 -phases_idx 1 -g_image_path separator_lr_wo_fibrils.tif
+```
+
+
 
 
 
