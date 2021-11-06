@@ -12,16 +12,20 @@ modes = ['bilinear', 'trilinear']
 
 
 def return_D_nets(ngpu, wd, n_dims, device, lr, beta1, anisotropic,
-                  D_images, scale_f, rotation):
+                  D_images, scale_f, rotation, rotation_bool):
+    """
+    :return: Returns the batch makers, discriminators, and optimizers for the
+    discriminators. If the material is isotropic, there is 1 discriminator,
+    and if the material is anisotropic, there are 3 discriminators.
+    """
     D_nets = []
     D_optimisers = []
     D_BMs = []
     if anisotropic:
-        rotation = [False, False, True]  # TODO change this to be general!!
         for i in np.arange(n_dims):
             BM_D = BatchMaker(device, path=D_images[i], sf=scale_f,
                               dims=n_dims, stack=True, low_res=False,
-                              rot_and_mir=rotation[i])
+                              rot_and_mir=rotation_bool[i])
             nc_d = len(BM_D.phases)
             # Create the Discriminator
             netD = discriminator(ngpu, wd, nc_d, n_dims).to(device)
@@ -30,6 +34,7 @@ def return_D_nets(ngpu, wd, n_dims, device, lr, beta1, anisotropic,
                 netD = nn.DataParallel(netD, list(range(ngpu)))
             optimiserD = optim.Adam(netD.parameters(), lr=lr,
                                     betas=(beta1, 0.999))
+            # append the BMs, nets and optimisers:
             D_BMs.append(BM_D)
             D_nets.append(netD)
             D_optimisers.append(optimiserD)
@@ -134,7 +139,7 @@ class Generator3D(nn.Module):
         after_block = self.res_block(x_first, self.bn_res[0], self.conv_res[0],
                                      self.bn_res[1], self.conv_res[1])
         # more residual blocks:
-        for i in range(2, self.n_res_blocks, 2):
+        for i in range(2, self.n_res_blocks*2, 2):
             after_block = self.res_block(after_block, self.bn_res[i],
                                          self.conv_res[i], self.bn_res[i+1],
                                          self.conv_res[i+1])
@@ -142,8 +147,7 @@ class Generator3D(nn.Module):
         res = x_first + after_block
         # up sampling using conv resize
         if 4 < cur_scale <= 8:
-            up_sample = nn.Upsample(scale_factor=2, mode=modes[1])  # TODO
-            # maybe TODO trilinear upsampling?
+            up_sample = nn.Upsample(scale_factor=2, mode=modes[1])
             res = nn.ReLU()(self.bn_resize_0(self.conv_resize_0(up_sample(
                 res))))
             cur_scale /= 2
@@ -152,8 +156,7 @@ class Generator3D(nn.Module):
             res = nn.ReLU()(self.bn_trans(self.conv_trans(res)))
             cur_scale /= 2
         # last up sample using conv resize:
-        up_sample = nn.Upsample(scale_factor=cur_scale, mode=modes[1])  # TODO
-        # maybe TODO trilinear upsampling?
+        up_sample = nn.Upsample(scale_factor=cur_scale, mode=modes[1])
         super_res = nn.ReLU()(self.bn_resize(self.conv_resize(up_sample(res))))
         # another convolution before the end:
         bf_end = self.conv_bf_end(super_res)
@@ -162,7 +165,7 @@ class Generator3D(nn.Module):
 
 
 def discriminator(ngpu, wd, nc_d, dims):
-    if dims == 3:
+    if dims == 3:  # practically always
         return Discriminator3d(ngpu, wd, nc_d)
     else:  # dims == 2
         return Discriminator2d(ngpu, wd, nc_d)
@@ -173,15 +176,15 @@ class Discriminator3d(nn.Module):
     def __init__(self, ngpu, wd, nc_d):
         super(Discriminator3d, self).__init__()
         self.ngpu = ngpu
-        # first convolution, input is 3x66x66
+        # first convolution, input is 3x64x64
         self.conv0 = nn.Conv2d(nc_d, 2 ** (wd - 3), 4, 2, 1)
-        # second convolution, input is 32x32x32
+        # second convolution, input is 64x32x32
         self.conv2 = nn.Conv2d(2 ** (wd - 3), 2 ** (wd - 2), 4, 2, 1)
-        # third convolution, input is 64x16x16
+        # third convolution, input is 128x16x16
         self.conv3 = nn.Conv2d(2 ** (wd - 2), 2 ** (wd - 1), 4, 2, 1)
-        # fourth convolution, input is 128x8x8
+        # fourth convolution, input is 256x8x8
         self.conv4 = nn.Conv2d(2 ** (wd - 1), 2 ** wd, 4, 2, 1)
-        # fifth convolution, input is 256x4x4
+        # fifth convolution, input is 512x4x4
         self.conv5 = nn.Conv2d(2 ** wd, 1, 4, 2, 0)
         # for smaller cube
         self.conv_early = nn.Conv2d(2**(wd-1), 1, 4, 2, 0)
@@ -274,7 +277,6 @@ class Generator2D(nn.Module):
         :return: the output of the forward pass.
         """
         # x after the first run for many channels:
-        # TODO also instead of conv with 1 padding to conv with 0 padding
         x_first = nn.ReLU()(self.bn_minus_1(self.conv_minus_1(x)))
         # first residual block:
         after_block = self.res_block(x_first, self.conv_res[0], self.bn_res[0])
@@ -290,8 +292,6 @@ class Generator2D(nn.Module):
         up_1 = self.up_sample(up_0, self.pixel, self.bn1, self.conv1)
 
         y = self.conv2(up_1)
-
-        # TODO maybe different function in the end?
         return nn.Softmax(dim=1)(y)
 
     def return_scale_factor(self, high_res_length):

@@ -35,7 +35,7 @@ num_epochs, g_update, n_dims = args.num_epochs, args.g_update, args.n_dims
 squash, phases_to_low = args.squash_phases, args.phases_low_res_idx
 D_dimensions_to_check, scale_f = args.d_dimensions_to_check, args.scale_factor
 rotation, anisotropic = args.with_rotation, args.anisotropic
-down_sample = args.down_sample
+rotations_bool, down_sample = args.rotations_bool, args.down_sample
 
 if not os.path.exists(ImageTools.progress_dir + progress_dir):
     os.makedirs(ImageTools.progress_dir + progress_dir)
@@ -47,26 +47,15 @@ eta_file = 'eta.npy'
 # G and D slices to choose from
 g_batch_slices = [0]  # in 3D different views of the cube, better to keep it as
 # 0..
-d_batch_slices = [0]  # if it is a stack of 2D images (
-# phases X num_images X widthXhigth), then 0 should be chosen.
-if 1 in d_batch_slices or 2 in d_batch_slices:
-    print('Warning: all dimensions chosen to slice with D have to be larger '
-          'than the sample length size.')
 
-# adding 45 degree angle instead of z axis slices (TODO in addition)
+# adding 45 degree angle instead of z axis slices
 forty_five_deg = False
 
 # Root directory for dataset
 dataroot = "data/"
-# D_image_path_0 = dataroot + 'separator_rods_slices.tif'
-# D_image_path_1 = dataroot + 'separator_rods_slices.tif'
-# D_image_path_2 = dataroot + 'separator_speckles_slices.tif'
-D_image_path = dataroot + 'sem_image_stack.tif'
-G_image_path = dataroot + 'nmc_wo_binder.tif'
-# G_image_path = dataroot + 'new_vol_1024.tif'
-# D_images = [D_image_path_0, D_image_path_1, D_image_path_2]
-D_images = [D_image_path]
-G_image = G_image_path
+
+D_images = [dataroot + d_path for d_path in args.d_image_path]
+G_image = dataroot + args.g_image_path
 
 # Number of workers for dataloader
 workers = 2
@@ -88,7 +77,7 @@ print('device is ' + str(device))
 # the material indices to low-res:
 to_low_idx = torch.LongTensor(phases_to_low).to(device)
 
-# Number of channels in the training images. For color images this is 3
+# Number of channels in the training images.
 if squash:
     nc_g = 2 + 1
 else:
@@ -145,7 +134,8 @@ if __name__ == '__main__':
     # The batch makers for D and G:
     D_BMs, D_nets, D_optimisers = Networks.return_D_nets(ngpu, wd, n_dims,
                                            device, lr, beta1, anisotropic,
-                                           D_images, scale_f, rotation)
+                                           D_images, scale_f, rotation,
+                                                         rotations_bool)
     # Number of HR number of phases:
     nc_d = len(D_BMs[0].phases)
 
@@ -243,9 +233,7 @@ if __name__ == '__main__':
                 # Train with all-real batch
                 netD.zero_grad()
                 # Batch of real high res for D
-                d_slice = random.choice(d_batch_slices)
-                # d_slice = k  # TODO see how to do this nicely..
-                high_res = BM_D.random_batch_for_real(batch_size_D, d_slice)
+                high_res = BM_D.random_batch_for_real(batch_size_D)
 
                 # Forward pass real batch through D
                 output_real = netD(high_res).view(-1).mean()

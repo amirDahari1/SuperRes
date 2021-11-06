@@ -33,7 +33,8 @@ class BatchMaker:
         """
         :param device: the device that the image is on.
         :param to_low_idx: the indices of the phases to be down-sampled.
-        :param path: the path of the tif file (TODO make it more general)
+        :param path: the path of the tif file
+        TODO make it more general than just tif..
         :param sf: the scale factor between low and high res.
         :param dims: number of dimensions for the batches (2 or 3)
         :param stack: if the data is a stack of 2D images
@@ -112,14 +113,14 @@ class BatchMaker:
                                                              [-2, -1])
         self.im = res
 
-    def random_batch_for_real(self, batch_size, dim_chosen):
-        return self.random_batch2d(batch_size, dim_chosen)
+    def random_batch_for_real(self, batch_size):
+        return self.random_batch2d(batch_size)
 
     def random_batch_for_fake(self, batch_size, dim_chosen):
         if self.dims == 3:
             return self.random_batch3d(batch_size, dim_chosen)
         else:  # dims = 2
-            return self.random_batch2d(batch_size, dim_chosen)
+            return self.random_batch2d(batch_size)
 
     def random_batch3d(self, batch_size, dim_chosen):
         """
@@ -140,8 +141,7 @@ class BatchMaker:
         """
         :param dim_chosen: the dimension chosen for the slice
         :return: A random image of size res from the dimension chosen of the
-        image. TODO I don't think we can separate between 2d and 3d here
-        TODO because of slice
+        image.
         """
         h_r = self.high_l
         # starting voxels
@@ -152,52 +152,37 @@ class BatchMaker:
         # for different view, change the cube around..
         return res_image.transpose(0, *perms[dim_chosen])
 
-    def random_batch2d(self, batch_size, dim_chosen):
+    def random_batch2d(self, batch_size):
         """
-        :return: A batch of high resolution images, TODO 2d function
+        :return: A batch of high resolution images,
         along the dimension chosen (0->x,1->y,2->z) in the 3d tif image.
         """
         res = np.zeros((batch_size, len(self.phases), self.high_l,
                           self.high_l), dtype=self.im.dtype)
         for i in range(batch_size):
-            res[i, :, :, :] = self.generate_a_random_image2d(dim_chosen)
+            res[i, :, :, :] = self.generate_a_random_image2d()
         # return a torch tensor:
         if self.down_sample:
             return self.down_sample_im(res)
         return torch.FloatTensor(res).to(device=self.device)
 
-    def generate_a_random_image2d(self, dim_chosen):
+    def generate_a_random_image2d(self):
         """
-        :param dim_chosen: the dimension chosen for the slice TODO 2d function
         :return: A random image of size res from the dimension chosen of the
         image.
         """
-        # TODO sampling from an already low-res image
         # the starting pixels of the other dimensions:
-        if self.stack:
+        if self.stack:  # has to be, since this function is only called for
+            # by the discriminator batch maker.
             s_ind = np.random.randint(np.array(self.im.shape[2:]) -
                                       self.high_l)
             e_ind = s_ind + self.high_l
             slice_chosen = np.random.randint(self.im.shape[1])
             return self.im[:, slice_chosen, s_ind[0]:e_ind[0],
                                     s_ind[1]:e_ind[1]]
-        s_ind = np.random.randint(np.array(self.im.shape[1:]) -
-                                  self.high_l)
-        e_ind = s_ind + self.high_l  # TODO warning somehow when it is going
-        # TODO to be an error
-        slice_chosen = np.random.randint(np.array(self.im.shape[1:]))
-        if self.dim_im == 2:  # the image is just 2D
-            return self.im[:, s_ind[0]:e_ind[0], s_ind[0]:e_ind[0]]
-        if dim_chosen == 0:
-            res_image = self.im[:, slice_chosen[0], s_ind[1]:e_ind[1],
-                                    s_ind[2]:e_ind[2]]
-        elif dim_chosen == 1:  # TODO: s_ind now returns error for this!
-            res_image = self.im[:, s_ind[0]:e_ind[0], slice_chosen[1],
-                                    s_ind[2]:e_ind[2]]
-        else:  # dim_chosen == 2
-            res_image = self.im[:, s_ind[0]:e_ind[0], s_ind[1]:e_ind[1],
-                                    slice_chosen[2]]
-        return res_image
+        else:
+            raise ValueError("2D images should be stacked as "
+                             "n_stack X height X width")
 
     def all_image_batch(self):
         """

@@ -19,25 +19,25 @@ n_res_blocks, pix_distance = args.n_res_blocks, args.pixel_coefficient_distance
 num_epochs, g_update, n_dims = args.num_epochs, args.g_update, args.n_dims
 squash = args.squash_phases
 D_dimensions_to_check, scale_f = args.d_dimensions_to_check, args.scale_factor
+size_to_evaluate = args.volume_size_to_evaluate
+g_file_name = args.g_image_path
+phases_to_low = args.phases_low_res_idx
 
-phases_to_low = [1]
 down_sample = False
 
 progress_main_dir = 'progress/' + progress_dir
 # progress_main_dir = 'progress'
 path_to_g_weights = progress_main_dir + '/g_weights.pth'
 # path_to_g_weights = progress_main_dir + '/g_weights_large_slice.pth'
-G_image_path = 'data/nmc_wo_binder.tif'
+G_image_path = 'data/' + g_file_name
 # G_image_path = 'data/new_vol_down_sample.tif'
 
 file_name = 'generated_tif.tif'
 crop_to_cube = False
-down_sample_without_memory = False
-input_with_noise = False
+down_sample_without_memory = args.down_sample
+input_with_noise = True
 all_pore_input = False
 
-# TODO all of these (ngpu, device, to_low_idx, nc_g..) can go into a
-#  function in LearnTools that Architecture can also use
 # Number of GPUs available. Use 0 for CPU mode.
 ngpu = 1
 
@@ -70,8 +70,24 @@ G_net.load_state_dict(torch.load(path_to_g_weights, map_location=torch.device(
 G_net.eval()
 
 
+def crop_to_down_sample(high_res):
+    """
+    If down sample, crops the high resolution image to fit the scale factor.
+    """
+    dims = np.array(high_res.shape)
+    crop_dims = []
+    for idx in range(len(dims)):
+        dim = dims[idx]
+        for subtract in range(dim):
+            # doing % twice because the number can be 0 from below (%1.6=1.599)
+            if np.round((dim - subtract) % scale_f, 5) % scale_f == 0:
+                crop_dims.append(dim - subtract)
+                break
+    return high_res[:crop_dims[0], :crop_dims[1], :crop_dims[2]]
+
+
 def down_sample_wo_memory(path):
-    high_res_vol = imread(path)
+    high_res_vol = crop_to_down_sample(imread(path))
     ohe_hr_vol = ImageTools.one_hot_encoding(high_res_vol,
                                              np.unique(high_res_vol))
     ohe_hr_vol = np.expand_dims(ohe_hr_vol, axis=0)
@@ -81,11 +97,14 @@ def down_sample_wo_memory(path):
     mat_low_res = interpolate(mat_phase_double, scale_factor=1 / scale_f,
                               mode='trilinear')
     mat_low_res += (torch.rand(mat_low_res.size()).to(device) - 0.5) / 100
-    mat_low_res = torch.where(mat_low_res > 0.5, 1., 0.)
-    pore_phase = torch.ones(size=mat_low_res.size(),
-                            device=device) - mat_low_res
+    mat_low_res = torch.where(mat_low_res > 0.5, 1., 0.)  # TODO to change
+    # to ImageTools.fractions_to_ohe also here but more importantly also in
+    # the BatchMaker functions of down sampling thresholds.
+    sum_of_low_res = torch.sum(mat_low_res, dim=1).unsqueeze(
+        dim=1)
+    pore_phase = torch.ones(size=sum_of_low_res.size(),
+                            device=device) - sum_of_low_res
     return torch.cat((pore_phase, mat_low_res), dim=1)
-
 
 
 with torch.no_grad():  # save the images
@@ -93,9 +112,9 @@ with torch.no_grad():  # save the images
     # wandb.init(project='SuperRes', name='making large volume',
     #            entity='tldr-group')
 
-    step_len = 16
-    overlap = 8
-    high_overlap = int(overlap / 2 * scale_f)
+    step_len = int(np.round(128/scale_f, 5))
+    overlap = int(step_len/2)
+    high_overlap = int(np.round(overlap / 2 * scale_f, 5))
     step = step_len - overlap
 
     if down_sample_without_memory:
@@ -104,13 +123,6 @@ with torch.no_grad():  # save the images
         BM_G = BatchMaker.BatchMaker(path=G_image_path, device=device,
                                      to_low_idx=to_low_idx, rot_and_mir=False)
         im_3d = BM_G.all_image_batch()
-
-    # orig_im_3d = BM_D.all_image_batch()
-    # if crop_to_cube:
-    #     min_d = 128
-    #     im_3d = im_3d[:, :, :min_d, :min_d, :min_d]
-        # orig_im_3d = orig_im_3d[:, :, :min_d, :min_d, :min_d]
-    # save_tif_3d(G_net, im_3d, to_low_idx, device, file_name)
 
     if all_pore_input:
         im_3d[:] = 0
@@ -123,15 +135,12 @@ with torch.no_grad():  # save the images
                             device=device, dtype=im_3d.dtype)
         im_3d = torch.cat((im_3d, noise), dim=1)
 
-
-    # nz1, nz2, nz3 = im_3d.size()[-3:]
-    nz1, nz2, nz3 = 64, 64, 64
+    nz1, nz2, nz3 = size_to_evaluate
     first_img_stack = []
     with torch.no_grad():
         last_ind1 = int(np.ceil((nz1-step_len)/step))
         for i in range(last_ind1 + 1):
-            # wandb.log({'large step': i})
-            print('i = ' + str(i))
+            print('large step = ' + str(i))
             if i == last_ind1:
                 first_lr_vec = im_3d[..., nz1-step_len:nz1, :, :]
             else:
@@ -139,7 +148,7 @@ with torch.no_grad():  # save the images
             second_img_stack = []
             last_ind2 = int(np.ceil((nz2-step_len)/step))
             for j in range(last_ind2 + 1):
-                print(j)
+                print('middle step = ' + str(j))
                 if j == last_ind2:
                     second_lr_vec = first_lr_vec[..., :, nz2-step_len:nz2, :]
                 else:
@@ -148,8 +157,7 @@ with torch.no_grad():  # save the images
                 third_img_stack = []
                 last_ind3 = int(np.ceil((nz3-step_len)/step))
                 for k in range(last_ind3 + 1):
-                    # wandb.log({'small step': k})
-                    print(k)
+                    print('small step = ' + str(k))
                     if k == last_ind3:
                         third_lr_vec = second_lr_vec[..., :, :,
                                        nz3-step_len:nz3]
@@ -205,5 +213,6 @@ with torch.no_grad():  # save the images
         imsave(progress_main_dir + '/' + file_name + '_pore', img)
     else:
         imsave(progress_main_dir + '/' + file_name, img)
+
+    # also save the low-res input.
     imsave(progress_main_dir + '/' + file_name + 'low_res', low_res)
-    # np.save('large_new_vol_nmc', img)

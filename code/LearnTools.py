@@ -26,10 +26,21 @@ def return_args(parser):
                         help="The material is anisotropic (requires dif Ds).")
     parser.add_argument("--with_rotation", default=False, action="store_true",
                         help="create rotations and mirrors for the BM.")
+    parser.add_argument('-rotations_bool', nargs='+', type=int,
+                        default=[0, 0, 1], help="If the material is "
+                        "anisotropic, specify which images can be augmented "
+                                                "(rotations and mirrors)")
+    parser.add_argument('-g_image_path', type=str, help="Path to the LR "
+                        "3D volume")
+    parser.add_argument('-d_image_path', nargs='+', type=str, help="Path to "
+                        "the HR 2D slice, if Isotropic, 3 paths are needed, "
+                        "in correct order")
     parser.add_argument('-phases_idx', '--phases_low_res_idx', nargs='+',
                         type=int, default=[1, 2])
     parser.add_argument('-d_dimensions', '--d_dimensions_to_check', nargs='+',
                         type=int, default=[0, 1, 2])
+    parser.add_argument('-volume_size_to_evaluate', nargs='+', type=int,
+                        default=[128, 128, 128])
     parser.add_argument('-wd', '--widthD', type=int, default=9,
                         help='Hyper-parameter for \
                         the width of the Discriminator network')
