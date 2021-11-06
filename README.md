@@ -18,7 +18,8 @@ To produce an
 
 ## Usage
 
-To use SuperRes, simply run
+### Training
+To train the generator, simply run
 
 ```
 python code/Architecture.py [options] 
@@ -26,6 +27,23 @@ python code/Architecture.py [options]
 
 with the following options:
 
+Option | Type | Default | Description 
+--- | --- | --- | ---
+-d, --directory | str | 'default' | The name of the directory to save the generator in, under the 'progress' directory.
+-sf, --scale_factor | float | 4 | The scale-factor between the high-res slice and low-res volume.
+-g_image_path | str | No default | Path to the low-res 3D volume.
+-d_image_path | str | No default | Path to the high-res 2D slice. If the material is anisotropic, 3 paths are needed in the correct order.
+-phases_idx | int | [1, 2] | The indices of the phases of the low-res input to be compared with the super-res output.
+--anisotropic | boolean - stores true | False | Use this option when the material is anisotropic.
+--with_rotation | boolean - stores true | False | Use this option for data augmentaion (rotations and mirrors) of the high-res input.
+
+More options are available in ```code/LearnTools.py```
+
+#### Training examples
+
+
+### Evaluation
+To evaluate 
 
 
 
