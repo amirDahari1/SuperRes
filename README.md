@@ -1,6 +1,8 @@
 # SuperRes :telescope:
 Welcome to SuperRes! 
 
+![](super-res-icon.png)
+
 To understand the capabilities and theory behind SuperRes, please read our paper:
 
 [Super-resolution of multiphase materials by combining complementary 2D and 3D image data using generative adversarial networks](https://arxiv.org/abs/2110.11281)
