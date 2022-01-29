@@ -6,6 +6,8 @@ To understand the capabilities and theory behind SuperRes, please read our (curr
 
 [Super-resolution of multiphase materials by combining complementary 2D and 3D image data using generative adversarial networks](https://arxiv.org/abs/2110.11281)
 
+[![DOI](https://zenodo.org/badge/317877801.svg)](https://zenodo.org/badge/latestdoi/317877801)
+
 ## Overview
 
 In very short, SuperRes requires (n >= m): 
