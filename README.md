@@ -2,7 +2,7 @@
 
 ![](super-res-icon.png)
 
-To understand the capabilities and theory behind SuperRes, please read our (under review) paper:
+To understand the capabilities and theory behind SuperRes, please read our (currently under review) paper:
 
 [Super-resolution of multiphase materials by combining complementary 2D and 3D image data using generative adversarial networks](https://arxiv.org/abs/2110.11281)
 
