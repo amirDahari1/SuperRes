@@ -19,9 +19,19 @@ To produce an
 
 ![](paper_figure_for_github.png)
 
-## Usage
+## Setup and usage
+
+We welcome contributions to SuperRes. Please [raise an issue](https://github.com/amirDahari1/SuperRes/issues) to report bugs, request features, or ask questions. 
+
+### Setup
+
+1. Install [git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git).
+2. [Clone or Fork](https://docs.github.com/en/get-started/quickstart/fork-a-repo) the repository.
 
 ### Training
+
+Store your 2D and 3D image training data inside the [data](data) folder.
+
 To train the generator, simply run
 
 ```
