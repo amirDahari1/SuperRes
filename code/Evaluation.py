@@ -7,7 +7,6 @@ import torch
 import numpy as np
 from tifffile import imsave, imread
 from torch.nn.functional import interpolate
-# import wandb
 
 # Parsing arguments:
 parser = argparse.ArgumentParser()
