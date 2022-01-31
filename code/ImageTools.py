@@ -1,6 +1,5 @@
 from matplotlib import pyplot as plt
 import numpy as np
-import torch
 import wandb
 
 LOW_RES = 16

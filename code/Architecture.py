@@ -24,6 +24,10 @@ import wandb
 if os.getcwd().endswith('code'):
     os.chdir('..')  # current directory from /SuperRes/code to SuperRes/
 
+#################################################################
+# All variables initialization, for the training loop skip ahead.
+#################################################################
+
 # Parsing arguments:
 parser = argparse.ArgumentParser()
 
@@ -44,12 +48,6 @@ PATH_G = 'progress/' + progress_dir + '/g_weights.pth'
 PATH_D = 'progress/' + progress_dir + '/d_weights.pth'
 eta_file = 'eta.npy'
 
-# G and D slices to choose from
-g_batch_slices = [0]  # in 3D different views of the cube, better to keep it as
-# 0..
-
-# adding 45 degree angle instead of z axis slices
-forty_five_deg = False
 
 # Root directory for dataset
 dataroot = "data/"
@@ -60,13 +58,21 @@ G_image = dataroot + args.g_image_path
 # Number of workers for dataloader
 workers = 2
 
+# G and D slices to choose from
+g_batch_slices = [0]  # in 3D different views of the cube, better to keep it as
+# 0..
+
+# adding 45 degree angle instead of z axis slices
+forty_five_deg = False
+
 # Batch sizes during training
 if n_dims == 3:
     batch_size_G_for_D, batch_size_G, batch_size_D = 4, 32, 64
 else:  # n_dims == 2
     batch_size_G_for_D, batch_size_G, batch_size_D = 64, 64, 64
 
-# Number of GPUs available. Use 0 for CPU mode.
+# Number of GPUs available. Use 0 for CPU mode. For more than 1 GPU parallel
+# computing, this feature needs to be updated.
 ngpu = 1
 
 # Decide which device we want to run on
@@ -110,8 +116,8 @@ def weights_init(m):
         nn.init.constant_(m.bias.data, 0)
 
 
-def save_differences(input_to_g, output_of_g, save_dir, filename,
-                     scale_factor, masks, with_deg=False):
+def save_differences(input_to_g, output_of_g, save_dir, filename, masks,
+                     with_deg=False):
     """
     Saves the image of the differences between the high-res real and the
     generated images that are supposed to be similar.
@@ -153,10 +159,11 @@ if __name__ == '__main__':
     if (device.type == 'cuda') and (ngpu > 1):
         netG = nn.DataParallel(netG, list(range(ngpu)))
 
-    # Apply the weights_init function to randomly initialize all weights
-    #  to mean=0, stdev=0.2.
+    # Uncomment to apply the weights_init function to randomly initialize all
+    # weights to mean=0, stdev=0.2.
     # netG.apply(weights_init)
     # netD.apply(weights_init)
+
     # masks for 45 degree angle
     masks_45 = LearnTools.forty_five_deg_masks(batch_size_G_for_D,
                                                nc_d, D_BMs[0].high_l)
@@ -177,8 +184,7 @@ if __name__ == '__main__':
         # make noise channel and concatenate it to input:
         noise = torch.randn(input_size[0], 1, *input_size[2:], device=device)
         input_to_G = torch.cat((input_to_G, noise), dim=1)
-        print(input_to_G.size())
-        print(nc_g)
+
         # Generate fake image batch with G
         if detach_output:
             return input_to_G, netG(input_to_G).detach()
@@ -187,6 +193,8 @@ if __name__ == '__main__':
 
     def take_fake_slices(fake_image, perm_idx):
         """
+        :param fake_image: The fake image to slice at all directions.
+        :param perm_idx: The permutation index for permutation before slicing.
         :return: batch of slices from the 3d image (if 2d image,
         just returns the image)
         """
@@ -205,21 +213,22 @@ if __name__ == '__main__':
         else:  # same 2d slices are fed into D
             return fake_image
 
+    ################
     # Training Loop!
+    ################
+
     steps = epoch_iterations
     print("Starting Training Loop...")
     start = time.time()
 
     for epoch in range(num_epochs):
-        # For each batch in the dataloader
-        i = 0
 
         j = np.random.randint(steps)  # to see different slices
-        for _ in range(steps):
+        for i in range(steps):
 
-            ############################
+            #######################
             # (1) Update D network:
-            ###########################
+            #######################
 
             _, fake_for_d = generate_fake_image(detach_output=True)
 
@@ -298,8 +307,6 @@ if __name__ == '__main__':
                     else:
                         g_cost += -fake_output
 
-
-
                 # Calculate gradients for G
                 g_cost.backward()
                 # Update G
@@ -318,10 +325,8 @@ if __name__ == '__main__':
                         detach_output=True)
                     # plot input without the noise channel
                     save_differences(g_input_plot[:, :-1], g_output_plot,
-                                     progress_dir, 'running slices',
-                                     BM_G.scale_factor, masks_45,
+                                     progress_dir, 'running slices', masks_45,
                                      forty_five_deg)
-            i += 1
             print(i, j)
 
         if (epoch % 3) == 0:

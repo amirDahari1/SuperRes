@@ -48,10 +48,10 @@ class BatchMaker:
         self.down_sample, self.to_low_idx, self.squash = down_sample, \
                                                          to_low_idx, squash
         self.scale_factor = sf
-        self.path = path
+        self.path = path  # the path of the tif file
         self.dims = dims  # if G is 3D to 3D or 2D to 2D
         self.device = device
-        self.stack = stack
+        self.stack = stack  # if the data is a stack of 2D images
         self.im = imread(path)
         if rot_and_mir:
             self.rotate_and_mirror()
@@ -191,13 +191,3 @@ class BatchMaker:
         """
         return torch.FloatTensor(self.im).to(self.device).unsqueeze(0)
 
-
-def main():
-    BM = BatchMaker('cpu')
-    cubes = BM.random_batch3d(8, 0)
-    print(BM.im.shape)
-    print(cubes.size())
-
-
-if __name__ == '__main__':
-    main()

@@ -39,7 +39,7 @@ def return_D_nets(ngpu, wd, n_dims, device, lr, beta1, anisotropic,
             D_nets.append(netD)
             D_optimisers.append(optimiserD)
 
-    else:  # isotropic
+    else:  # material is isotropic
         # Create the batch maker
         BM_D = BatchMaker(device, path=D_images[0], sf=scale_f,
                           dims=n_dims, stack=True, low_res=False,
@@ -60,6 +60,9 @@ def return_D_nets(ngpu, wd, n_dims, device, lr, beta1, anisotropic,
 
 
 def generator(ngpu, wg, nc_g, nc_d, n_res_block, dims, scale_factor):
+    """
+    :return: The generator depending on the number of dimensions.
+    """
     if dims == 3:
         return Generator3D(ngpu, wg, nc_g, nc_d, n_res_block, scale_factor)
     else:  # dims == 2
@@ -200,7 +203,7 @@ class Discriminator3d(nn.Module):
         return self.conv5(x)
 
 
-# Discriminator code
+# Discriminator code for 2D material generation case
 class Discriminator2d(nn.Module):
     def __init__(self, ngpu, wd, nc_d):
         super(Discriminator2d, self).__init__()
@@ -227,7 +230,7 @@ class Discriminator2d(nn.Module):
         return self.conv5(x)
 
 
-# Generator Code
+# Generator Code for 2D generation case
 class Generator2D(nn.Module):
     def __init__(self, ngpu, wg, nc_g, nc_d, n_res_blocks):
         super(Generator2D, self).__init__()
