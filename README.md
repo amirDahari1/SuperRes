@@ -10,14 +10,23 @@ To understand the capabilities and theory behind SuperRes, please read our (curr
 
 ## Overview
 
+SuperRes model combines image data with complementary attributes, to obtain image data with all four properties to accurately model porous and/or composite materials:
+
+1. Three dimensional (3D)
+2. High resolution
+3. Large field-of-view
+4. Confidently differentiate between phases
+
+- It is rarely possible to obtain image data with all four of these properties from a single imaging technique. 
+
+![](paper_figure_for_github.png)
+
 In very short, SuperRes requires (n >= m): 
-- n-phase high-resolution 2D image.
-- m-phase low-resolution 3D volume.
+- n-phase high-resolution 2D image. 
+- m-phase low-resolution 3D volume. 
 
 To produce an
 - n-phase super-resolution 3D volume of the low-resolution 3D volume, with the fine characteristics and added features of the high-resolution 2D image. 
-
-![](paper_figure_for_github.png)
 
 ## Setup and usage
 
@@ -65,6 +74,8 @@ To train the generator on anisotropic material as in Figure 3, run:
 ```
 python code/Architecture.py -d separator_anisotropic --anisotropic -phases_idx 1 -sf 4 -g_image_path separator_lr_wo_fibrils.tif -d_image_path separator_rods_slices.tif separator_rods_slices.tif separator_speckles_slices.tif
 ```
+
+With the aim of making the repository light-weight, the other data sets used for training in the paper are readily available upon [request](mailto:a.dahari@imperial.ac.uk).  
 
 ### Evaluation
 To evaluate and create the large super-resolution volume, run
