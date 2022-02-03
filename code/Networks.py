@@ -142,7 +142,7 @@ class Generator3D(nn.Module):
         after_block = self.res_block(x_first, self.bn_res[0], self.conv_res[0],
                                      self.bn_res[1], self.conv_res[1])
         # more residual blocks:
-        for i in range(2, self.n_res_blocks*2, 2):
+        for i in range(2, self.n_res_blocks, 2):
             after_block = self.res_block(after_block, self.bn_res[i],
                                          self.conv_res[i], self.bn_res[i+1],
                                          self.conv_res[i+1])
