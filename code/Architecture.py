@@ -176,7 +176,7 @@ if __name__ == '__main__':
         :param detach_output: to detach the tensor output from gradient memory.
         :return: the generated image from G
         """
-        # Generate batch of g input
+        # Generate batch of G's input:
         g_slice = random.choice(g_batch_slices)
         input_to_G = BM_G.random_batch_for_fake(batch_size_G_for_D,
                                                           g_slice)
@@ -241,6 +241,7 @@ if __name__ == '__main__':
 
                 # Train with all-real batch
                 netD.zero_grad()
+
                 # Batch of real high res for D
                 high_res = BM_D.random_batch_for_real(batch_size_D)
 

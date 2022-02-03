@@ -31,7 +31,9 @@ path_to_g_weights = progress_main_dir + '/g_weights.pth'
 G_image_path = 'data/' + g_file_name
 # G_image_path = 'data/new_vol_down_sample.tif'
 
-file_name = 'generated_tif.tif'
+rand_id = str(np.random.randint(10000))
+
+file_name = 'generated_tif' + rand_id + '.tif'
 crop_to_cube = False
 down_sample_without_memory = args.down_sample
 input_with_noise = True
