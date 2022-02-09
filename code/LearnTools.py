@@ -63,6 +63,25 @@ def return_args(parser):
     return args
 
 
+def calculate_gaussian_kernel_3d(scale_factor):
+    """
+    :param scale_factor: The scale factor used between the low- and high-res
+    volumes.
+    :return: A gaussian blur 3d kernel for blurring before interpolating
+    """
+    ks = math.ceil(scale_factor)  # the kernel size
+    if ks % 2 == 0:
+        ks += 1  # closest odd number from above.
+    # The same default sigma as defined in transforms.functional.gaussian_blur:
+    sigma = 0.3 * ((ks - 1) * 0.5 - 1) + 0.8
+    ts = torch.linspace(-(ks // 2), ks // 2, ks)
+    gauss = torch.exp((-(ts / sigma) ** 2 / 2))
+    kernel_1d = gauss / gauss.sum()  # Normalization
+    # 3d gaussian kernel can be computed in the following way:
+    kernel_3d = torch.einsum('i,j,k->ijk', kernel_1d, kernel_1d, kernel_1d)
+    return kernel_3d
+
+
 def forty_five_deg_masks(batch_size, phases, high_l):
     """
     :param batch_size: batch size for the images for the making of the mask.
@@ -196,6 +215,7 @@ def logistic_function(x, k, x0):
     :param x0: the middle input
     :return: the logistic value of x
     """
+    # TODO what if 3 or more phases use gumbel softmax
     return 1/(1+torch.exp(-k*(x-x0)))
 
 
