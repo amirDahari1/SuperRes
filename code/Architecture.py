@@ -106,16 +106,6 @@ Lambda = 10
 saving_num = 50
 
 
-# custom weights initialization called on netG and netD
-def weights_init(m):
-    classname = m.__class__.__name__
-    if classname.find('Conv') != -1:
-        nn.init.normal_(m.weight.data, 0.0, 0.02)
-    elif classname.find('BatchNorm') != -1:
-        nn.init.normal_(m.weight.data, 1.0, 0.02)
-        nn.init.constant_(m.bias.data, 0)
-
-
 def save_differences(input_to_g, output_of_g, save_dir, filename, masks,
                      with_deg=False):
     """
@@ -159,11 +149,6 @@ if __name__ == '__main__':
     if (device.type == 'cuda') and (ngpu > 1):
         netG = nn.DataParallel(netG, list(range(ngpu)))
 
-    # Uncomment to apply the weights_init function to randomly initialize all
-    # weights to mean=0, stdev=0.2.
-    # netG.apply(weights_init)
-    # netD.apply(weights_init)
-
     # masks for 45 degree angle
     masks_45 = LearnTools.forty_five_deg_masks(batch_size_G_for_D,
                                                nc_d, D_BMs[0].high_l)
@@ -178,8 +163,7 @@ if __name__ == '__main__':
         """
         # Generate batch of G's input:
         g_slice = random.choice(g_batch_slices)
-        input_to_G = BM_G.random_batch_for_fake(batch_size_G_for_D,
-                                                          g_slice)
+        input_to_G = BM_G.random_batch_for_fake(batch_size_G_for_D, g_slice)
         input_size = input_to_G.size()
         # make noise channel and concatenate it to input:
         noise = torch.randn(input_size[0], 1, *input_size[2:], device=device)
@@ -269,9 +253,9 @@ if __name__ == '__main__':
 
                 wass = abs(output_fake.item() - output_real.item())
 
-            ############################
+            #######################
             # (2) Update G network:
-            ###########################
+            #######################
 
             if (i % g_update) == 0:
                 netG.zero_grad()
@@ -299,9 +283,9 @@ if __name__ == '__main__':
                         fake_output = fake_output * 100
 
                     # get the pixel-wise-distance loss
-                    pix_loss = LearnTools.pixel_wise_distance(low_res,
-                               fake_for_g, to_low_idx, BM_G.scale_factor,
-                               device, n_dims, squash)
+                    pix_loss = LearnTools.\
+                        pixel_wise_distance(low_res, fake_for_g, to_low_idx,
+                                            BM_G.scale_factor, n_dims, squash)
                     # Calculate G's loss based on this output
                     if pix_loss.item() > 0.005:
                         g_cost += -fake_output + pix_distance * pix_loss

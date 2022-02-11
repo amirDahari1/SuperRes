@@ -1,4 +1,6 @@
 import torch
+from torch import nn
+from torch.nn import functional
 from torch.nn.functional import interpolate
 from torch import autograd
 import math  # just so I don't use numpy by accident
@@ -63,23 +65,7 @@ def return_args(parser):
     return args
 
 
-def calculate_gaussian_kernel_3d(scale_factor):
-    """
-    :param scale_factor: The scale factor used between the low- and high-res
-    volumes.
-    :return: A gaussian blur 3d kernel for blurring before interpolating
-    """
-    ks = math.ceil(scale_factor)  # the kernel size
-    if ks % 2 == 0:
-        ks += 1  # closest odd number from above.
-    # The same default sigma as defined in transforms.functional.gaussian_blur:
-    sigma = 0.3 * ((ks - 1) * 0.5 - 1) + 0.8
-    ts = torch.linspace(-(ks // 2), ks // 2, ks)
-    gauss = torch.exp((-(ts / sigma) ** 2 / 2))
-    kernel_1d = gauss / gauss.sum()  # Normalization
-    # 3d gaussian kernel can be computed in the following way:
-    kernel_3d = torch.einsum('i,j,k->ijk', kernel_1d, kernel_1d, kernel_1d)
-    return kernel_3d
+
 
 
 def forty_five_deg_masks(batch_size, phases, high_l):
@@ -174,13 +160,59 @@ def calc_gradient_penalty(netD, real_data, fake_data, batch_size, l, device,
     # pass interpolates through netD
     disc_interpolates = netD(interpolates)
     gradients = autograd.grad(outputs=disc_interpolates, inputs=interpolates,
-                              grad_outputs=torch.ones(disc_interpolates.size(), device = device),
+                              grad_outputs=torch.ones(disc_interpolates.size(),
+                                                      device=device),
                               create_graph=True, only_inputs=True)[0]
     # extract the grads and calculate gp
     gradients = gradients.view(gradients.size(0), -1)
     gradient_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean() * gp_lambda
     return gradient_penalty
 
+
+class DownSample(nn.Module):
+    """
+    Calculates the down-sampled version of the generated volume. Can also be
+    used to generate a low-res volume from a high-res volume for evaluation
+    reasons.
+    """
+    def __init__(self, squash, n_dims, low_res_idx, scale_factor):
+        """
+        :param n_dims: 2d to 2d or 3d to 3d.
+        :param low_res_idx: the indices of phases to down-sample.
+        :param scale_factor: scale factor between high-res and low-res.
+        :param squash: if to squash all material phases together for
+        down-sampling. (when it is hard to distinguish between material phases
+        in low resolution e.g. SOFC cathode.)
+        """
+        super(DownSample, self).__init__()
+        self.squash = squash
+        self.n_dims = n_dims
+        self.low_res_idx = low_res_idx
+        self.scale_factor = scale_factor
+        self.voxel_wise_loss = nn.MSELoss()  # the voxel-wise loss
+        # Calculate the gaussian kernel and make the 3d convolution:
+        self.gaussian_kernel = self.calc_gaussian_kernel_3d(self.scale_factor)
+
+        functional.conv3d(input, weight, bias=None, stride=1, padding='same', dilation=1, groups=1)
+
+    @staticmethod
+    def calc_gaussian_kernel_3d(scale_factor):
+        """
+        :param scale_factor: The scale factor used between the low- and high-res
+        volumes.
+        :return: A gaussian blur 3d kernel for blurring before interpolating
+        """
+        ks = math.ceil(scale_factor)  # the kernel size
+        if ks % 2 == 0:
+            ks += 1  # closest odd number from above.
+        # The same default sigma as defined in transforms.functional.gaussian_blur:
+        sigma = 0.3 * ((ks - 1) * 0.5 - 1) + 0.8
+        ts = torch.linspace(-(ks // 2), ks // 2, ks)
+        gauss = torch.exp((-(ts / sigma) ** 2 / 2))
+        kernel_1d = gauss / gauss.sum()  # Normalization
+        # 3d gaussian kernel can be computed in the following way:
+        kernel_3d = torch.einsum('i,j,k->ijk', kernel_1d, kernel_1d, kernel_1d)
+        return kernel_3d
 
 def down_sample(high_res_multi_phase, mat_idx, scale_factor, n_dims,
                 squash=False):
@@ -232,7 +264,7 @@ def down_sample_for_similarity_check(generated_im, mat_idx, scale_factor,
 
 
 def pixel_wise_distance(low_res_im, generated_im, mat_idx,
-                        scale_factor, device, n_dims, squash=True):
+                        scale_factor, n_dims, squash=True):
     """
     calculates and returns the pixel wise distance between the low resolution
     image and the down sampling of the high resolution generated image.
