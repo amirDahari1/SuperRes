@@ -278,16 +278,16 @@ class DownSample(nn.Module):
         return kernel_3d
 
 
-if __name__ == '__main__':
-    downsample_test = DownSample(squash=False, n_dims=3,
-                                 low_res_idx=torch.LongTensor([1, 2, 3]),
-                                 scale_factor=4)
-    gen_im = torch.zeros(1, 5, 4, 4, 4)
-    gen_im[0, 1] = 0.5
-    gen_im[0, 2] = 0.5
-    low_res = torch.zeros(1, 4, 1, 1, 1)
-    low_res[0, 1] = 1
-    res1 = downsample_test(gen_im)
-    res2 = downsample_test(gen_im, low_res_input=True)
-    loss = downsample_test.voxel_wise_distance(gen_im, low_res)
+# if __name__ == '__main__':
+#     downsample_test = DownSample(squash=False, n_dims=3,
+#                                  low_res_idx=torch.LongTensor([1, 2, 3]),
+#                                  scale_factor=4)
+#     gen_im = torch.zeros(1, 5, 4, 4, 4)
+#     gen_im[0, 1] = 0.54
+#     gen_im[0, 2] = 0.46
+#     low_res = torch.zeros(1, 4, 1, 1, 1)
+#     low_res[0, 1] = 1
+#     res1 = downsample_test(gen_im)
+#     res2 = downsample_test(gen_im, low_res_input=True)
+#     loss = downsample_test.voxel_wise_distance(gen_im, low_res)
 
