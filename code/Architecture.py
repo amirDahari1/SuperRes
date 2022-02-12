@@ -128,10 +128,9 @@ if __name__ == '__main__':
                entity='tldr-group')
 
     # The batch makers for D and G:
-    D_BMs, D_nets, D_optimisers = Networks.return_D_nets(ngpu, wd, n_dims,
-                                           device, lr, beta1, anisotropic,
-                                           D_images, scale_f, rotation,
-                                                         rotations_bool)
+    D_BMs, D_nets, D_optimisers = Networks.\
+        return_D_nets(ngpu, wd, n_dims, device, lr, beta1, anisotropic,
+                      D_images, scale_f, rotation, rotations_bool)
     # Number of HR number of phases:
     nc_d = len(D_BMs[0].phases)
 

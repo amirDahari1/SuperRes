@@ -112,6 +112,8 @@ def fractions_to_ohe(image):
     """
     np_image = np.array(image)
     res = np.zeros(np_image.shape)
+    # Add a little noise for (0.5, 0.5) situations.
+    np_image += (np.random.rand(*np_image.shape) - 0.5) / 100
     # finding the indices of the maximum phases:
     arg_phase_max = np.expand_dims(np.argmax(np_image, axis=1), axis=1)
     # make them 1:

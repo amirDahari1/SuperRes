@@ -68,32 +68,17 @@ class BatchMaker:
             self.high_l = int(HIGH_L_3D/self.scale_factor)
         if self.dims == 2:
             self.high_l = self.high_l*2
+        if self.down_sample:
+            self.down_sample_object = LearnTools.\
+                DownSample(self.squash, self.dims, self.to_low_idx,
+                           self.scale_factor)
 
     def down_sample_im(self, image):
         """
         :return: a down-sample image of the high resolution image for the input
         of G.
         """
-        material_low_res = LearnTools.down_sample(torch.FloatTensor(
-            image).to(self.device), self.to_low_idx, self.scale_factor,
-                                                  self.dims, self.squash)
-        # add a tiny bit of noise for all the 0.5 voxels so there will not
-        # be a bias in either way:
-        material_low_res += (torch.rand(material_low_res.size(),
-                                        device=self.device)-0.5)/100
-        # threshold at 0.5:
-        material_low_res = torch.where(material_low_res > 0.5, 1., 0.)
-        # make the pore channel:
-        if self.squash:  # material_low_res already in one channel
-            pore_phase = torch.ones(size=material_low_res.size(),
-                                    device=self.device) - material_low_res
-        else:  # material_low_res can be in multiple channels
-            sum_of_low_res = torch.sum(material_low_res, dim=1).unsqueeze(
-                dim=1)
-            pore_phase = torch.ones(size=sum_of_low_res.size(),
-                                    device=self.device) - sum_of_low_res
-        # concat pore and material:
-        return torch.cat((pore_phase, material_low_res), dim=1).squeeze(0)
+        return self.down_sample_object(image, low_res_input=True)
 
     def rotate_and_mirror(self):
         """

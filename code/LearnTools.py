@@ -3,6 +3,7 @@ import ImageTools
 from torch import nn
 from torch.nn import functional
 from torch.nn.functional import interpolate
+from torch.nn.functional import one_hot
 from torch import autograd
 import numpy as np
 import math  # just so I don't use numpy by accident
@@ -220,7 +221,7 @@ class DownSample(nn.Module):
             return torch.nn.MSELoss()(low_res, down_sampled_im)
         # There is a double error for a mismatch:
         mse_loss = torch.nn.MSELoss()(low_res, down_sampled_im)
-        return  mse_loss * self.low_res_len / 2  # to standardize the loss.
+        return mse_loss * self.low_res_len / 2  # to standardize the loss.
 
     def forward(self, generated_im, low_res_input=False):
         """
@@ -246,17 +247,21 @@ class DownSample(nn.Module):
         # differentiable argmax function to avoid blocky super-res volumes:
         return self.softmax(blurred_low_res*100, dim=1)
 
-    @staticmethod
-    def get_low_res_input(blurred_image):
+    def get_low_res_input(self, blurred_image):
         """
         If only the low-res input is to be calculated for evaluation study.
         :param blurred_image: after the image has been blurred and
         down-sampled.
-        :return: a batch_size X *low_res_vol_dimensions of a greyscale (0,1,
-        2,... for the different phases) volume.
+        :return: a batch_size X low_res_phases X *low_res_vol_dimensions of a
+        for a one-hot volume.
         """
-        ohe_im = ImageTools.fractions_to_ohe(blurred_image.detach().cpu())
-        return np.squeeze(ImageTools.one_hot_decoding(ohe_im), 0)
+        # Adding little noise for the (0.5, 0.5) scenarios.
+        blurred_image += (torch.rand(blurred_image.size(),
+                                     device=blurred_image.device) - 0.5) / 100
+        num_phases = blurred_image.size()[1]
+        blurred_image = torch.argmax(blurred_image, dim=1)  # find max phase
+        one_hot_vol = one_hot(blurred_image, num_classes=num_phases)
+        return one_hot_vol.permute(0, -1, *torch.arange(1, self.n_dims + 1))
 
     @staticmethod
     def calc_gaussian_kernel_3d(scale_factor):
@@ -278,16 +283,16 @@ class DownSample(nn.Module):
         return kernel_3d
 
 
-# if __name__ == '__main__':
-#     downsample_test = DownSample(squash=False, n_dims=3,
-#                                  low_res_idx=torch.LongTensor([1, 2, 3]),
-#                                  scale_factor=4)
-#     gen_im = torch.zeros(1, 5, 4, 4, 4)
-#     gen_im[0, 1] = 0.54
-#     gen_im[0, 2] = 0.46
-#     low_res = torch.zeros(1, 4, 1, 1, 1)
-#     low_res[0, 1] = 1
-#     res1 = downsample_test(gen_im)
-#     res2 = downsample_test(gen_im, low_res_input=True)
-#     loss = downsample_test.voxel_wise_distance(gen_im, low_res)
+if __name__ == '__main__':
+    downsample_test = DownSample(squash=False, n_dims=3,
+                                 low_res_idx=torch.LongTensor([1, 2, 3]),
+                                 scale_factor=2)
+    gen_im = torch.zeros(1, 5, 4, 4, 4)
+    gen_im[0, 1, 2:,2:,2:] = 1
+    gen_im[0, 2, :2,:2,:2] = 1
+    low_res = torch.zeros(1, 4, 1, 1, 1)
+    low_res[0, 2] = 1
+    res1 = downsample_test(gen_im)
+    res2 = downsample_test(gen_im, low_res_input=True)
+    loss = downsample_test.voxel_wise_distance(gen_im, low_res)
 
