@@ -144,6 +144,10 @@ if __name__ == '__main__':
                               BM_G.scale_factor).to(device)
     wandb.watch(netG, log='all')
 
+    # Create the down-sample object to compare between super-res and low-res
+    down_sample_object = LearnTools.DownSample(squash, n_dims, to_low_idx,
+                                               scale_f).to(device)
+
     # Handle multi-gpu if desired
     if (device.type == 'cuda') and (ngpu > 1):
         netG = nn.DataParallel(netG, list(range(ngpu)))
@@ -281,10 +285,10 @@ if __name__ == '__main__':
                         wandb.log({'deg_slice': fake_output})
                         fake_output = fake_output * 100
 
-                    # get the pixel-wise-distance loss
-                    pix_loss = LearnTools.\
-                        pixel_wise_distance(low_res, fake_for_g, to_low_idx,
-                                            BM_G.scale_factor, n_dims, squash)
+                    # get the voxel-wise-distance loss
+                    pix_loss = down_sample_object.voxel_wise_distance(
+                        fake_for_g, low_res)
+
                     # Calculate G's loss based on this output
                     if pix_loss.item() > 0.005:
                         g_cost += -fake_output + pix_distance * pix_loss
