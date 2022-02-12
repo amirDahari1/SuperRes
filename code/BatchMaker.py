@@ -44,6 +44,8 @@ class BatchMaker:
         mirror for another 8 configurations
         :param squash: whether to squash all phases (other than pore) to one phase.
         """
+        # TODO currently training images are on cpu, maybe better to move
+        #  them to gpu.
         # down-sample parameters:
         self.down_sample, self.to_low_idx, self.squash = down_sample, \
                                                          to_low_idx, squash
