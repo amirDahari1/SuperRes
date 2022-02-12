@@ -72,14 +72,15 @@ class BatchMaker:
             self.down_sample_object = LearnTools.\
                 DownSample(self.squash, self.dims, self.to_low_idx,
                            self.scale_factor)
-            self.im = self.down_sample_im(self.im)
+            self.im = np.array(self.down_sample_im(self.im).detach().cpu())
 
     def down_sample_im(self, image):
         """
         :return: a down-sample image of the high resolution image for the input
         of G.
         """
-        return self.down_sample_object(image, low_res_input=True)
+        torch_im = torch.FloatTensor(image).to(self.device)
+        return self.down_sample_object(torch_im, low_res_input=True)
 
     def rotate_and_mirror(self):
         """
