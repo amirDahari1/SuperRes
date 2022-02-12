@@ -72,6 +72,7 @@ class BatchMaker:
             self.down_sample_object = LearnTools.\
                 DownSample(self.squash, self.dims, self.to_low_idx,
                            self.scale_factor)
+            self.im = self.down_sample_im(self.im)
 
     def down_sample_im(self, image):
         """
@@ -118,8 +119,6 @@ class BatchMaker:
         for i in range(batch_size):
             res[i, ...] = self.generate_a_random_image3d(dim_chosen)
         # return a torch tensor:
-        if self.down_sample:
-            return self.down_sample_im(res)
         return torch.FloatTensor(res).to(device=self.device)
 
     def generate_a_random_image3d(self, dim_chosen):
@@ -147,8 +146,6 @@ class BatchMaker:
         for i in range(batch_size):
             res[i, :, :, :] = self.generate_a_random_image2d()
         # return a torch tensor:
-        if self.down_sample:
-            return self.down_sample_im(res)
         return torch.FloatTensor(res).to(device=self.device)
 
     def generate_a_random_image2d(self):

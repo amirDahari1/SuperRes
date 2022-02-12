@@ -190,6 +190,7 @@ class DownSample(nn.Module):
         # Here we want to compare the pore as well:
         self.low_res_idx = torch.cat((torch.zeros(1).to(low_res_idx),
                                       low_res_idx))
+
         self.low_res_len = self.low_res_idx.numel()  # how many phases
         self.scale_factor = scale_factor
         self.voxel_wise_loss = nn.MSELoss()  # the voxel-wise loss
