@@ -28,7 +28,7 @@ class BatchMaker:
     """
 
     def __init__(self, device, to_low_idx=None, path=NMC_PATH, sf=4, dims=3,
-                 stack=True, crop=False, down_sample=False,
+                 stack=True, crop=False, down_sample=False, separator=False,
                  low_res=False, rot_and_mir=True, squash=False):
         """
         :param device: the device that the image is on.
@@ -40,6 +40,7 @@ class BatchMaker:
         :param stack: if the data is a stack of 2D images
         :param crop: if to crop the image at the edges.
         :param down_sample: whether to down-sample the data or not.
+        :param separator: whether the material is a separator.
         :param rot_and_mir: if True, the stack of 2D images will rotate and
         mirror for another 8 configurations
         :param squash: whether to squash all phases (other than pore) to one phase.
@@ -73,7 +74,8 @@ class BatchMaker:
         if self.down_sample:
             self.down_sample_object = LearnTools.\
                 DownSample(self.squash, self.dims, self.to_low_idx,
-                           self.scale_factor, device).to(self.device)
+                           self.scale_factor, device, separator).to(
+                           self.device)
             self.im = np.array(self.down_sample_im(self.im).detach().cpu())
             self.phases = [self.phases[0]] + list(np.array(self.phases)[
                            np.array(self.to_low_idx.detach().cpu())])

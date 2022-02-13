@@ -9,7 +9,6 @@ from torch import autograd
 import numpy as np
 import math  # just so I don't use numpy by accident
 
-separator = False
 k_logistic = 30  # the logistic function coefficient
 threshold = 0.5
 modes = ['bilinear', 'trilinear']
@@ -30,6 +29,9 @@ def return_args(parser):
                         help="The material is anisotropic (requires dif Ds).")
     parser.add_argument("--with_rotation", default=False, action="store_true",
                         help="create rotations and mirrors for the BM.")
+    parser.add_argument("--separator", default=False, action="store_true",
+                        help="Different voxel-wise loss for separator "
+                             "material.")
     parser.add_argument('-rotations_bool', nargs='+', type=int,
                         default=[0, 0, 1], help="If the material is "
                         "anisotropic, specify which images can be augmented "
@@ -176,12 +178,14 @@ class DownSample(nn.Module):
     used to generate a low-res volume from a high-res volume for evaluation
     reasons.
     """
-    def __init__(self, squash, n_dims, low_res_idx, scale_factor, device):
+    def __init__(self, squash, n_dims, low_res_idx, scale_factor,
+                 separator, device):
         """
         :param n_dims: 2d to 2d or 3d to 3d.
         :param low_res_idx: the indices of phases to down-sample.
         :param scale_factor: scale factor between high-res and low-res.
         :param squash: if to squash all material phases together for
+        :param separator: different voxel-wise loss for the separator material.
         :param device: The device the object is on.
         down-sampling. (when it is hard to distinguish between material phases
         in low resolution e.g. SOFC cathode.)
@@ -196,6 +200,7 @@ class DownSample(nn.Module):
         self.low_res_len = self.low_res_idx.numel()  # how many phases
         self.scale_factor = scale_factor
         self.device = device
+        self.separator = separator
         self.voxel_wise_loss = nn.MSELoss()  # the voxel-wise loss
         # Calculate the gaussian kernel and make the 3d convolution:
         self.gaussian_k = self.calc_gaussian_kernel_3d(self.scale_factor)
@@ -216,7 +221,7 @@ class DownSample(nn.Module):
         the low resolution image.)
         """
         down_sampled_im = self(generated_im)
-        if separator:  # no punishment for making more material where pore
+        if self.separator:  # no punishment for making more material where pore
             # is in low_res. All low res phases which are not pore are to be
             # matched:
             low_res = low_res[:, 1:]

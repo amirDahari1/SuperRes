@@ -40,6 +40,7 @@ squash, phases_to_low = args.squash_phases, args.phases_low_res_idx
 D_dimensions_to_check, scale_f = args.d_dimensions_to_check, args.scale_factor
 rotation, anisotropic = args.with_rotation, args.anisotropic
 rotations_bool, down_sample = args.rotations_bool, args.down_sample
+separator = args.separator
 
 if not os.path.exists(ImageTools.progress_dir + progress_dir):
     os.makedirs(ImageTools.progress_dir + progress_dir)
@@ -146,7 +147,8 @@ if __name__ == '__main__':
 
     # Create the down-sample object to compare between super-res and low-res
     down_sample_object = LearnTools.DownSample(squash, n_dims, to_low_idx,
-                                               scale_f, device).to(device)
+                                               scale_f, device, separator).to(
+        device)
 
     # Handle multi-gpu if desired
     if (device.type == 'cuda') and (ngpu > 1):
