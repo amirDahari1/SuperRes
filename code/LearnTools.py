@@ -236,6 +236,8 @@ class DownSample(nn.Module):
             low_res_phases = torch.sum(low_res_phases, dim=1).unsqueeze(
                 dim=1)
         # Then gaussian blur the low res phases generated image:
+        print(low_res_phases.get_device())
+        print(self.gaussian_k.get_device())
         blurred_im = self.gaussian_conv(input=low_res_phases,
                                         weight=self.gaussian_k,
                                         padding='same', groups=self.groups)
