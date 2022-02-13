@@ -150,7 +150,7 @@ def calc_gradient_penalty(netD, real_data, fake_data, batch_size, l, device,
     :return: gradient penalty
     """
     # sample and reshape random numbers
-    alpha = torch.rand(batch_size, 1, device = device)
+    alpha = torch.rand(batch_size, 1, device=device)
     num_images = real_data.size()[0]
     alpha = alpha.expand(batch_size, int(real_data.numel() /
                                          batch_size)).contiguous()
@@ -179,7 +179,7 @@ class DownSample(nn.Module):
     reasons.
     """
     def __init__(self, squash, n_dims, low_res_idx, scale_factor,
-                 separator, device):
+                 device, separator):
         """
         :param n_dims: 2d to 2d or 3d to 3d.
         :param low_res_idx: the indices of phases to down-sample.
@@ -275,8 +275,8 @@ class DownSample(nn.Module):
     @staticmethod
     def calc_gaussian_kernel_3d(scale_factor):
         """
-        :param scale_factor: The scale factor used between the low- and high-res
-        volumes.
+        :param scale_factor: The scale factor used between the low- and
+        high-res volumes.
         :return: A gaussian blur 3d kernel for blurring before interpolating
         """
         ks = math.ceil(scale_factor)  # the kernel size
