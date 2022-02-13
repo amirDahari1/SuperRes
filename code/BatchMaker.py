@@ -27,7 +27,7 @@ class BatchMaker:
     Makes and saves training and test batch images.
     """
 
-    def __init__(self, device, to_low_idx=False, path=NMC_PATH, sf=4, dims=3,
+    def __init__(self, device, to_low_idx=None, path=NMC_PATH, sf=4, dims=3,
                  stack=True, crop=False, down_sample=False,
                  low_res=False, rot_and_mir=True, squash=False):
         """
@@ -76,7 +76,7 @@ class BatchMaker:
                            self.scale_factor, device).to(self.device)
             self.im = np.array(self.down_sample_im(self.im).detach().cpu())
             self.phases = [self.phases[0]] + list(np.array(self.phases)[
-                           np.array(self.to_low_idx)])
+                           np.array(self.to_low_idx.detach().cpu())])
             self.high_l = int(HIGH_L_3D / self.scale_factor)
 
     def down_sample_im(self, image):
