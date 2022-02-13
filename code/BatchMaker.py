@@ -75,14 +75,17 @@ class BatchMaker:
                 DownSample(self.squash, self.dims, self.to_low_idx,
                            self.scale_factor)
             self.im = np.array(self.down_sample_im(self.im).detach().cpu())
+            self.phases = [self.phases[0]] + list(self.phases[
+                                                      list(self.to_low_idx)])
+            self.high_l = int(HIGH_L_3D / self.scale_factor)
 
     def down_sample_im(self, image):
         """
         :return: a down-sample image of the high resolution image for the input
         of G.
         """
-        torch_im = torch.FloatTensor(image).to(self.device)
-        return self.down_sample_object(torch_im, low_res_input=True)
+        torch_im = torch.FloatTensor(image).unsqueeze(0).to(self.device)
+        return self.down_sample_object(torch_im, low_res_input=True).squeeze(0)
 
     def rotate_and_mirror(self):
         """
@@ -117,8 +120,8 @@ class BatchMaker:
         along the dimension chosen (0->x,1->y,2->z) in the 3d tif image.
         """
         res = np.zeros((batch_size, len(self.phases),
-                        *self.high_l * np.ones(self.dims, dtype=int)),
-                          dtype=self.im.dtype)
+                       *self.high_l * np.ones(self.dims, dtype=int)),
+                       dtype=self.im.dtype)
         for i in range(batch_size):
             res[i, ...] = self.generate_a_random_image3d(dim_chosen)
         # return a torch tensor:

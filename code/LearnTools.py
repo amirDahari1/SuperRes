@@ -1,3 +1,4 @@
+import matplotlib.pyplot as plt
 import torch
 import ImageTools
 from torch import nn
@@ -216,8 +217,8 @@ class DownSample(nn.Module):
         if separator:  # no punishment for making more material where pore
             # is in low_res. All low res phases which are not pore are to be
             # matched:
-            low_res = low_res[:, 1:-1]
-            down_sampled_im = down_sampled_im[:, 1:-1]
+            low_res = low_res[:, 1:]
+            down_sampled_im = down_sampled_im[:, 1:]
             down_sampled_im = down_sampled_im * low_res
             return torch.nn.MSELoss()(low_res, down_sampled_im)
         # There is a double error for a mismatch:
@@ -258,7 +259,7 @@ class DownSample(nn.Module):
         """
         # Adding little noise for the (0.5, 0.5) scenarios.
         blurred_image += (torch.rand(blurred_image.size(),
-                                     device=blurred_image.device) - 0.5) / 100
+                                     device=blurred_image.device) - 0.5) / 1000
         num_phases = blurred_image.size()[1]
         blurred_image = torch.argmax(blurred_image, dim=1)  # find max phase
         one_hot_vol = one_hot(blurred_image, num_classes=num_phases)
@@ -287,7 +288,7 @@ class DownSample(nn.Module):
 # if __name__ == '__main__':
 #     downsample_test = DownSample(squash=False, n_dims=3,
 #                                  low_res_idx=torch.LongTensor([1, 2, 3]),
-#                                  scale_factor=2)
+#                                  scale_factor=4)
 #     gen_im = torch.zeros(1, 5, 4, 4, 4)
 #     gen_im[0, 1, 2:,2:,2:] = 1
 #     gen_im[0, 2, :2,:2,:2] = 1

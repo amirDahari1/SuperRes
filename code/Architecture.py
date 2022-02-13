@@ -286,8 +286,9 @@ if __name__ == '__main__':
                         fake_output = fake_output * 100
 
                     # get the voxel-wise-distance loss
+                    low_res_without_noise = low_res[:, :-1]  # without noise
                     pix_loss = down_sample_object.voxel_wise_distance(
-                        fake_for_g, low_res)
+                        fake_for_g, low_res_without_noise)
 
                     # Calculate G's loss based on this output
                     if pix_loss.item() > 0.005:
