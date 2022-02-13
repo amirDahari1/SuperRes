@@ -176,12 +176,13 @@ class DownSample(nn.Module):
     used to generate a low-res volume from a high-res volume for evaluation
     reasons.
     """
-    def __init__(self, squash, n_dims, low_res_idx, scale_factor):
+    def __init__(self, squash, n_dims, low_res_idx, scale_factor, device):
         """
         :param n_dims: 2d to 2d or 3d to 3d.
         :param low_res_idx: the indices of phases to down-sample.
         :param scale_factor: scale factor between high-res and low-res.
         :param squash: if to squash all material phases together for
+        :param device: The device the object is on.
         down-sampling. (when it is hard to distinguish between material phases
         in low resolution e.g. SOFC cathode.)
         """
@@ -194,13 +195,14 @@ class DownSample(nn.Module):
 
         self.low_res_len = self.low_res_idx.numel()  # how many phases
         self.scale_factor = scale_factor
+        self.device = device
         self.voxel_wise_loss = nn.MSELoss()  # the voxel-wise loss
         # Calculate the gaussian kernel and make the 3d convolution:
         self.gaussian_k = self.calc_gaussian_kernel_3d(self.scale_factor)
         # Reshape to convolutional weight
         self.gaussian_k = self.gaussian_k.view(1, 1, *self.gaussian_k.size())
         self.gaussian_k = self.gaussian_k.repeat(self.low_res_len, *[1] * (
-                self.gaussian_k.dim() - 1))
+                self.gaussian_k.dim() - 1)).to(self.device)
         self.groups = self.low_res_len  # ensures that each phase will be
         # blurred independently.
         self.gaussian_conv = functional.conv3d
