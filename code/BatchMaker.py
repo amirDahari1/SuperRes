@@ -75,8 +75,8 @@ class BatchMaker:
                 DownSample(self.squash, self.dims, self.to_low_idx,
                            self.scale_factor, device).to(self.device)
             self.im = np.array(self.down_sample_im(self.im).detach().cpu())
-            self.phases = [self.phases[0]] + list(self.phases[
-                                                      list(self.to_low_idx)])
+            self.phases = [self.phases[0]] + list(np.array(self.phases)[
+                           np.array(self.to_low_idx)])
             self.high_l = int(HIGH_L_3D / self.scale_factor)
 
     def down_sample_im(self, image):
