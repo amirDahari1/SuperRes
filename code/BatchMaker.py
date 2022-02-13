@@ -73,7 +73,7 @@ class BatchMaker:
         if self.down_sample:
             self.down_sample_object = LearnTools.\
                 DownSample(self.squash, self.dims, self.to_low_idx,
-                           self.scale_factor)
+                           self.scale_factor).to(self.device)
             self.im = np.array(self.down_sample_im(self.im).detach().cpu())
             self.phases = [self.phases[0]] + list(self.phases[
                                                       list(self.to_low_idx)])
