@@ -6,7 +6,6 @@ import argparse
 import torch
 import numpy as np
 from tifffile import imsave, imread
-from torch.nn.functional import interpolate
 
 # Parsing arguments:
 parser = argparse.ArgumentParser()
@@ -16,13 +15,11 @@ args = LearnTools.return_args(parser)
 progress_dir, wd, wg = args.directory, args.widthD, args.widthG
 n_res_blocks, pix_distance = args.n_res_blocks, args.pixel_coefficient_distance
 num_epochs, g_update, n_dims = args.num_epochs, args.g_update, args.n_dims
-squash = args.squash_phases
+squash, down_sample = args.squash_phases, args.down_sample
 D_dimensions_to_check, scale_f = args.d_dimensions_to_check, args.scale_factor
 size_to_evaluate = args.volume_size_to_evaluate
 g_file_name = args.g_image_path
 phases_to_low = args.phases_low_res_idx
-
-down_sample = False
 
 progress_main_dir = 'progress/' + progress_dir
 # progress_main_dir = 'progress'
@@ -35,7 +32,6 @@ rand_id = str(np.random.randint(10000))
 
 file_name = 'generated_tif' + rand_id + '.tif'
 crop_to_cube = False
-down_sample_without_memory = args.down_sample
 input_with_noise = True
 all_pore_input = False
 
@@ -87,27 +83,6 @@ def crop_to_down_sample(high_res):
     return high_res[:crop_dims[0], :crop_dims[1], :crop_dims[2]]
 
 
-def down_sample_wo_memory(path):
-    high_res_vol = crop_to_down_sample(imread(path))
-    ohe_hr_vol = ImageTools.one_hot_encoding(high_res_vol,
-                                             np.unique(high_res_vol))
-    ohe_hr_vol = np.expand_dims(ohe_hr_vol, axis=0)
-    material_phases = torch.index_select(torch.tensor(ohe_hr_vol).to(device), 1,
-                                         to_low_idx)
-    mat_phase_double = material_phases.double()
-    mat_low_res = interpolate(mat_phase_double, scale_factor=1 / scale_f,
-                              mode='trilinear')
-    mat_low_res += (torch.rand(mat_low_res.size()).to(device) - 0.5) / 100
-    mat_low_res = torch.where(mat_low_res > 0.5, 1., 0.)  # TODO to change
-    # to ImageTools.fractions_to_ohe also here but more importantly also in
-    # the BatchMaker functions of down sampling thresholds.
-    sum_of_low_res = torch.sum(mat_low_res, dim=1).unsqueeze(
-        dim=1)
-    pore_phase = torch.ones(size=sum_of_low_res.size(),
-                            device=device) - sum_of_low_res
-    return torch.cat((pore_phase, mat_low_res), dim=1)
-
-
 with torch.no_grad():  # save the images
     # 1. Start a new run
     # wandb.init(project='SuperRes', name='making large volume',
@@ -118,12 +93,12 @@ with torch.no_grad():  # save the images
     high_overlap = int(np.round(overlap / 2 * scale_f, 5))
     step = step_len - overlap
 
-    if down_sample_without_memory:
-        im_3d = down_sample_wo_memory(path=G_image_path)
-    else:
-        BM_G = BatchMaker.BatchMaker(path=G_image_path, device=device,
-                                     to_low_idx=to_low_idx, rot_and_mir=False)
-        im_3d = BM_G.all_image_batch()
+    BM_G = BatchMaker.\
+        BatchMaker(device=device, to_low_idx=to_low_idx, path=G_image_path,
+                   sf=scale_f, dims=n_dims, stack=False,
+                   down_sample=down_sample, low_res=not down_sample,
+                   rot_and_mir=False, squash=squash)
+    im_3d = BM_G.all_image_batch()
 
     if all_pore_input:
         im_3d[:] = 0

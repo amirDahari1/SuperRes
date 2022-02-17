@@ -179,7 +179,7 @@ class DownSample(nn.Module):
     reasons.
     """
     def __init__(self, squash, n_dims, low_res_idx, scale_factor,
-                 device, separator):
+                 device, separator=False):
         """
         :param n_dims: 2d to 2d or 3d to 3d.
         :param low_res_idx: the indices of phases to down-sample.
