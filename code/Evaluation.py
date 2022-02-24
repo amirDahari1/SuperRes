@@ -17,7 +17,7 @@ n_res_blocks, pix_distance = args.n_res_blocks, args.pixel_coefficient_distance
 num_epochs, g_update, n_dims = args.num_epochs, args.g_update, args.n_dims
 squash, down_sample = args.squash_phases, args.down_sample
 D_dimensions_to_check, scale_f = args.d_dimensions_to_check, args.scale_factor
-size_to_evaluate = args.volume_size_to_evaluate
+separator, size_to_evaluate = args.volume_size_to_evaluate, args.separator
 g_file_name = args.g_image_path
 phases_to_low = args.phases_low_res_idx
 
@@ -58,7 +58,12 @@ else:
     # material phases to low res.
     else:
         nc_g = 1 + to_low_idx.size()[0]
-nc_d = 3  # three phases for the discriminator input
+
+# TODO make this more general, to support any number of discriminator phases
+if separator:
+    nc_d = 2
+else:
+    nc_d = 3  # three phases for the discriminator input
 
 G_net = Networks.generator(ngpu, wg, nc_g, nc_d, n_res_blocks, n_dims,
                            scale_factor=scale_f).to(device)
