@@ -17,7 +17,7 @@ n_res_blocks, pix_distance = args.n_res_blocks, args.pixel_coefficient_distance
 num_epochs, g_update, n_dims = args.num_epochs, args.g_update, args.n_dims
 squash, down_sample = args.squash_phases, args.down_sample
 D_dimensions_to_check, scale_f = args.d_dimensions_to_check, args.scale_factor
-separator, size_to_evaluate = args.volume_size_to_evaluate, args.separator
+size_to_evaluate, separator = args.volume_size_to_evaluate, args.separator
 g_file_name = args.g_image_path
 phases_to_low = args.phases_low_res_idx
 
