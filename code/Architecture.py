@@ -49,7 +49,6 @@ PATH_G = 'progress/' + progress_dir + '/g_weights.pth'
 PATH_D = 'progress/' + progress_dir + '/d_weights.pth'
 eta_file = 'eta.npy'
 
-
 # Root directory for dataset
 dataroot = "data/"
 
@@ -92,7 +91,7 @@ else:
     # material phases to low res plus noise channel.
 
 # number of iterations in each epoch
-epoch_iterations = 10000//batch_size_G
+epoch_iterations = 10000 // batch_size_G
 
 # Learning rate for optimizers
 lr = 0.0001
@@ -107,14 +106,15 @@ Lambda = 10
 saving_num = 50
 
 
-def save_differences(input_to_g, output_of_g, save_dir, filename, masks,
-                     with_deg=False):
+def save_differences_and_metrics(input_to_g, output_of_g, save_dir, filename,
+                                 masks, hr_metrics, with_deg=False):
     """
     Saves the image of the differences between the high-res real and the
     generated images that are supposed to be similar.
     """
     images = [input_to_g.clone().detach().cpu()]
     g_output = output_of_g.cpu()
+    ImageTools.log_metrics(g_output, hr_metrics)
     images = images + [input_to_g.detach().cpu(), g_output]
     if with_deg:
         slices_45 = LearnTools.forty_five_deg_slices(masks, g_output)
@@ -129,11 +129,13 @@ if __name__ == '__main__':
                entity='tldr-group')
 
     # The batch makers for D and G:
-    D_BMs, D_nets, D_optimisers = Networks.\
+    D_BMs, D_nets, D_optimisers = Networks. \
         return_D_nets(ngpu, wd, n_dims, device, lr, beta1, anisotropic,
                       D_images, scale_f, rotation, rotations_bool)
     # Number of HR number of phases:
     nc_d = len(D_BMs[0].phases)
+    # volume fraction and surface area high-res metrics:
+    hr_metrics = D_BMs[0].hr_metrics
 
     BM_G = BatchMaker(device=device, to_low_idx=to_low_idx, path=G_image,
                       sf=scale_f, dims=n_dims, stack=False,
@@ -146,9 +148,9 @@ if __name__ == '__main__':
     wandb.watch(netG, log='all')
 
     # Create the down-sample object to compare between super-res and low-res
-    down_sample_object = LearnTools.\
+    down_sample_object = LearnTools. \
         DownSample(squash, n_dims, to_low_idx, scale_f, device, separator).to(
-                                               device)
+        device)
 
     # Handle multi-gpu if desired
     if (device.type == 'cuda') and (ngpu > 1):
@@ -160,6 +162,7 @@ if __name__ == '__main__':
 
     # Setup Adam optimizers for G
     optimizerG = optim.Adam(netG.parameters(), lr=lr, betas=(beta1, 0.999))
+
 
     def generate_fake_image(detach_output=True):
         """
@@ -179,6 +182,7 @@ if __name__ == '__main__':
             return input_to_G, netG(input_to_G).detach()
         else:
             return input_to_G, netG(input_to_G)
+
 
     def take_fake_slices(fake_image, perm_idx):
         """
@@ -201,6 +205,7 @@ if __name__ == '__main__':
                                              D_BMs[0].high_l, D_BMs[0].high_l)
         else:  # same 2d slices are fed into D
             return fake_image
+
 
     ################
     # Training Loop!
@@ -245,10 +250,11 @@ if __name__ == '__main__':
 
                 min_batch = min(high_res.size()[0], fake_slices.size()[0])
                 # Calculate gradient penalty
-                gradient_penalty = LearnTools.calc_gradient_penalty(netD,
-                                   high_res[:min_batch], fake_slices[:min_batch],
-                                   batch_size_D, BM_D.high_l, device,
-                                   Lambda, nc_d)
+                gradient_penalty = LearnTools.\
+                    calc_gradient_penalty(netD, high_res[:min_batch],
+                                          fake_slices[:min_batch],
+                                          batch_size_D, BM_D.high_l, device,
+                                          Lambda, nc_d)
 
                 # discriminator is trying to minimize:
                 d_cost = output_fake - output_real + gradient_penalty
@@ -315,9 +321,10 @@ if __name__ == '__main__':
                     g_input_plot, g_output_plot = generate_fake_image(
                         detach_output=True)
                     # plot input without the noise channel
-                    save_differences(g_input_plot[:, :-1], g_output_plot,
-                                     progress_dir, 'running slices', masks_45,
-                                     forty_five_deg)
+                    save_differences_and_metrics\
+                        (g_input_plot[:, :-1], g_output_plot, progress_dir,
+                         'running slices', masks_45, hr_metrics,
+                         forty_five_deg)
             print(i, j)
 
         if (epoch % 3) == 0:

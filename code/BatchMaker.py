@@ -56,6 +56,8 @@ class BatchMaker:
         self.device = device
         self.stack = stack  # if the data is a stack of 2D images
         self.im = imread(path)
+        if stack and not low_res:  # it is the high-res training data
+            self.hr_metrics = ImageTools.vf_sa_metrics(self.im)
         if rot_and_mir:
             self.rotate_and_mirror()
         self.dim_im = len(self.im.shape)  # the dimension of the image

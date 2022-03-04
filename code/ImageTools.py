@@ -1,6 +1,8 @@
 from matplotlib import pyplot as plt
 import numpy as np
 import wandb
+from taufactor import metrics
+from itertools import combinations
 
 LOW_RES = 16
 HIGH_RES = 64
@@ -17,6 +19,38 @@ def show_grey_image(image, title):
     wandb.log({title: [wandb.Image(plt)]})
     # plt.show()
 
+
+def log_metrics(g_output, hr_metrics):
+    """
+    Logs the volume fraction and surface area metrics of the
+    generated super-res volumes in wandb.
+    :param g_output: the current output from g (batch_size*64^3 tensors)
+    :param hr_metrics: the same metrics of the high-res 2D slice for
+    comparison.
+    """
+    g_output = one_hot_decoding(fractions_to_ohe(g_output))
+    sr_metrics = vf_sa_metrics(g_output)
+    metric_labels = ["VF pore ", "VF AM ", "VF binder ", "SA pore/AM ",
+                     "SA pore/binder ", "SA AM/binder "]
+    [wandb.log({metric_labels[i] + 'SR': sr_metrics[i]}) for i in range(6)]
+    [wandb.log({metric_labels[i] + 'HR': hr_metrics[i]}) for i in range(6)]
+
+
+def vf_sa_metrics(batch_images):
+    """
+    :param batch_images: a 4-dim or 3-dim array of images (batch_size x H x
+    W or batch_size x D x H x W)
+    :return: a list of the mean volume fractions of the different phases and
+    the interfacial surface area between every pair of phases.
+    """
+    batch_size = batch_images.shape[0]
+    phases = np.unique(batch_images)
+    vf = np.mean([metrics.volume_fraction(batch_images[j]) for j in range(
+        batch_size)], axis=0)
+    sa = np.mean([[metrics.surface_area(batch_images[j], [ph1, ph2]) for ph1,
+                   ph2 in combinations(phases, 2)] for j in range(
+        batch_size)], axis=0)
+    return list(vf) + list(sa)
 
 def plot_fake_difference(images, save_dir, filename, with_deg=False):
     # first move everything to numpy
