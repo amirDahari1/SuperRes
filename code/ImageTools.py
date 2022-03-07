@@ -49,10 +49,11 @@ def vf_sa_metrics(batch_images):
     phases = np.unique(batch_images)
     vf = np.mean([metrics.volume_fraction(batch_images[j]) for j in range(
         batch_size)], axis=0)
-    sa = np.mean([[metrics.surface_area(batch_images[j], [ph1, ph2]) for ph1,
-                   ph2 in combinations(phases, 2)] for j in range(
+    sa = np.mean([[metrics.surface_area(batch_images[j][0], [ph1, ph2]) for
+                   ph1, ph2 in combinations(phases, 2)] for j in range(
         batch_size)], axis=0)
     return list(vf) + list(sa)
+
 
 def plot_fake_difference(images, save_dir, filename, with_deg=False):
     # first move everything to numpy
