@@ -67,7 +67,7 @@ forty_five_deg = False
 
 # Batch sizes during training
 if n_dims == 3:
-    batch_size_G_for_D, batch_size_G, batch_size_D = 4, 32, 64
+    batch_size_G_for_D, batch_size_G, batch_size_D = 8, 32, 64
 else:  # n_dims == 2
     batch_size_G_for_D, batch_size_G, batch_size_D = 64, 64, 64
 
