@@ -236,35 +236,20 @@ class DownSample(nn.Module):
         """
         Apply gaussian filter to the generated image.
         """
-        sample_im = ImageTools.one_hot_decoding(generated_im)[0, 10*8 + 4]
-        plt.imshow(sample_im)
-        plt.show()
         # First choose the material phase in the image:
         low_res_phases = torch.index_select(generated_im, 1, self.low_res_idx)
-        sample_im = ImageTools.one_hot_decoding(low_res_phases)[0, 10 * 8 + 4]
-        plt.imshow(sample_im)
-        plt.show()
         if self.squash:  # all phases of material are same in low-res
             # sum all the material phases:
             low_res_phases = torch.sum(low_res_phases, dim=1).unsqueeze(
                 dim=1)
-
         # Then gaussian blur the low res phases generated image:
         blurred_im = self.gaussian_conv(input=low_res_phases,
                                         weight=self.gaussian_k,
                                         padding='same', groups=self.groups)
-        low_res_phases = torch.index_select(blurred_im, 1, self.low_res_idx)
-        sample_im = ImageTools.one_hot_decoding(low_res_phases)[0, 10 * 8 + 4]
-        plt.imshow(sample_im)
-        plt.show()
         # Then downsample using trilinear interpolation:
         blurred_low_res = interpolate(blurred_im,
                                       scale_factor=1 / self.scale_factor,
                                       mode=modes[self.n_dims - 2])
-        sample_im = ImageTools.one_hot_decoding(blurred_low_res)[0, (10 * 8
-                                                                     + 4)//8]
-        plt.imshow(sample_im)
-        plt.show()
         if low_res_input:  # calculate a low-res input.
             return self.get_low_res_input(blurred_low_res)
         # Multiplying the softmax probabilities by a large number to get a
