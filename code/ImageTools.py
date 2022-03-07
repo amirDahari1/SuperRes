@@ -32,6 +32,8 @@ def log_metrics(g_output, hr_metrics):
     sr_metrics = vf_sa_metrics(g_output)
     metric_labels = ["VF pore ", "VF AM ", "VF binder ", "SA pore/AM ",
                      "SA pore/binder ", "SA AM/binder "]
+    print(sr_metrics)
+    print(hr_metrics)
     [wandb.log({metric_labels[i] + 'SR': sr_metrics[i]}) for i in range(6)]
     [wandb.log({metric_labels[i] + 'HR': hr_metrics[i]}) for i in range(6)]
 
