@@ -332,7 +332,7 @@ if __name__ == '__main__':
 
                 with torch.no_grad():  # only for plotting
                     g_input_plot, _, g_output_plot = generate_fake_image(
-                        detach_output=True, same_seed=True, batch_size=16)
+                        detach_output=True, same_seed=True, batch_size=32)
                     # plot input without the noise channel
                     save_differences_and_metrics\
                         (g_input_plot[:, :-1], g_output_plot, progress_dir,
