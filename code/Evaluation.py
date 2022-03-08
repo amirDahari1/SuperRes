@@ -35,6 +35,9 @@ crop_to_cube = False
 input_with_noise = True
 all_pore_input = False
 
+# crop the edges
+crop = 4
+
 # Number of GPUs available. Use 0 for CPU mode.
 ngpu = 1
 
@@ -145,7 +148,7 @@ with torch.no_grad():  # save the images
                     else:
                         third_lr_vec = second_lr_vec[..., :, :, k * step:k *
                                                      step + step_len]
-                    g_output = G_net(third_lr_vec).detach().cpu()
+                    g_output, _ = G_net(third_lr_vec).detach().cpu()
                     g_output = ImageTools.fractions_to_ohe(g_output)
                     g_output_grey = ImageTools.one_hot_decoding(
                         g_output).astype('int8').squeeze()
@@ -189,6 +192,7 @@ with torch.no_grad():  # save the images
                 res1 = res1[high_overlap:-high_overlap, :, :]
             first_img_stack.append(res1)
     img = np.concatenate(first_img_stack, axis=0)
+    img = img[crop:-crop, crop:-crop, crop:-crop]
     low_res = np.squeeze(ImageTools.one_hot_decoding(im_3d.cpu()))
     if all_pore_input:
         imsave(progress_main_dir + '/' + file_name + '_pore', img)
