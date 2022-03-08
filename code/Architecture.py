@@ -94,7 +94,7 @@ else:
 epoch_iterations = 10000 // batch_size_G
 
 # Learning rate for optimizers
-lr = 0.0001
+lr = 0.00001
 
 # Beta1 hyperparam for Adam optimizers
 beta1 = 0.5
