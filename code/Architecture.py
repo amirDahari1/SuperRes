@@ -164,9 +164,11 @@ if __name__ == '__main__':
     optimizerG = optim.Adam(netG.parameters(), lr=lr, betas=(beta1, 0.999))
 
 
-    def generate_fake_image(detach_output=True, batch_size=batch_size_G_for_D):
+    def generate_fake_image(detach_output=True, same_seed=False,
+                            batch_size=batch_size_G_for_D):
         """
         :param detach_output: to detach the tensor output from gradient memory.
+        :param same_seed: generate the same random seed.
         :param batch_size: the batch size of the fake images.
         :return: the generated image from G
         """
@@ -175,7 +177,15 @@ if __name__ == '__main__':
         input_to_G = BM_G.random_batch_for_fake(batch_size, g_slice)
         input_size = input_to_G.size()
         # make noise channel and concatenate it to input:
-        noise = torch.randn(input_size[0], 1, *input_size[2:], device=device)
+        if same_seed:  # for plotting reasons, have the same noise input
+            # each time.
+            torch.manual_seed(0)
+            noise = torch.randn(input_size[0], 1, *input_size[2:],
+                                device=device)
+            torch.manual_seed(torch.seed())  # return to randomness
+            # TODO maybe the low-res images should also be the same..
+        else:
+            noise = torch.randn(input_size[0], 1, *input_size[2:], device=device)
         input_to_G = torch.cat((input_to_G, noise), dim=1)
 
         # Generate fake image batch with G
@@ -320,7 +330,7 @@ if __name__ == '__main__':
 
                 with torch.no_grad():  # only for plotting
                     g_input_plot, g_output_plot = generate_fake_image(
-                        detach_output=True, batch_size=16)
+                        detach_output=True, same_seed=True, batch_size=16)
                     # plot input without the noise channel
                     save_differences_and_metrics\
                         (g_input_plot[:, :-1], g_output_plot, progress_dir,
