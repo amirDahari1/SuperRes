@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 
 perms = [[1, 2, 3], [2, 1, 3], [3, 1, 2]]  # permutations for a 4d array.
 perms_3d = np.array(perms) + 1 # permutations for a 5d array.
-CROP = 4  # crop pixels in each dimension when choosing train slices
+crop_size = 4  # crop pixels in each dimension when choosing train slices
 # LOW_L_3D = 45  # length of low resolution 3d
 HIGH_L_3D = 64  # length of high resolution 3d
 
@@ -28,7 +28,7 @@ class BatchMaker:
     """
 
     def __init__(self, device, to_low_idx=None, path=NMC_PATH, sf=4, dims=3,
-                 stack=True, crop=False, down_sample=False, separator=False,
+                 stack=True, down_sample=False, separator=False,
                  low_res=False, rot_and_mir=True, squash=False):
         """
         :param device: the device that the image is on.
@@ -38,7 +38,6 @@ class BatchMaker:
         :param sf: the scale factor between low and high res.
         :param dims: number of dimensions for the batches (2 or 3)
         :param stack: if the data is a stack of 2D images
-        :param crop: if to crop the image at the edges.
         :param down_sample: whether to down-sample the data or not.
         :param separator: whether the material is a separator.
         :param rot_and_mir: if True, the stack of 2D images will rotate and
@@ -56,19 +55,15 @@ class BatchMaker:
         self.device = device
         self.stack = stack  # if the data is a stack of 2D images
         self.im = imread(path)
+        self.high_l = HIGH_L_3D
         if stack and not low_res:  # it is the high-res training data
             self.hr_metrics = ImageTools.vf_sa_metrics(self.im)
+            self.high_l -= crop_size*2
         if rot_and_mir:
             self.rotate_and_mirror()
         self.dim_im = len(self.im.shape)  # the dimension of the image
         self.phases = np.unique(self.im)  # the unique values in image
-        if crop:  # crop the image in the edges:
-            if self.dim_im == 3:
-                self.im = self.im[CROP:-CROP, CROP:-CROP, CROP:-CROP]
-            else:
-                self.im = self.im[CROP:-CROP, CROP:-CROP]
         self.im = ImageTools.one_hot_encoding(self.im, self.phases)
-        self.high_l = HIGH_L_3D
         if low_res:
             self.high_l = int(HIGH_L_3D/self.scale_factor)
         if self.dims == 2:
@@ -152,7 +147,7 @@ class BatchMaker:
         along the dimension chosen (0->x,1->y,2->z) in the 3d tif image.
         """
         res = np.zeros((batch_size, len(self.phases), self.high_l,
-                          self.high_l), dtype=self.im.dtype)
+                        self.high_l), dtype=self.im.dtype)
         for i in range(batch_size):
             res[i, :, :, :] = self.generate_a_random_image2d()
         # return a torch tensor:

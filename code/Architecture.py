@@ -94,7 +94,7 @@ else:
 epoch_iterations = 10000 // batch_size_G
 
 # Learning rate for optimizers
-lr = 0.00001
+lr = 0.0001
 
 # Beta1 hyperparam for Adam optimizers
 beta1 = 0.5
@@ -189,10 +189,11 @@ if __name__ == '__main__':
         input_to_G = torch.cat((input_to_G, noise), dim=1)
 
         # Generate fake image batch with G
+        with_edges, without_edges = netG(input_to_G)
         if detach_output:
-            return input_to_G, netG(input_to_G).detach()
+            return input_to_G, with_edges.detach(), without_edges.detach()
         else:
-            return input_to_G, netG(input_to_G)
+            return input_to_G, with_edges, without_edges
 
 
     def take_fake_slices(fake_image, perm_idx):
@@ -235,7 +236,7 @@ if __name__ == '__main__':
             # (1) Update D network:
             #######################
 
-            _, fake_for_d = generate_fake_image(detach_output=True)
+            _, _, fake_for_d = generate_fake_image(detach_output=True)
 
             for k in range(math.comb(n_dims, 2)):
                 BM_D, netD, optimizerD = D_BMs[k], D_nets[k], D_optimisers[k]
@@ -282,7 +283,8 @@ if __name__ == '__main__':
             if (i % g_update) == 0:
                 netG.zero_grad()
                 # generate fake again to update G:
-                low_res, fake_for_g = generate_fake_image(detach_output=False)
+                low_res, fake_for_g_vwl, fake_for_g = generate_fake_image(
+                    detach_output=False)
                 # save the cost of g to add from each axis:
                 g_cost = 0
                 # go through each axis
@@ -307,7 +309,7 @@ if __name__ == '__main__':
                     # get the voxel-wise-distance loss
                     low_res_without_noise = low_res[:, :-1]  # without noise
                     pix_loss = down_sample_object.voxel_wise_distance(
-                        fake_for_g, low_res_without_noise)
+                        fake_for_g_vwl, low_res_without_noise)
 
                     # Calculate G's loss based on this output
                     if pix_loss.item() > 0.005:
@@ -329,7 +331,7 @@ if __name__ == '__main__':
                                              epoch, num_epochs, eta_file)
 
                 with torch.no_grad():  # only for plotting
-                    g_input_plot, g_output_plot = generate_fake_image(
+                    g_input_plot, _, g_output_plot = generate_fake_image(
                         detach_output=True, same_seed=True, batch_size=16)
                     # plot input without the noise channel
                     save_differences_and_metrics\
