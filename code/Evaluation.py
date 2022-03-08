@@ -148,7 +148,8 @@ with torch.no_grad():  # save the images
                     else:
                         third_lr_vec = second_lr_vec[..., :, :, k * step:k *
                                                      step + step_len]
-                    g_output, _ = G_net(third_lr_vec).detach().cpu()
+                    g_output, _ = G_net(third_lr_vec)
+                    g_output = g_output.detach().cpu()
                     g_output = ImageTools.fractions_to_ohe(g_output)
                     g_output_grey = ImageTools.one_hot_decoding(
                         g_output).astype('int8').squeeze()
