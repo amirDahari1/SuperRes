@@ -29,7 +29,8 @@ class BatchMaker:
 
     def __init__(self, device, to_low_idx=None, path=NMC_PATH, sf=4, dims=3,
                  stack=True, down_sample=False, separator=False,
-                 low_res=False, rot_and_mir=True, squash=False):
+                 low_res=False, rot_and_mir=True, squash=False,
+                 super_sample=False):
         """
         :param device: the device that the image is on.
         :param to_low_idx: the indices of the phases to be down-sampled.
@@ -43,6 +44,8 @@ class BatchMaker:
         :param rot_and_mir: if True, the stack of 2D images will rotate and
         mirror for another 8 configurations
         :param squash: whether to squash all phases (other than pore) to one phase.
+        :param super_sample: whether when down sampling to make it with
+        super-sampling and not with blurring.
         """
         # TODO currently training images are on cpu, maybe better to move
         #  them to gpu.
@@ -71,8 +74,8 @@ class BatchMaker:
         if self.down_sample:
             self.down_sample_object = LearnTools.\
                 DownSample(self.squash, self.dims, self.to_low_idx,
-                           self.scale_factor, device, separator).to(
-                           self.device)
+                           self.scale_factor, device, super_sample,
+                           separator).to(self.device)
             self.im = np.array(self.down_sample_im(self.im).detach().cpu())
             self.phases = [self.phases[0]] + list(np.array(self.phases)[
                            np.array(self.to_low_idx.detach().cpu())])

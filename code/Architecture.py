@@ -149,8 +149,8 @@ if __name__ == '__main__':
 
     # Create the down-sample object to compare between super-res and low-res
     down_sample_object = LearnTools. \
-        DownSample(squash, n_dims, to_low_idx, scale_f, device, separator).to(
-        device)
+        DownSample(squash, n_dims, to_low_idx, scale_f, device,
+                   super_sampling, separator).to(device)
 
     # Handle multi-gpu if desired
     if (device.type == 'cuda') and (ngpu > 1):
