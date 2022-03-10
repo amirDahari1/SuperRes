@@ -29,13 +29,15 @@ def log_metrics(g_output, hr_metrics):
     comparison.
     """
     g_output = one_hot_decoding(fractions_to_ohe(g_output))
-    sr_metrics = vf_sa_metrics(g_output)
-    metric_labels = ["VF pore ", "VF AM ", "VF binder ", "SA pore/AM ",
-                     "SA pore/binder ", "SA AM/binder "]
-    print(sr_metrics)
-    print(hr_metrics)
-    [wandb.log({metric_labels[i] + 'SR': sr_metrics[i]}) for i in range(6)]
-    [wandb.log({metric_labels[i] + 'HR': hr_metrics[i]}) for i in range(6)]
+    # The super-res volume fraction and surface area values:
+    sr_vf, sr_sa = vf_sa_metrics(g_output)
+    hr_vf, hr_sa = hr_metrics
+    vf_labels, sa_labels = ["VF pore ", "VF AM ", "VF binder "], \
+                           ["SA pore/AM ", "SA pore/binder ", "SA AM/binder "]
+    [wandb.log({vf_labels[i] + 'SR': sr_vf[i]}) for i in range(len(sr_vf))]
+    [wandb.log({vf_labels[i] + 'HR': hr_vf[i]}) for i in range(len(hr_vf))]
+    [wandb.log({sa_labels[i] + 'SR': sr_sa[i]}) for i in range(len(sr_sa))]
+    [wandb.log({sa_labels[i] + 'HR': hr_sa[i]}) for i in range(len(hr_sa))]
 
 
 def vf_sa_metrics(batch_images):
@@ -52,7 +54,7 @@ def vf_sa_metrics(batch_images):
     sa = np.mean([[metrics.surface_area(batch_images[j], [ph1, ph2]).item() for
                    ph1, ph2 in combinations(phases, 2)] for j in range(
         batch_size)], axis=0)
-    return list(vf) + list(sa)
+    return list(vf), list(sa)
 
 
 def plot_fake_difference(images, save_dir, filename, with_deg=False):

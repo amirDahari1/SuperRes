@@ -135,7 +135,7 @@ if __name__ == '__main__':
     # Number of HR number of phases:
     nc_d = len(D_BMs[0].phases)
     # volume fraction and surface area high-res metrics:
-    hr_metrics = D_BMs[0].hr_metrics
+    hr_slice_metrics = D_BMs[0].hr_metrics
 
     BM_G = BatchMaker(device=device, to_low_idx=to_low_idx, path=G_image,
                       sf=scale_f, dims=n_dims, stack=False,
@@ -336,12 +336,15 @@ if __name__ == '__main__':
                     # plot input without the noise channel
                     save_differences_and_metrics\
                         (g_input_plot[:, :-1], g_output_plot, progress_dir,
-                         'running slices', masks_45, hr_metrics,
+                         'running slices', masks_45, hr_slice_metrics,
                          forty_five_deg)
             print(i, j)
 
         if (epoch % 3) == 0:
             torch.save(netG.state_dict(), PATH_G)
             wandb.save(PATH_G)
+            if (epoch % 201) == 0 and epoch > 0:
+                torch.save(netG.state_dict(), PATH_G + str(epoch))
+                wandb.save(PATH_G)
 
     print('finished training')
