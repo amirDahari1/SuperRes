@@ -23,6 +23,10 @@ def return_args(parser):
     parser.add_argument("--down_sample", default=False, action="store_true",
                         help="Down samples the input for G for testing "
                              "purposes.")
+    parser.add_argument("--super_sampling", default=False,
+                        action="store_true", help="When comparing super-res "
+                        "and low-res, instead of blurring, it picks one voxel "
+                        "with nearest-neighbour interpolation.")
     parser.add_argument("--squash_phases", default=False, action="store_true",
                         help="All material phases in low res are the same.")
     parser.add_argument("--anisotropic", default=False, action="store_true",
@@ -179,7 +183,7 @@ class DownSample(nn.Module):
     reasons.
     """
     def __init__(self, squash, n_dims, low_res_idx, scale_factor,
-                 device, separator=False):
+                 device, super_sampling=False, separator=False):
         """
         :param n_dims: 2d to 2d or 3d to 3d.
         :param low_res_idx: the indices of phases to down-sample.
@@ -212,6 +216,7 @@ class DownSample(nn.Module):
         # blurred independently.
         self.gaussian_conv = functional.conv3d
         self.softmax = functional.softmax
+        self.super_sampling = super_sampling
 
     def voxel_wise_distance(self, generated_im, low_res):
         """
@@ -242,6 +247,10 @@ class DownSample(nn.Module):
             # sum all the material phases:
             low_res_phases = torch.sum(low_res_phases, dim=1).unsqueeze(
                 dim=1)
+        # if it is super-sampling, return nearest-neighbour interpolation:
+        if self.super_sampling:
+            return interpolate(low_res_phases, scale_factor=1 /
+                               self.scale_factor, mode='nearest')
         # Then gaussian blur the low res phases generated image:
         blurred_im = self.gaussian_conv(input=low_res_phases,
                                         weight=self.gaussian_k,
