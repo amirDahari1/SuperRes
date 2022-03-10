@@ -48,7 +48,7 @@ def vf_sa_metrics(batch_images):
     the interfacial surface area between every pair of phases.
     """
     batch_size = batch_images.shape[0]
-    phases = np.unique(batch_images)
+    phases = list(np.unique(batch_images))
     vf = np.mean([metrics.volume_fraction(batch_images[j], phases=phases) for j
                   in range(batch_size)], axis=0)
     sa = np.mean([[metrics.surface_area(batch_images[j], [ph1, ph2]).item() for
