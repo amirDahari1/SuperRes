@@ -18,7 +18,7 @@ num_epochs, g_update, n_dims = args.num_epochs, args.g_update, args.n_dims
 squash, down_sample = args.squash_phases, args.down_sample
 D_dimensions_to_check, scale_f = args.d_dimensions_to_check, args.scale_factor
 size_to_evaluate, separator = args.volume_size_to_evaluate, args.separator
-g_file_name = args.g_image_path
+g_file_name, super_sample = args.g_image_path, args.super_sampling
 phases_to_low = args.phases_low_res_idx
 
 progress_main_dir = 'progress/' + progress_dir
@@ -105,7 +105,7 @@ with torch.no_grad():  # save the images
         BatchMaker(device=device, to_low_idx=to_low_idx, path=G_image_path,
                    sf=scale_f, dims=n_dims, stack=False,
                    down_sample=down_sample, low_res=not down_sample,
-                   rot_and_mir=False, squash=squash)
+                   rot_and_mir=False, squash=squash, super_sample=super_sample)
     im_3d = BM_G.all_image_batch()
 
     if all_pore_input:
