@@ -19,11 +19,11 @@ squash, down_sample = args.squash_phases, args.down_sample
 D_dimensions_to_check, scale_f = args.d_dimensions_to_check, args.scale_factor
 size_to_evaluate, separator = args.volume_size_to_evaluate, args.separator
 g_file_name, super_sample = args.g_image_path, args.super_sampling
-phases_to_low, g_weights_id = args.phases_low_res_idx, args.g_weights_id
+phases_to_low, g_epoch_id = args.phases_low_res_idx, args.g_epoch_id
 
 progress_main_dir = 'progress/' + progress_dir
 # progress_main_dir = 'progress'
-path_to_g_weights = progress_main_dir + '/g_weights.pth' + g_weights_id
+path_to_g_weights = progress_main_dir + '/g_weights.pth' + g_epoch_id
 # path_to_g_weights = progress_main_dir + '/g_weights_large_slice.pth'
 G_image_path = 'data/' + g_file_name
 # G_image_path = 'data/new_vol_down_sample.tif'

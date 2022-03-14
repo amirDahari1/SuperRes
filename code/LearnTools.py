@@ -71,7 +71,7 @@ def return_args(parser):
                         default=10,
                         help='The coefficient of the pixel distance loss '
                              'added to the cost of G.')
-    parser.add_argument('-g_weights_id', type=str, default='', help='Since '
+    parser.add_argument('-g_epoch_id', type=str, default='', help='Since '
                         'more than 1 G is saved during a run, specific G can '
                         'be chosen for evaluation')
     args, unknown = parser.parse_known_args()
