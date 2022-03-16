@@ -115,7 +115,7 @@ def save_differences_and_metrics(input_to_g, output_of_g, save_dir, filename,
     images = [input_to_g.clone().detach().cpu()]
     g_output = output_of_g.cpu()
     metrics_loss = ImageTools.log_metrics(g_output, hr_metrics)
-    if metrics_loss < 0.02:  # mean difference is smaller than 2%
+    if metrics_loss < 0.015:  # mean difference is smaller than 1.5%
         difference_str = str(np.round(metrics_loss, 4))
         torch.save(generator.state_dict(), PATH_G + difference_str)
         wandb.save(PATH_G + difference_str)

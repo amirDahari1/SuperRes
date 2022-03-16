@@ -8,7 +8,7 @@ import math
 from BatchMaker import *
 smaller_cube = False
 crop = 4
-EPS = 10e-10
+EPS = 10e-5
 modes = ['bilinear', 'trilinear']
 
 
