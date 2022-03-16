@@ -36,12 +36,13 @@ def log_metrics(g_output, hr_metrics):
                            ["SA pore/AM ", "SA pore/binder ", "SA AM/binder "]
     [wandb.log({vf_labels[i] + 'SR': sr_vf[i]}) for i in range(len(sr_vf))]
     [wandb.log({vf_labels[i] + 'HR': hr_vf[i]}) for i in range(len(hr_vf))]
-    m_loss = np.sum([np.abs(1-sr_vf[i]/hr_vf[i]) for i in range(len(hr_vf))])
+    m_loss = [np.abs(1-sr_vf[i]/hr_vf[i]) for i in range(len(hr_vf))]
     [wandb.log({sa_labels[i] + 'SR': sr_sa[i]}) for i in range(len(sr_sa))]
     [wandb.log({sa_labels[i] + 'HR': hr_sa[i]}) for i in range(len(hr_sa))]
-    m_loss += np.sum([np.abs(1 - sr_sa[i] / hr_sa[i]) for i in range(len(
-        hr_sa))])
+    m_loss += [np.abs(1 - sr_sa[i] / hr_sa[i]) for i in range(len(hr_sa))]
+    m_loss = np.mean(m_loss)
     wandb.log({'Metrics percentage difference': m_loss})
+    return m_loss
 
 
 def vf_sa_metrics(batch_images):

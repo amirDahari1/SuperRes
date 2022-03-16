@@ -107,14 +107,18 @@ saving_num = 50
 
 
 def save_differences_and_metrics(input_to_g, output_of_g, save_dir, filename,
-                                 masks, hr_metrics, with_deg=False):
+                                 masks, hr_metrics, generator, with_deg=False):
     """
     Saves the image of the differences between the high-res real and the
     generated images that are supposed to be similar.
     """
     images = [input_to_g.clone().detach().cpu()]
     g_output = output_of_g.cpu()
-    ImageTools.log_metrics(g_output, hr_metrics)
+    metrics_loss = ImageTools.log_metrics(g_output, hr_metrics)
+    if metrics_loss < 0.015:  # mean difference is smaller than 1.5%
+        difference_str = str(np.round(metrics_loss, 4))
+        torch.save(netG.state_dict(), PATH_G + difference_str)
+        wandb.save(PATH_G + difference_str)
     images = images + [input_to_g.detach().cpu(), g_output]
     if with_deg:
         slices_45 = LearnTools.forty_five_deg_slices(masks, g_output)
@@ -337,14 +341,11 @@ if __name__ == '__main__':
                     save_differences_and_metrics\
                         (g_input_plot[:, :-1], g_output_plot, progress_dir,
                          'running slices', masks_45, hr_slice_metrics,
-                         forty_five_deg)
+                         netG, forty_five_deg)
             print(i, j)
 
         if (epoch % 3) == 0:
             torch.save(netG.state_dict(), PATH_G)
             wandb.save(PATH_G)
-            if (epoch % 60) == 0 and epoch > 0:
-                torch.save(netG.state_dict(), PATH_G + str(epoch))
-                wandb.save(PATH_G)
 
     print('finished training')
