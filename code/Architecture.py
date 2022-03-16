@@ -331,6 +331,7 @@ if __name__ == '__main__':
 
             # Output training stats
             if i == j or i == 0:
+                netG.eval()
                 ImageTools.calc_and_save_eta(steps, time.time(), start, i,
                                              epoch, num_epochs, eta_file)
 
@@ -342,6 +343,7 @@ if __name__ == '__main__':
                         (g_input_plot[:, :-1], g_output_plot, progress_dir,
                          'running slices', masks_45, hr_slice_metrics,
                          netG, forty_five_deg)
+                netG.train()
             print(i, j)
 
         if (epoch % 3) == 0:
