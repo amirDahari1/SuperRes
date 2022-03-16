@@ -81,6 +81,7 @@ class Generator3D(nn.Module):
         sf_c = int(math.log(self.scale_factor - EPS, 2))
         print(sf_c)
         wg_sf = wg + sf_c
+        print(wg_sf)
         # first convolution, making many channels
         self.conv_minus_1 = nn.Conv3d(nc_g, 2 ** (wg_sf-1), 3, stride=1,
                                       padding=1, padding_mode='replicate')
