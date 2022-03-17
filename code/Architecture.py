@@ -345,10 +345,10 @@ if __name__ == '__main__':
             print(i, j)
 
         if (epoch % 3) == 0:
-            torch.save(netG, PATH_G)
+            torch.save(netG.state_dict(), PATH_G)
             wandb.save(PATH_G)
             if (epoch % 60) == 0:
-                torch.save(netG, PATH_G + str(epoch) + '.pth')
+                torch.save(netG.state_dict(), PATH_G + str(epoch) + '.pth')
                 wandb.save(PATH_G + str(epoch) + '.pth')
 
     print('finished training')

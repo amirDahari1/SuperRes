@@ -68,13 +68,13 @@ if separator:
 else:
     nc_d = 3  # three phases for the discriminator input
 
-# G_net = Networks.generator(ngpu, wg, nc_g, nc_d, n_res_blocks, n_dims,
-#                            scale_factor=scale_f).to(device)
-# G_net.load_state_dict(torch.load(path_to_g_weights, map_location=torch.device(
-#     device)))
+G_net = Networks.generator(ngpu, wg, nc_g, nc_d, n_res_blocks, n_dims,
+                           scale_factor=scale_f).to(device)
+G_net.load_state_dict(torch.load(path_to_g_weights, map_location=torch.device(
+    device)))
 
 # If the whole network is saved:
-G_net = torch.load(path_to_g_weights, map_location=torch.device(device))
+# G_net = torch.load(path_to_g_weights, map_location=torch.device(device))
 G_net.eval()
 
 
