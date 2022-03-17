@@ -79,7 +79,6 @@ class Generator3D(nn.Module):
         self.ngpu = ngpu
         # how to change the channels depends on the number of layers
         sf_c = int(math.log(self.scale_factor - EPS, 2))
-        print(sf_c)
         wg_sf = wg + sf_c
         print(wg_sf)
         # first convolution, making many channels
