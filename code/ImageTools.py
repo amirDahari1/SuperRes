@@ -1,6 +1,8 @@
 from matplotlib import pyplot as plt
 import numpy as np
 import wandb
+from taufactor import metrics
+from itertools import combinations
 
 LOW_RES = 16
 HIGH_RES = 64
@@ -16,6 +18,48 @@ def show_grey_image(image, title):
     plt.imshow(image, cmap='gray', vmin=0, vmax=255)
     wandb.log({title: [wandb.Image(plt)]})
     # plt.show()
+
+
+def log_metrics(g_output, hr_metrics):
+    """
+    Logs the volume fraction and surface area metrics of the
+    generated super-res volumes in wandb.
+    :param g_output: the current output from g (batch_size*64^3 tensors)
+    :param hr_metrics: the same metrics of the high-res 2D slice for
+    comparison.
+    """
+    g_output = one_hot_decoding(fractions_to_ohe(g_output))
+    # The super-res volume fraction and surface area values:
+    sr_vf, sr_sa = vf_sa_metrics(g_output)
+    hr_vf, hr_sa = hr_metrics
+    vf_labels, sa_labels = ["VF pore ", "VF AM ", "VF binder "], \
+                           ["SA pore/AM ", "SA pore/binder ", "SA AM/binder "]
+    [wandb.log({vf_labels[i] + 'SR': sr_vf[i]}) for i in range(len(sr_vf))]
+    [wandb.log({vf_labels[i] + 'HR': hr_vf[i]}) for i in range(len(hr_vf))]
+    m_loss = [np.abs(1-sr_vf[i]/hr_vf[i]) for i in range(len(hr_vf))]
+    [wandb.log({sa_labels[i] + 'SR': sr_sa[i]}) for i in range(len(sr_sa))]
+    [wandb.log({sa_labels[i] + 'HR': hr_sa[i]}) for i in range(len(hr_sa))]
+    m_loss += [np.abs(1 - sr_sa[i] / hr_sa[i]) for i in range(len(hr_sa))]
+    m_loss = np.mean(m_loss)
+    wandb.log({'Metrics percentage difference': m_loss})
+    return m_loss
+
+
+def vf_sa_metrics(batch_images):
+    """
+    :param batch_images: a 4-dim or 3-dim array of images (batch_size x H x
+    W or batch_size x D x H x W)
+    :return: a list of the mean volume fractions of the different phases and
+    the interfacial surface area between every pair of phases.
+    """
+    batch_size = batch_images.shape[0]
+    phases = np.unique(batch_images)
+    vf = np.mean([[(batch_images[j] == p).mean() for p in phases] for j
+                  in range(batch_size)], axis=0)
+    sa = np.mean([[metrics.surface_area(batch_images[j], [ph1, ph2]).item() for
+                   ph1, ph2 in combinations(phases, 2)] for j in range(
+        batch_size)], axis=0)
+    return list(vf), list(sa)
 
 
 def plot_fake_difference(images, save_dir, filename, with_deg=False):
@@ -112,6 +156,8 @@ def fractions_to_ohe(image):
     """
     np_image = np.array(image)
     res = np.zeros(np_image.shape)
+    # Add a little noise for (0.5, 0.5) situations.
+    np_image += (np.random.rand(*np_image.shape) - 0.5) / 100
     # finding the indices of the maximum phases:
     arg_phase_max = np.expand_dims(np.argmax(np_image, axis=1), axis=1)
     # make them 1:

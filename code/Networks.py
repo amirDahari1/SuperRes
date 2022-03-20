@@ -7,7 +7,8 @@ import copy
 import math
 from BatchMaker import *
 smaller_cube = False
-EPS = 10e-10
+crop = 4
+EPS = 10e-5
 modes = ['bilinear', 'trilinear']
 
 
@@ -79,6 +80,7 @@ class Generator3D(nn.Module):
         # how to change the channels depends on the number of layers
         sf_c = int(math.log(self.scale_factor - EPS, 2))
         wg_sf = wg + sf_c
+        print(wg_sf)
         # first convolution, making many channels
         self.conv_minus_1 = nn.Conv3d(nc_g, 2 ** (wg_sf-1), 3, stride=1,
                                       padding=1, padding_mode='replicate')
@@ -142,7 +144,7 @@ class Generator3D(nn.Module):
         after_block = self.res_block(x_first, self.bn_res[0], self.conv_res[0],
                                      self.bn_res[1], self.conv_res[1])
         # more residual blocks:
-        for i in range(2, self.n_res_blocks*2, 2):
+        for i in range(2, self.n_res_blocks, 2):
             after_block = self.res_block(after_block, self.bn_res[i],
                                          self.conv_res[i], self.bn_res[i+1],
                                          self.conv_res[i+1])
@@ -164,7 +166,9 @@ class Generator3D(nn.Module):
         # another convolution before the end:
         bf_end = self.conv_bf_end(super_res)
         # softmax of the phase dimension:
-        return nn.Softmax(dim=1)(bf_end)
+        result = nn.Softmax(dim=1)(bf_end)
+        # returns the result and the cropped result to feed into D
+        return result, result[..., crop:-crop, crop:-crop, crop:-crop]
 
 
 def discriminator(ngpu, wd, nc_d, dims):
@@ -179,15 +183,15 @@ class Discriminator3d(nn.Module):
     def __init__(self, ngpu, wd, nc_d):
         super(Discriminator3d, self).__init__()
         self.ngpu = ngpu
-        # first convolution, input is 3x64x64
+        # first convolution, input is 3x56^3
         self.conv0 = nn.Conv2d(nc_d, 2 ** (wd - 3), 4, 2, 1)
-        # second convolution, input is 64x32x32
+        # second convolution, input is 64x28^3
         self.conv2 = nn.Conv2d(2 ** (wd - 3), 2 ** (wd - 2), 4, 2, 1)
-        # third convolution, input is 128x16x16
+        # third convolution, input is 128x14^3
         self.conv3 = nn.Conv2d(2 ** (wd - 2), 2 ** (wd - 1), 4, 2, 1)
-        # fourth convolution, input is 256x8x8
-        self.conv4 = nn.Conv2d(2 ** (wd - 1), 2 ** wd, 4, 2, 1)
-        # fifth convolution, input is 512x4x4
+        # fourth convolution, input is 256x7^3, conv kernel 3
+        self.conv4 = nn.Conv2d(2 ** (wd - 1), 2 ** wd, 3, 2, 1)
+        # fifth convolution, input is 512x4^3
         self.conv5 = nn.Conv2d(2 ** wd, 1, 4, 2, 0)
         # for smaller cube
         self.conv_early = nn.Conv2d(2**(wd-1), 1, 4, 2, 0)

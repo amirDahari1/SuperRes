@@ -40,6 +40,7 @@ squash, phases_to_low = args.squash_phases, args.phases_low_res_idx
 D_dimensions_to_check, scale_f = args.d_dimensions_to_check, args.scale_factor
 rotation, anisotropic = args.with_rotation, args.anisotropic
 rotations_bool, down_sample = args.rotations_bool, args.down_sample
+separator, super_sampling = args.separator, args.super_sampling
 
 if not os.path.exists(ImageTools.progress_dir + progress_dir):
     os.makedirs(ImageTools.progress_dir + progress_dir)
@@ -47,7 +48,6 @@ if not os.path.exists(ImageTools.progress_dir + progress_dir):
 PATH_G = 'progress/' + progress_dir + '/g_weights.pth'
 PATH_D = 'progress/' + progress_dir + '/d_weights.pth'
 eta_file = 'eta.npy'
-
 
 # Root directory for dataset
 dataroot = "data/"
@@ -91,7 +91,7 @@ else:
     # material phases to low res plus noise channel.
 
 # number of iterations in each epoch
-epoch_iterations = 10000//batch_size_G
+epoch_iterations = 10000 // batch_size_G
 
 # Learning rate for optimizers
 lr = 0.0001
@@ -106,24 +106,19 @@ Lambda = 10
 saving_num = 50
 
 
-# custom weights initialization called on netG and netD
-def weights_init(m):
-    classname = m.__class__.__name__
-    if classname.find('Conv') != -1:
-        nn.init.normal_(m.weight.data, 0.0, 0.02)
-    elif classname.find('BatchNorm') != -1:
-        nn.init.normal_(m.weight.data, 1.0, 0.02)
-        nn.init.constant_(m.bias.data, 0)
-
-
-def save_differences(input_to_g, output_of_g, save_dir, filename, masks,
-                     with_deg=False):
+def save_differences_and_metrics(input_to_g, output_of_g, save_dir, filename,
+                                 masks, hr_metrics, generator, with_deg=False):
     """
     Saves the image of the differences between the high-res real and the
     generated images that are supposed to be similar.
     """
     images = [input_to_g.clone().detach().cpu()]
     g_output = output_of_g.cpu()
+    metrics_loss = ImageTools.log_metrics(g_output, hr_metrics)
+    if metrics_loss < 0.015:  # mean difference is smaller than 1.5%
+        difference_str = str(np.round(metrics_loss, 4))
+        torch.save(generator.state_dict(), PATH_G + difference_str)
+        wandb.save(PATH_G + difference_str)
     images = images + [input_to_g.detach().cpu(), g_output]
     if with_deg:
         slices_45 = LearnTools.forty_five_deg_slices(masks, g_output)
@@ -138,12 +133,13 @@ if __name__ == '__main__':
                entity='tldr-group')
 
     # The batch makers for D and G:
-    D_BMs, D_nets, D_optimisers = Networks.return_D_nets(ngpu, wd, n_dims,
-                                           device, lr, beta1, anisotropic,
-                                           D_images, scale_f, rotation,
-                                                         rotations_bool)
+    D_BMs, D_nets, D_optimisers = Networks. \
+        return_D_nets(ngpu, wd, n_dims, device, lr, beta1, anisotropic,
+                      D_images, scale_f, rotation, rotations_bool)
     # Number of HR number of phases:
     nc_d = len(D_BMs[0].phases)
+    # volume fraction and surface area high-res metrics:
+    hr_slice_metrics = D_BMs[0].hr_metrics
 
     BM_G = BatchMaker(device=device, to_low_idx=to_low_idx, path=G_image,
                       sf=scale_f, dims=n_dims, stack=False,
@@ -155,14 +151,14 @@ if __name__ == '__main__':
                               BM_G.scale_factor).to(device)
     wandb.watch(netG, log='all')
 
+    # Create the down-sample object to compare between super-res and low-res
+    down_sample_object = LearnTools. \
+        DownSample(squash, n_dims, to_low_idx, scale_f, device,
+                   super_sampling, separator).to(device)
+
     # Handle multi-gpu if desired
     if (device.type == 'cuda') and (ngpu > 1):
         netG = nn.DataParallel(netG, list(range(ngpu)))
-
-    # Uncomment to apply the weights_init function to randomly initialize all
-    # weights to mean=0, stdev=0.2.
-    # netG.apply(weights_init)
-    # netD.apply(weights_init)
 
     # masks for 45 degree angle
     masks_45 = LearnTools.forty_five_deg_masks(batch_size_G_for_D,
@@ -171,25 +167,38 @@ if __name__ == '__main__':
     # Setup Adam optimizers for G
     optimizerG = optim.Adam(netG.parameters(), lr=lr, betas=(beta1, 0.999))
 
-    def generate_fake_image(detach_output=True):
+
+    def generate_fake_image(detach_output=True, same_seed=False,
+                            batch_size=batch_size_G_for_D):
         """
         :param detach_output: to detach the tensor output from gradient memory.
+        :param same_seed: generate the same random seed.
+        :param batch_size: the batch size of the fake images.
         :return: the generated image from G
         """
-        # Generate batch of g input
+        # Generate batch of G's input:
         g_slice = random.choice(g_batch_slices)
-        input_to_G = BM_G.random_batch_for_fake(batch_size_G_for_D,
-                                                          g_slice)
+        input_to_G = BM_G.random_batch_for_fake(batch_size, g_slice)
         input_size = input_to_G.size()
         # make noise channel and concatenate it to input:
-        noise = torch.randn(input_size[0], 1, *input_size[2:], device=device)
+        if same_seed:  # for plotting reasons, have the same noise input
+            # each time.
+            torch.manual_seed(0)
+            noise = torch.randn(input_size[0], 1, *input_size[2:],
+                                device=device)
+            torch.manual_seed(torch.seed())  # return to randomness
+            # TODO maybe the low-res images should also be the same..
+        else:
+            noise = torch.randn(input_size[0], 1, *input_size[2:], device=device)
         input_to_G = torch.cat((input_to_G, noise), dim=1)
 
         # Generate fake image batch with G
+        with_edges, without_edges = netG(input_to_G)
         if detach_output:
-            return input_to_G, netG(input_to_G).detach()
+            return input_to_G, with_edges.detach(), without_edges.detach()
         else:
-            return input_to_G, netG(input_to_G)
+            return input_to_G, with_edges, without_edges
+
 
     def take_fake_slices(fake_image, perm_idx):
         """
@@ -213,6 +222,7 @@ if __name__ == '__main__':
         else:  # same 2d slices are fed into D
             return fake_image
 
+
     ################
     # Training Loop!
     ################
@@ -230,7 +240,7 @@ if __name__ == '__main__':
             # (1) Update D network:
             #######################
 
-            _, fake_for_d = generate_fake_image(detach_output=True)
+            _, _, fake_for_d = generate_fake_image(detach_output=True)
 
             for k in range(math.comb(n_dims, 2)):
                 BM_D, netD, optimizerD = D_BMs[k], D_nets[k], D_optimisers[k]
@@ -241,6 +251,7 @@ if __name__ == '__main__':
 
                 # Train with all-real batch
                 netD.zero_grad()
+
                 # Batch of real high res for D
                 high_res = BM_D.random_batch_for_real(batch_size_D)
 
@@ -255,10 +266,11 @@ if __name__ == '__main__':
 
                 min_batch = min(high_res.size()[0], fake_slices.size()[0])
                 # Calculate gradient penalty
-                gradient_penalty = LearnTools.calc_gradient_penalty(netD,
-                                   high_res[:min_batch], fake_slices[:min_batch],
-                                   batch_size_D, BM_D.high_l, device,
-                                   Lambda, nc_d)
+                gradient_penalty = LearnTools.\
+                    calc_gradient_penalty(netD, high_res[:min_batch],
+                                          fake_slices[:min_batch],
+                                          batch_size_D, BM_D.high_l, device,
+                                          Lambda, nc_d)
 
                 # discriminator is trying to minimize:
                 d_cost = output_fake - output_real + gradient_penalty
@@ -268,14 +280,15 @@ if __name__ == '__main__':
 
                 wass = abs(output_fake.item() - output_real.item())
 
-            ############################
+            #######################
             # (2) Update G network:
-            ###########################
+            #######################
 
             if (i % g_update) == 0:
                 netG.zero_grad()
                 # generate fake again to update G:
-                low_res, fake_for_g = generate_fake_image(detach_output=False)
+                low_res, fake_for_g_vwl, fake_for_g = generate_fake_image(
+                    detach_output=False)
                 # save the cost of g to add from each axis:
                 g_cost = 0
                 # go through each axis
@@ -297,10 +310,11 @@ if __name__ == '__main__':
                         wandb.log({'deg_slice': fake_output})
                         fake_output = fake_output * 100
 
-                    # get the pixel-wise-distance loss
-                    pix_loss = LearnTools.pixel_wise_distance(low_res,
-                               fake_for_g, to_low_idx, BM_G.scale_factor,
-                               device, n_dims, squash)
+                    # get the voxel-wise-distance loss
+                    low_res_without_noise = low_res[:, :-1]  # without noise
+                    pix_loss = down_sample_object.voxel_wise_distance(
+                        fake_for_g_vwl, low_res_without_noise)
+
                     # Calculate G's loss based on this output
                     if pix_loss.item() > 0.005:
                         g_cost += -fake_output + pix_distance * pix_loss
@@ -321,16 +335,20 @@ if __name__ == '__main__':
                                              epoch, num_epochs, eta_file)
 
                 with torch.no_grad():  # only for plotting
-                    g_input_plot, g_output_plot = generate_fake_image(
-                        detach_output=True)
+                    g_input_plot, _, g_output_plot = generate_fake_image(
+                        detach_output=True, same_seed=True, batch_size=32)
                     # plot input without the noise channel
-                    save_differences(g_input_plot[:, :-1], g_output_plot,
-                                     progress_dir, 'running slices', masks_45,
-                                     forty_five_deg)
+                    save_differences_and_metrics\
+                        (g_input_plot[:, :-1], g_output_plot, progress_dir,
+                         'running slices', masks_45, hr_slice_metrics,
+                         netG, forty_five_deg)
             print(i, j)
 
         if (epoch % 3) == 0:
             torch.save(netG.state_dict(), PATH_G)
             wandb.save(PATH_G)
+            if (epoch % 60) == 0:
+                torch.save(netG.state_dict(), PATH_G + str(epoch) + '.pth')
+                wandb.save(PATH_G + str(epoch) + '.pth')
 
     print('finished training')

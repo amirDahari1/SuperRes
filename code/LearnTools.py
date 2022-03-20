@@ -1,9 +1,14 @@
+import matplotlib.pyplot as plt
 import torch
+import ImageTools
+from torch import nn
+from torch.nn import functional
 from torch.nn.functional import interpolate
+from torch.nn.functional import one_hot
 from torch import autograd
+import numpy as np
 import math  # just so I don't use numpy by accident
 
-separator = False
 k_logistic = 30  # the logistic function coefficient
 threshold = 0.5
 modes = ['bilinear', 'trilinear']
@@ -18,12 +23,19 @@ def return_args(parser):
     parser.add_argument("--down_sample", default=False, action="store_true",
                         help="Down samples the input for G for testing "
                              "purposes.")
+    parser.add_argument("--super_sampling", default=False,
+                        action="store_true", help="When comparing super-res "
+                        "and low-res, instead of blurring, it picks one voxel "
+                        "with nearest-neighbour interpolation.")
     parser.add_argument("--squash_phases", default=False, action="store_true",
                         help="All material phases in low res are the same.")
     parser.add_argument("--anisotropic", default=False, action="store_true",
                         help="The material is anisotropic (requires dif Ds).")
     parser.add_argument("--with_rotation", default=False, action="store_true",
                         help="create rotations and mirrors for the BM.")
+    parser.add_argument("--separator", default=False, action="store_true",
+                        help="Different voxel-wise loss for separator "
+                             "material.")
     parser.add_argument('-rotations_bool', nargs='+', type=int,
                         default=[0, 0, 1], help="If the material is "
                         "anisotropic, specify which images can be augmented "
@@ -59,6 +71,9 @@ def return_args(parser):
                         default=10,
                         help='The coefficient of the pixel distance loss '
                              'added to the cost of G.')
+    parser.add_argument('-g_epoch_id', type=str, default='', help='Since '
+                        'more than 1 G is saved during a run, specific G can '
+                        'be chosen for evaluation')
     args, unknown = parser.parse_known_args()
     return args
 
@@ -142,7 +157,7 @@ def calc_gradient_penalty(netD, real_data, fake_data, batch_size, l, device,
     :return: gradient penalty
     """
     # sample and reshape random numbers
-    alpha = torch.rand(batch_size, 1, device = device)
+    alpha = torch.rand(batch_size, 1, device=device)
     num_images = real_data.size()[0]
     alpha = alpha.expand(batch_size, int(real_data.numel() /
                                          batch_size)).contiguous()
@@ -155,7 +170,8 @@ def calc_gradient_penalty(netD, real_data, fake_data, batch_size, l, device,
     # pass interpolates through netD
     disc_interpolates = netD(interpolates)
     gradients = autograd.grad(outputs=disc_interpolates, inputs=interpolates,
-                              grad_outputs=torch.ones(disc_interpolates.size(), device = device),
+                              grad_outputs=torch.ones(disc_interpolates.size(),
+                                                      device=device),
                               create_graph=True, only_inputs=True)[0]
     # extract the grads and calculate gp
     gradients = gradients.view(gradients.size(0), -1)
@@ -163,69 +179,141 @@ def calc_gradient_penalty(netD, real_data, fake_data, batch_size, l, device,
     return gradient_penalty
 
 
-def down_sample(high_res_multi_phase, mat_idx, scale_factor, n_dims,
-                squash=False):
+class DownSample(nn.Module):
     """
-    :param high_res_multi_phase: the high resolution image to downsample.
-    :param mat_idx: the indices of phases to downsample.
-    :param scale_factor: what is the scale factor of the downsample.
-    :param device: cpu or gpu
-    :param n_dims: 2d or 3d
-    :param squash: if to squash all material phases together for
-    downsampling. (when it is hard to distinguish between material phases in
-    low resolution e.g. SOFC cathode.)
-    :return: a down-sample image of the high resolution image.
+    Calculates the down-sampled version of the generated volume. Can also be
+    used to generate a low-res volume from a high-res volume for evaluation
+    reasons.
     """
-    # first choose the material phase in the image:
-    material_phases = torch.index_select(high_res_multi_phase, 1, mat_idx)
-    if squash:  # all phases of material are same in low-res
-        # sum all the material phases:
-        material_phases = torch.sum(material_phases, dim=1).unsqueeze(dim=1)
-    # down sample:
-    material_low_res = interpolate(material_phases,
-                                   scale_factor=1/scale_factor,
-                                   mode=modes[n_dims - 2])
+    def __init__(self, squash, n_dims, low_res_idx, scale_factor,
+                 device, super_sampling=False, separator=False):
+        """
+        :param n_dims: 2d to 2d or 3d to 3d.
+        :param low_res_idx: the indices of phases to down-sample.
+        :param scale_factor: scale factor between high-res and low-res.
+        :param squash: if to squash all material phases together for
+        :param separator: different voxel-wise loss for the separator material.
+        :param device: The device the object is on.
+        down-sampling. (when it is hard to distinguish between material phases
+        in low resolution e.g. SOFC cathode.)
+        """
+        super(DownSample, self).__init__()
+        self.squash = squash
+        self.n_dims = n_dims
+        # Here we want to compare the pore as well:
+        self.low_res_idx = torch.cat((torch.zeros(1).to(low_res_idx),
+                                      low_res_idx))
 
-    return material_low_res
+        self.low_res_len = self.low_res_idx.numel()  # how many phases
+        self.scale_factor = scale_factor
+        self.device = device
+        self.separator = separator
+        self.voxel_wise_loss = nn.MSELoss()  # the voxel-wise loss
+        # Calculate the gaussian kernel and make the 3d convolution:
+        self.gaussian_k = self.calc_gaussian_kernel_3d(self.scale_factor)
+        # Reshape to convolutional weight
+        self.gaussian_k = self.gaussian_k.view(1, 1, *self.gaussian_k.size())
+        self.gaussian_k = self.gaussian_k.repeat(self.low_res_len, *[1] * (
+                self.gaussian_k.dim() - 1)).to(self.device)
+        self.groups = self.low_res_len  # ensures that each phase will be
+        # blurred independently.
+        self.gaussian_conv = functional.conv3d
+        self.softmax = functional.softmax
+        self.super_sampling = super_sampling
+
+    def voxel_wise_distance(self, generated_im, low_res):
+        """
+        calculates and returns the pixel wise distance between the low-res
+        image and the down sampling of the high-res generated image.
+        :return: the normalized distance (divided by the number of pixels of
+        the low resolution image.)
+        """
+        down_sampled_im = self(generated_im)
+        if self.separator:  # no punishment for making more material where pore
+            # is in low_res. All low res phases which are not pore are to be
+            # matched:
+            low_res = low_res[:, 1:]
+            down_sampled_im = down_sampled_im[:, 1:]
+            down_sampled_im = down_sampled_im * low_res
+            return torch.nn.MSELoss()(low_res, down_sampled_im)
+        # There is a double error for a mismatch:
+        mse_loss = torch.nn.MSELoss()(low_res, down_sampled_im)
+        return mse_loss * self.low_res_len / 2  # to standardize the loss.
+
+    def forward(self, generated_im, low_res_input=False):
+        """
+        Apply gaussian filter to the generated image.
+        """
+        # First choose the material phase in the image:
+        low_res_phases = torch.index_select(generated_im, 1, self.low_res_idx)
+        if self.squash:  # all phases of material are same in low-res
+            # sum all the material phases:
+            low_res_phases = torch.sum(low_res_phases, dim=1).unsqueeze(
+                dim=1)
+        # if it is super-sampling, return nearest-neighbour interpolation:
+        if self.super_sampling:
+            return interpolate(low_res_phases, scale_factor=1 /
+                               self.scale_factor, mode='nearest')
+        # Then gaussian blur the low res phases generated image:
+        blurred_im = self.gaussian_conv(input=low_res_phases,
+                                        weight=self.gaussian_k,
+                                        padding='same', groups=self.groups)
+        # Then downsample using trilinear interpolation:
+        blurred_low_res = interpolate(blurred_im,
+                                      scale_factor=1 / self.scale_factor,
+                                      mode=modes[self.n_dims - 2])
+        if low_res_input:  # calculate a low-res input.
+            return self.get_low_res_input(blurred_low_res)
+        # Multiplying the softmax probabilities by a large number to get a
+        # differentiable argmax function to avoid blocky super-res volumes:
+        return self.softmax(blurred_low_res*100, dim=1)
+
+    def get_low_res_input(self, blurred_image):
+        """
+        If only the low-res input is to be calculated for evaluation study.
+        :param blurred_image: after the image has been blurred and
+        down-sampled.
+        :return: a batch_size X low_res_phases X *low_res_vol_dimensions of a
+        for a one-hot volume.
+        """
+        # Adding little noise for the (0.5, 0.5) scenarios.
+        blurred_image += (torch.rand(blurred_image.size(),
+                                     device=blurred_image.device) - 0.5) / 1000
+        num_phases = blurred_image.size()[1]
+        blurred_image = torch.argmax(blurred_image, dim=1)  # find max phase
+        one_hot_vol = one_hot(blurred_image, num_classes=num_phases)
+        return one_hot_vol.permute(0, -1, *torch.arange(1, self.n_dims + 1))
+
+    @staticmethod
+    def calc_gaussian_kernel_3d(scale_factor):
+        """
+        :param scale_factor: The scale factor used between the low- and
+        high-res volumes.
+        :return: A gaussian blur 3d kernel for blurring before interpolating
+        """
+        ks = math.ceil(scale_factor)  # the kernel size
+        if ks % 2 == 0:
+            ks -= 1  # if even, the closest odd number from below.
+        # The same default sigma as in transforms.functional.gaussian_blur:
+        sigma = 0.3 * ((ks - 1) * 0.5 - 1) + 0.8
+        ts = torch.linspace(-(ks // 2), ks // 2, ks)
+        gauss = torch.exp((-(ts / sigma) ** 2 / 2))
+        kernel_1d = gauss / gauss.sum()  # Normalization
+        # 3d gaussian kernel can be computed in the following way:
+        kernel_3d = torch.einsum('i,j,k->ijk', kernel_1d, kernel_1d, kernel_1d)
+        return kernel_3d
 
 
-def logistic_function(x, k, x0):
-    """
-    :param x: The input
-    :param k: The logistic coefficient
-    :param x0: the middle input
-    :return: the logistic value of x
-    """
-    return 1/(1+torch.exp(-k*(x-x0)))
-
-
-def down_sample_for_similarity_check(generated_im, mat_idx, scale_factor,
-                                     n_dims, squash=True):
-    """
-    :return: down sample images of the generated image for the similarity
-    check with the low res input, no threshold (logistic function instead)
-    for differentiability.
-    """
-    material_low_res = down_sample(generated_im, mat_idx, scale_factor,
-                                   n_dims, squash)
-    return logistic_function(material_low_res, k_logistic, threshold)
-
-
-def pixel_wise_distance(low_res_im, generated_im, mat_idx,
-                        scale_factor, device, n_dims, squash=True):
-    """
-    calculates and returns the pixel wise distance between the low resolution
-    image and the down sampling of the high resolution generated image.
-    :return: the normalized distance (divided by the number of pixels of the
-    low resolution image
-    """
-    # all low res phases which are not pore are to be matched:
-    low_res_mat = low_res_im[:, 1:-1]
-    down_sample_im = down_sample_for_similarity_check(generated_im, mat_idx,
-                                                      scale_factor,
-                                                      n_dims, squash)
-    if separator:  # no punishment for making more material where pore is in
-        # low_res
-        down_sample_im = down_sample_im * low_res_mat
-    return torch.nn.MSELoss()(low_res_mat, down_sample_im)
+# if __name__ == '__main__':
+#     downsample_test = DownSample(squash=False, n_dims=3,
+#                                  low_res_idx=torch.LongTensor([1, 2, 3]),
+#                                  scale_factor=4)
+#     gen_im = torch.zeros(1, 5, 4, 4, 4)
+#     gen_im[0, 1, 2:,2:,2:] = 1
+#     gen_im[0, 2, :2,:2,:2] = 1
+#     low_res = torch.zeros(1, 4, 1, 1, 1)
+#     low_res[0, 2] = 1
+#     res1 = downsample_test(gen_im)
+#     res2 = downsample_test(gen_im, low_res_input=True)
+#     loss = downsample_test.voxel_wise_distance(gen_im, low_res)
 
