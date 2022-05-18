@@ -66,7 +66,7 @@ More options are available in [code/LearnTools.py](code/LearnTools.py)
 To train the generator on isotropic material as in Figure 6 in the [paper](https://arxiv.org/abs/2110.11281), run:
 
 ```
-python code/Architecture.py -d sem_isotropic --with_rotation -phases_idx 1 -sf 8 -g_image_path nmc_wo_bider.tif -d_image_path sem_image_stack.tif
+python code/Architecture.py -d sem_isotropic --with_rotation -phases_idx 1 -sf 8 -g_image_path nmc_wo_binder.tif -d_image_path sem_image_stack.tif
 ```
 
 To train the generator on anisotropic material as in Figure 3, run:
