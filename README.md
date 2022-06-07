@@ -84,10 +84,16 @@ To evaluate and create the large super-resolution volume, run
 python code/Evaluation.py [options]
 ```
 
-With the same directory name chosen for training. Specify ```-volume_size_to_evaluate``` for the size of the low-res volume to be super-resolved. There is no need to specify ```--anisotropic``` here since only the generator is used. For example:
+With the same directory name chosen for training. Specify ```-volume_size_to_evaluate``` for the size of the low-res volume to be super-resolved. There is no need to specify ```--anisotropic``` here since only the generator is used. For example the first training needs to be followed by:
 
 ```
-python code/Evaluation.py -d separator_anisotropic -volume_size_to_evaluate 156 75 75 -phases_idx 1 -g_image_path separator_lr_wo_fibrils.tif
+python code/Evaluation.py -d sem_isotropic -volume_size_to_evaluate 128 128 128 -sf 8 -phases_idx 1 -g_image_path nmc_wo_binder.tif
+```
+
+And the second training needs to be followed by:
+
+```
+python code/Evaluation.py -d separator_anisotropic --separator -volume_size_to_evaluate 156 75 75 -phases_idx 1 -g_image_path separator_lr_wo_fibrils.tif
 ```
 
 ## Development
