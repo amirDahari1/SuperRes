@@ -141,7 +141,7 @@ To add a new preprocessing method e.g for a different training datatype, see [co
 
 ## Code and Data
 
-v1.0.1 [![DOI](https://zenodo.org/badge/317877801.svg)](https://zenodo.org/badge/latestdoi/317877801)
+[![DOI](https://zenodo.org/badge/317877801.svg)](https://zenodo.org/badge/latestdoi/317877801)
 
 [A Super-Res generated volume for each model trained in the 4 explored case studies, plus all data used for training.](https://zenodo.org/record/7104555#.Y0V8TtJByGZ)
 
