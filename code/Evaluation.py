@@ -23,7 +23,7 @@ phases_to_low, g_epoch_id = args.phases_low_res_idx, args.g_epoch_id
 
 progress_main_dir = 'progress/' + progress_dir
 # progress_main_dir = 'progress'
-path_to_g_weights = progress_main_dir + '/g_weights.pth' + g_epoch_id
+path_to_g_weights = progress_main_dir + '/g_weights' + g_epoch_id + '.pth'
 # path_to_g_weights = progress_main_dir + '/g_weights_large_slice.pth'
 G_image_path = 'data/' + g_file_name
 # G_image_path = 'data/new_vol_down_sample.tif'
