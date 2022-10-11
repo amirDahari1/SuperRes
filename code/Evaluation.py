@@ -204,4 +204,5 @@ with torch.no_grad():  # save the images
         imsave(progress_main_dir + '/' + file_name, img)
 
     # also save the low-res input.
-    imsave(progress_main_dir + '/' + file_name + 'low_res', low_res)
+    imsave(progress_main_dir + '/' + file_name.split('.')[0] + '_low_res.tif',
+           low_res)

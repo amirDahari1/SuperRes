@@ -348,7 +348,9 @@ if __name__ == '__main__':
             torch.save(netG.state_dict(), PATH_G)
             wandb.save(PATH_G)
             if (epoch % 60) == 0:
-                torch.save(netG.state_dict(), PATH_G + str(epoch) + '.pth')
-                wandb.save(PATH_G + str(epoch) + '.pth')
+                PATH_G_wo_ext = PATH_G.split('.')[0]
+                torch.save(netG.state_dict(), PATH_G_wo_ext + str(epoch) +
+                           '.pth')
+                wandb.save(PATH_G_wo_ext + str(epoch) + '.pth')
 
     print('finished training')
