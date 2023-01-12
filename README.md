@@ -6,7 +6,7 @@ Fusion of complementary 2D and 3D mesostructural datasets using GANs
 
 To understand the capabilities and theory behind the model, please read our paper:
 
-[Fusion of complementary 2D and 3D mesostructural datasets using generative adversarial networks](https://arxiv.org/abs/2110.11281)
+[Fusion of complementary 2D and 3D mesostructural datasets using generative adversarial networks](https://onlinelibrary.wiley.com/doi/full/10.1002/aenm.202202407)
 
 (Recently accepted for publication in Advanced Energy Materials!)
 
