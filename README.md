@@ -2,7 +2,7 @@
 
 Fusion of complementary 2D and 3D mesostructural datasets using GANs
 
-![](super-res-icon.png)
+![](super-res-cover.png)
 
 To understand the capabilities and theory behind the model, please read our paper:
 
