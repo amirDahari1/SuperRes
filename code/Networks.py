@@ -42,6 +42,7 @@ def return_D_nets(ngpu, wd, n_dims, device, lr, beta1, anisotropic,
 
     else:  # material is isotropic
         # Create the batch maker
+        # print(f'phases: {np.unique(D_images[0])}')
         BM_D = BatchMaker(device, path=D_images[0], sf=scale_f,
                           dims=n_dims, stack=True, low_res=False,
                           rot_and_mir=rotation)
@@ -80,7 +81,6 @@ class Generator3D(nn.Module):
         # how to change the channels depends on the number of layers
         sf_c = int(math.log(self.scale_factor - EPS, 2))
         wg_sf = wg + sf_c
-        print(wg_sf)
         # first convolution, making many channels
         self.conv_minus_1 = nn.Conv3d(nc_g, 2 ** (wg_sf-1), 3, stride=1,
                                       padding=1, padding_mode='replicate')

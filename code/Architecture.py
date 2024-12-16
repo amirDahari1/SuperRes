@@ -119,7 +119,7 @@ def save_differences_and_metrics(input_to_g, output_of_g, save_dir, filename,
         difference_str = str(np.round(metrics_loss, 4))
         torch.save(generator.state_dict(), PATH_G + difference_str)
         wandb.save(PATH_G + difference_str)
-    images = images + [input_to_g.detach().cpu(), g_output]
+    images = images + [g_output]
     if with_deg:
         slices_45 = LearnTools.forty_five_deg_slices(masks, g_output)
         images.append(slices_45.detach().cpu())
@@ -330,19 +330,19 @@ if __name__ == '__main__':
                 wandb.log({"real": output_real, "fake": output_fake})
 
             # Output training stats
-            if i == j or i == 0:
+            if (i == j or i == 0) and (epoch % 2) == 0:
                 ImageTools.calc_and_save_eta(steps, time.time(), start, i,
                                              epoch, num_epochs, eta_file)
 
                 with torch.no_grad():  # only for plotting
                     g_input_plot, _, g_output_plot = generate_fake_image(
-                        detach_output=True, same_seed=True, batch_size=32)
+                        detach_output=True, same_seed=True, batch_size=64)
                     # plot input without the noise channel
                     save_differences_and_metrics\
                         (g_input_plot[:, :-1], g_output_plot, progress_dir,
                          'running slices', masks_45, hr_slice_metrics,
                          netG, forty_five_deg)
-            print(i, j)
+                print('Logged to wandb')
 
         if (epoch % 3) == 0:
             torch.save(netG.state_dict(), PATH_G)
