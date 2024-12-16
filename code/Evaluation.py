@@ -31,7 +31,7 @@ G_image_path = 'data/' + g_file_name
 rand_id = str(np.random.randint(10000))
 
 file_name = 'generated_tif' + rand_id + '.tif'
-crop_to_cube = False
+random_sample_3D = True
 input_with_noise = True
 all_pore_input = False
 
@@ -77,6 +77,14 @@ G_net.load_state_dict(torch.load(path_to_g_weights, map_location=torch.device(
 # G_net = torch.load(path_to_g_weights, map_location=torch.device(device))
 G_net.eval()
 
+def random_sample(im_3d, size_to_evaluate):
+    print(f'im 3d shape: {im_3d.shape}')
+    start = np.random.randint(0, np.array(im_3d.shape[-3:]) - size_to_evaluate)
+    print(f'start: {start}')
+    end = start + size_to_evaluate
+    return im_3d[..., start[0]:end[0], start[1]:end[1], start[2]:end[2]]
+    
+
 
 def crop_to_down_sample(high_res):
     """
@@ -121,6 +129,9 @@ with torch.no_grad():  # save the images
         noise = torch.randn(input_size[0], 1, *input_size[2:],
                             device=device, dtype=im_3d.dtype)
         im_3d = torch.cat((im_3d, noise), dim=1)
+    
+    if random_sample_3D:
+        im_3d = random_sample(im_3d, size_to_evaluate)
 
     nz1, nz2, nz3 = size_to_evaluate
     first_img_stack = []
@@ -144,7 +155,6 @@ with torch.no_grad():  # save the images
                 third_img_stack = []
                 last_ind3 = int(np.ceil((nz3-step_len)/step))
                 for k in range(last_ind3 + 1):
-                    print('small step = ' + str(k))
                     if k == last_ind3:
                         third_lr_vec = second_lr_vec[..., :, :,
                                        nz3-step_len:nz3]
@@ -197,7 +207,7 @@ with torch.no_grad():  # save the images
             first_img_stack.append(res1)
     img = np.concatenate(first_img_stack, axis=0)
     img = img[crop:-crop, crop:-crop, crop:-crop]
-    low_res = np.squeeze(ImageTools.one_hot_decoding(im_3d.cpu()))
+    low_res = np.squeeze(ImageTools.one_hot_decoding(im_3d.cpu())).astype('int8')
     if all_pore_input:
         imwrite(progress_main_dir + '/' + file_name + '_pore', img)
     else:
