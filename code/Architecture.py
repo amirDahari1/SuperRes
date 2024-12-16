@@ -342,7 +342,6 @@ if __name__ == '__main__':
                         (g_input_plot[:, :-1], g_output_plot, progress_dir,
                          'running slices', masks_45, hr_slice_metrics,
                          netG, forty_five_deg)
-            print(i, j)
 
         if (epoch % 3) == 0:
             torch.save(netG.state_dict(), PATH_G)
