@@ -56,7 +56,7 @@ def vf_sa_metrics(batch_images):
     phases = np.unique(batch_images)
     vf = np.mean([[(batch_images[j] == p).mean() for p in phases] for j
                   in range(batch_size)], axis=0)
-    sa = np.mean([[metrics.surface_area(batch_images[j], [ph1, ph2]).item() for
+    sa = np.mean([[metrics.surface_area(batch_images[j].astype(np.float32), [ph1, ph2]).item() for
                    ph1, ph2 in combinations(phases, 2)] for j in range(
         batch_size)], axis=0)
     return list(vf), list(sa)
