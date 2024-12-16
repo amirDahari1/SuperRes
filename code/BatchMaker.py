@@ -60,9 +60,16 @@ class BatchMaker:
         self.im = imread(path)
         self.high_l = HIGH_L_3D
         if stack and not low_res:  # it is the high-res training data
+            if len(self.im.shape) == 2:
+                # unsqueeze the np array to make it 1 X height X width
+                self.im = np.expand_dims(self.im, axis=0)
             self.hr_metrics = ImageTools.vf_sa_metrics(self.im)
             self.high_l -= crop_size*2
         if rot_and_mir:
+            # If the image is not square, the rotations will not work, so there is a 
+            # need to crop and batch the image(s) to squares:
+            if stack:
+                self.make_images_square()
             self.rotate_and_mirror()
         self.dim_im = len(self.im.shape)  # the dimension of the image
         self.phases = np.unique(self.im)  # the unique values in image
@@ -81,6 +88,25 @@ class BatchMaker:
                            np.array(self.to_low_idx.detach().cpu())])
             self.high_l = int(HIGH_L_3D / self.scale_factor)
 
+    def make_images_square(self):
+        if self.im.shape[1] != self.im.shape[2]:
+            min_len = min(self.im.shape[1], self.im.shape[2])
+            max_len = max(self.im.shape[1], self.im.shape[2])
+            max_idx = np.argmax(self.im.shape)
+            # Generate a set of square images that cover the whole image:
+            # the number of squares in the image:
+            num_squares = int(np.ceil(max_len/min_len))
+            new_image_stack = []
+            for i in range(num_squares):
+                slices = [slice(None)]*len(self.im.shape)
+                if i == num_squares - 1:
+                    slices[max_idx] = slice(max_len - min_len, max_len)
+                else:
+                    slices[max_idx] = slice(i*min_len, (i+1)*min_len)
+                new_image_stack.append(self.im[tuple(slices)])
+            # stack the new images:
+            self.im = np.concatenate(new_image_stack, axis=0)
+                
     def down_sample_im(self, image):
         """
         :return: a down-sample image of the high resolution image for the input
