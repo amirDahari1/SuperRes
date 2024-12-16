@@ -66,9 +66,9 @@ def plot_fake_difference(images, save_dir, filename, with_deg=False):
     # first move everything to numpy
     # rand_sim = np.array(input_to_g[:, 2, :, :])
     images = [np.array(image) for image in images]
-    images[2] = fractions_to_ohe(images[2])  # the output from g needs to ohe
+    images[1] = fractions_to_ohe(images[1])  # the output from g needs to ohe
     if with_deg:
-        images[3] = fractions_to_ohe(images[3])  # also the slices
+        images[2] = fractions_to_ohe(images[2])  # also the slices
     images = [one_hot_decoding(image) for image in images]
     save_three_by_two_grey(images, save_dir + ' ' + filename, save_dir,
                            filename, with_deg)
@@ -78,18 +78,22 @@ def save_three_by_two_grey(images, title, save_dir, filename, with_deg=False):
     if with_deg:
         f, axarr = plt.subplots(5, 3)
     else:
-        f, axarr = plt.subplots(4, 3)
+        f, axarr = plt.subplots(6, 3)
+    plane_labels = ['yz', 'xz', 'xy']
     for i in range(3):
         for j in range(3):
-            length_im = images[i].shape[1]
+            length_im = images[0].shape[1]
             middle = int(length_im/2)
-            axarr[i, j].imshow(images[i][j, middle, :, :], cmap='gray', vmin=0,
+            slices = [j]+[slice(None)]*3
+            slices[i+1] = middle
+            axarr[i*2, j].imshow(images[0][tuple(slices)], cmap='gray', vmin=0,
                                vmax=2)
-            axarr[i, j].set_xticks([0, length_im-1])
-            axarr[i, j].set_yticks([0, length_im-1])
-    for j in range(3):  # showing xy slices from 'above'
-        axarr[3, j].imshow(images[2][j, :, :, 4], cmap='gray', vmin=0,
-                           vmax=2)
+            axarr[i*2, j].set_xticks([0, length_im-1])
+            axarr[i*2, j].set_yticks([0, length_im-1])
+            # if j == 1:
+                # axarr[i*2, j].set_xtitle(f'{plane_labels[i]} plane')
+            axarr[i*2+1, j].imshow(images[1][tuple(slices)], cmap='gray', vmin=0,
+                                 vmax=2)
     if with_deg:
         for j in range(3):  # showing 45 deg slices
             axarr[4, j].imshow(images[3][j, :, :], cmap='gray', vmin=0,

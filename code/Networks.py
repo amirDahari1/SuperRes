@@ -42,7 +42,7 @@ def return_D_nets(ngpu, wd, n_dims, device, lr, beta1, anisotropic,
 
     else:  # material is isotropic
         # Create the batch maker
-        print(f'phases: {np.unique(D_images[0])}')
+        # print(f'phases: {np.unique(D_images[0])}')
         BM_D = BatchMaker(device, path=D_images[0], sf=scale_f,
                           dims=n_dims, stack=True, low_res=False,
                           rot_and_mir=rotation)
