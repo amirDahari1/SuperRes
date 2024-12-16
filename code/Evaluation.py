@@ -5,7 +5,7 @@ import ImageTools
 import argparse
 import torch
 import numpy as np
-from tifffile import imsave, imread
+from tifffile import imwrite, imread
 
 # Parsing arguments:
 parser = argparse.ArgumentParser()
@@ -199,10 +199,10 @@ with torch.no_grad():  # save the images
     img = img[crop:-crop, crop:-crop, crop:-crop]
     low_res = np.squeeze(ImageTools.one_hot_decoding(im_3d.cpu()))
     if all_pore_input:
-        imsave(progress_main_dir + '/' + file_name + '_pore', img)
+        imwrite(progress_main_dir + '/' + file_name + '_pore', img)
     else:
-        imsave(progress_main_dir + '/' + file_name, img)
+        imwrite(progress_main_dir + '/' + file_name, img)
 
     # also save the low-res input.
-    imsave(progress_main_dir + '/' + file_name.split('.')[0] + '_low_res.tif',
+    imwrite(progress_main_dir + '/' + file_name.split('.')[0] + '_low_res.tif',
            low_res)
