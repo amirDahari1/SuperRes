@@ -41,6 +41,7 @@ D_dimensions_to_check, scale_f = args.d_dimensions_to_check, args.scale_factor
 rotation, anisotropic = args.with_rotation, args.anisotropic
 rotations_bool, down_sample = args.rotations_bool, args.down_sample
 separator, super_sampling = args.separator, args.super_sampling
+larger_d_area = args.larger_d_area
 
 if not os.path.exists(ImageTools.progress_dir + progress_dir):
     os.makedirs(ImageTools.progress_dir + progress_dir)
@@ -67,7 +68,10 @@ forty_five_deg = False
 
 # Batch sizes during training
 if n_dims == 3:
-    batch_size_G_for_D, batch_size_G, batch_size_D = 4, 32, 64
+    if larger_d_area:
+        batch_size_G_for_D, batch_size_G, batch_size_D = 2, 32, 64
+    else:
+        batch_size_G_for_D, batch_size_G, batch_size_D = 8, 32, 64
 else:  # n_dims == 2
     batch_size_G_for_D, batch_size_G, batch_size_D = 64, 64, 64
 
@@ -135,7 +139,7 @@ if __name__ == '__main__':
     # The batch makers for D and G:
     D_BMs, D_nets, D_optimisers = Networks. \
         return_D_nets(ngpu, wd, n_dims, device, lr, beta1, anisotropic,
-                      D_images, scale_f, rotation, rotations_bool)
+                      D_images, scale_f, rotation, rotations_bool, larger_d_area)
     # Number of HR number of phases:
     nc_d = len(D_BMs[0].phases)
     # volume fraction and surface area high-res metrics:
@@ -144,7 +148,7 @@ if __name__ == '__main__':
     BM_G = BatchMaker(device=device, to_low_idx=to_low_idx, path=G_image,
                       sf=scale_f, dims=n_dims, stack=False,
                       down_sample=down_sample, low_res=not down_sample,
-                      rot_and_mir=False, squash=squash)
+                      rot_and_mir=False, squash=squash, larger_d_area=larger_d_area)
 
     # Create the generator
     netG = Networks.generator(ngpu, wg, nc_g, nc_d, n_res_blocks, n_dims,
@@ -241,6 +245,7 @@ if __name__ == '__main__':
             #######################
 
             _, _, fake_for_d = generate_fake_image(detach_output=True)
+            # print('fake_for_d shape: ', fake_for_d.size())
 
             for k in range(math.comb(n_dims, 2)):
                 BM_D, netD, optimizerD = D_BMs[k], D_nets[k], D_optimisers[k]
@@ -260,6 +265,7 @@ if __name__ == '__main__':
 
                 # obtain fake slices from the fake image
                 fake_slices = take_fake_slices(fake_for_d, k)
+                # print('fake_slices shape: ', fake_slices.size())
 
                 # Classify all fake batch with D
                 output_fake = netD(fake_slices).view(-1).mean()
@@ -336,7 +342,7 @@ if __name__ == '__main__':
 
                 with torch.no_grad():  # only for plotting
                     g_input_plot, _, g_output_plot = generate_fake_image(
-                        detach_output=True, same_seed=True, batch_size=64)
+                        detach_output=True, same_seed=True, batch_size=32)
                     # plot input without the noise channel
                     save_differences_and_metrics\
                         (g_input_plot[:, :-1], g_output_plot, progress_dir,

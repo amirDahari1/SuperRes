@@ -36,6 +36,8 @@ def return_args(parser):
     parser.add_argument("--separator", default=False, action="store_true",
                         help="Different voxel-wise loss for separator "
                              "material.")
+    parser.add_argument("--larger_d_area", default=False, action="store_true",
+                        help="The discriminator sees a 128^2 instead of a 64^2.") 
     parser.add_argument('-rotations_bool', nargs='+', type=int,
                         default=[0, 0, 1], help="If the material is "
                         "anisotropic, specify which images can be augmented "
