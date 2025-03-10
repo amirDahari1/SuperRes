@@ -30,7 +30,7 @@ class BatchMaker:
     def __init__(self, device, to_low_idx=None, path=NMC_PATH, sf=4, dims=3,
                  stack=True, down_sample=False, separator=False,
                  low_res=False, rot_and_mir=True, squash=False,
-                 super_sample=False):
+                 super_sample=False, larger_d_area=False):
         """
         :param device: the device that the image is on.
         :param to_low_idx: the indices of the phases to be down-sampled.
@@ -52,19 +52,23 @@ class BatchMaker:
         # down-sample parameters:
         self.down_sample, self.to_low_idx, self.squash = down_sample, \
                                                          to_low_idx, squash
+        self.larger_d_area = larger_d_area
         self.scale_factor = sf
         self.path = path  # the path of the tif file
         self.dims = dims  # if G is 3D to 3D or 2D to 2D
         self.device = device
         self.stack = stack  # if the data is a stack of 2D images
         self.im = imread(path)
-        self.high_l = HIGH_L_3D
+        self.high_l = HIGH_L_3D 
+        if self.larger_d_area:
+            self.high_l = HIGH_L_3D * 2
         if stack and not low_res:  # it is the high-res training data
             if len(self.im.shape) == 2:
                 # unsqueeze the np array to make it 1 X height X width
                 self.im = np.expand_dims(self.im, axis=0)
             self.hr_metrics = ImageTools.vf_sa_metrics(self.im)
             self.high_l -= crop_size*2
+        print(f'image shape before changes: {self.im.shape}')
         if rot_and_mir:
             # If the image is not square, the rotations will not work, so there is a 
             # need to crop and batch the image(s) to squares:
@@ -76,6 +80,8 @@ class BatchMaker:
         self.im = ImageTools.one_hot_encoding(self.im, self.phases)
         if low_res:
             self.high_l = int(HIGH_L_3D/self.scale_factor)
+            if self.larger_d_area:
+                self.high_l *= 2
         if self.dims == 2:
             self.high_l = self.high_l*2
         if self.down_sample:
@@ -87,6 +93,9 @@ class BatchMaker:
             self.phases = [self.phases[0]] + list(np.array(self.phases)[
                            np.array(self.to_low_idx.detach().cpu())])
             self.high_l = int(HIGH_L_3D / self.scale_factor)
+            if self.larger_d_area:
+                self.high_l *= 2
+        print(f'image shape after changes: {self.im.shape}')
 
     def make_images_square(self):
         if self.im.shape[1] != self.im.shape[2]:

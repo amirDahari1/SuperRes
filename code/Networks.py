@@ -13,7 +13,7 @@ modes = ['bilinear', 'trilinear']
 
 
 def return_D_nets(ngpu, wd, n_dims, device, lr, beta1, anisotropic,
-                  D_images, scale_f, rotation, rotation_bool):
+                  D_images, scale_f, rotation, rotation_bool, larger_d_area):
     """
     :return: Returns the batch makers, discriminators, and optimizers for the
     discriminators. If the material is isotropic, there is 1 discriminator,
@@ -22,42 +22,28 @@ def return_D_nets(ngpu, wd, n_dims, device, lr, beta1, anisotropic,
     D_nets = []
     D_optimisers = []
     D_BMs = []
-    if anisotropic:
-        for i in np.arange(n_dims):
-            BM_D = BatchMaker(device, path=D_images[i], sf=scale_f,
-                              dims=n_dims, stack=True, low_res=False,
-                              rot_and_mir=rotation_bool[i])
-            nc_d = len(BM_D.phases)
-            # Create the Discriminator
-            netD = discriminator(ngpu, wd, nc_d, n_dims).to(device)
-            # Handle multi-gpu if desired
-            if (device.type == 'cuda') and (ngpu > 1):
-                netD = nn.DataParallel(netD, list(range(ngpu)))
-            optimiserD = optim.Adam(netD.parameters(), lr=lr,
-                                    betas=(beta1, 0.999))
-            # append the BMs, nets and optimisers:
-            D_BMs.append(BM_D)
-            D_nets.append(netD)
-            D_optimisers.append(optimiserD)
-
-    else:  # material is isotropic
-        # Create the batch maker
-        # print(f'phases: {np.unique(D_images[0])}')
-        BM_D = BatchMaker(device, path=D_images[0], sf=scale_f,
-                          dims=n_dims, stack=True, low_res=False,
-                          rot_and_mir=rotation)
-        # Create the Discriminator
+    for i in np.arange(n_dims):
+        if anisotropic:
+            cur_rotation = rotation_bool[i]
+            cur_path = D_images[i]
+        else:
+            cur_rotation = rotation
+            cur_path = D_images[0]
+        BM_D = BatchMaker(device, path=cur_path, sf=scale_f,
+                            dims=n_dims, stack=True, low_res=False,
+                            rot_and_mir=cur_rotation, larger_d_area=larger_d_area)
         nc_d = len(BM_D.phases)
-        netD = discriminator(ngpu, wd, nc_d, n_dims).to(device)
+        # Create the Discriminator
+        netD = discriminator(ngpu, wd, nc_d, n_dims, larger_d_area=larger_d_area).to(device)
         # Handle multi-gpu if desired
         if (device.type == 'cuda') and (ngpu > 1):
             netD = nn.DataParallel(netD, list(range(ngpu)))
         optimiserD = optim.Adam(netD.parameters(), lr=lr,
                                 betas=(beta1, 0.999))
-        D_BMs = [BM_D]*n_dims  # same batch maker, different pointers
-        D_nets = [netD]*n_dims  # same network, different pointers
-        D_optimisers = [optimiserD]*n_dims  # same optimiser, different
-        # pointers
+        # append the BMs, nets and optimisers:
+        D_BMs.append(BM_D)
+        D_nets.append(netD)
+        D_optimisers.append(optimiserD)
     return D_BMs, D_nets, D_optimisers
 
 
@@ -171,26 +157,39 @@ class Generator3D(nn.Module):
         return result, result[..., crop:-crop, crop:-crop, crop:-crop]
 
 
-def discriminator(ngpu, wd, nc_d, dims):
+def discriminator(ngpu, wd, nc_d, dims, larger_d_area=True):
     if dims == 3:  # practically always
-        return Discriminator3d(ngpu, wd, nc_d)
-    else:  # dims == 2
+        return Discriminator3d(ngpu, wd, nc_d, larger_d_area=larger_d_area)
+    else:  # dims == 2 already a larger area
         return Discriminator2d(ngpu, wd, nc_d)
 
 
 # Discriminator code
 class Discriminator3d(nn.Module):
-    def __init__(self, ngpu, wd, nc_d):
+    def __init__(self, ngpu, wd, nc_d, larger_d_area):
         super(Discriminator3d, self).__init__()
         self.ngpu = ngpu
-        # first convolution, input is 3x56^3
-        self.conv0 = nn.Conv2d(nc_d, 2 ** (wd - 3), 4, 2, 1)
-        # second convolution, input is 64x28^3
+        self.larger_d_area = larger_d_area
+        if self.larger_d_area:
+            # zero convolution, input is 3x120^3
+            self.conv0 = nn.Conv2d(nc_d, 2 ** (wd - 3), 4, 2, 1)
+            # first convolution, input is 64x60^3
+            self.conv1 = nn.Conv2d(2 ** (wd - 3), 2 ** (wd - 3), 4, 2, 1)
+        else:
+            # first convolution, input is 3x56^3
+            self.conv0 = nn.Conv2d(nc_d, 2 ** (wd - 3), 4, 2, 1)
+        # second convolution, input is 64x28^3 (30^3 for larger area)
         self.conv2 = nn.Conv2d(2 ** (wd - 3), 2 ** (wd - 2), 4, 2, 1)
-        # third convolution, input is 128x14^3
-        self.conv3 = nn.Conv2d(2 ** (wd - 2), 2 ** (wd - 1), 4, 2, 1)
-        # fourth convolution, input is 256x7^3, conv kernel 3
-        self.conv4 = nn.Conv2d(2 ** (wd - 1), 2 ** wd, 3, 2, 1)
+        # third convolution, input is 128x14^3 (15^3 for larger area)
+        if self.larger_d_area:
+            self.conv3 = nn.Conv2d(2 ** (wd - 2), 2 ** (wd - 1), 3, 2, 1)
+        else:
+            self.conv3 = nn.Conv2d(2 ** (wd - 2), 2 ** (wd - 1), 4, 2, 1)
+        # fourth convolution, input is 256x7^3 (8^3 for larger area)
+        if self.larger_d_area:
+            self.conv4 = nn.Conv2d(2 ** (wd - 1), 2 ** wd, 4, 2, 1)
+        else:
+            self.conv4 = nn.Conv2d(2 ** (wd - 1), 2 ** wd, 3, 2, 1)
         # fifth convolution, input is 512x4^3
         self.conv5 = nn.Conv2d(2 ** wd, 1, 4, 2, 0)
         # for smaller cube
@@ -198,7 +197,8 @@ class Discriminator3d(nn.Module):
 
     def forward(self, x):
         x = nn.ReLU()(self.conv0(x))
-        # x = nn.ReLU()(self.conv1(x))
+        if self.larger_d_area:
+            x = nn.ReLU()(self.conv1(x))
         x = nn.ReLU()(self.conv2(x))
         x = nn.ReLU()(self.conv3(x))
         if smaller_cube:
