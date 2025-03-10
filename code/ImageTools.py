@@ -42,8 +42,27 @@ def log_metrics(g_output, hr_metrics):
     m_loss += [np.abs(1 - sr_sa[i] / hr_sa[i]) for i in range(len(hr_sa))]
     m_loss = np.mean(m_loss)
     wandb.log({'Metrics percentage difference': m_loss})
+    # calculate the error in isotropy:
+    phases = np.unique(g_output)
+    isotropy_errors(g_output, phases[-2], phases[-1])
     return m_loss
 
+def isotropy_errors(batch_images, phase_a, phase_b):
+    
+    dist = 3
+    up_images = np.roll(batch_images, dist, axis=1)
+    down_images = np.roll(batch_images, -dist, axis=1)
+    right_images = np.roll(batch_images, dist, axis=2)
+    left_images = np.roll(batch_images, -dist, axis=2)
+    in_images = np.roll(batch_images, dist, axis=3)
+    out_images = np.roll(batch_images, -dist, axis=3)
+    all_ims = [up_images, down_images, right_images, left_images, in_images, out_images]
+    all_ims = [im[:, dist:-dist, dist:-dist, dist:-dist] for im in all_ims]
+    str_ims = ['up', 'down', 'right', 'left', 'in', 'out']
+    batch_images_cropped = batch_images[:, dist:-dist, dist:-dist, dist:-dist]
+    for im, str_im in zip(all_ims, str_ims):
+        overlap = ((batch_images_cropped==phase_a) & (im==phase_b)).mean()
+        wandb.log({'Isotropy ' + str_im + ' overlap': overlap})
 
 def vf_sa_metrics(batch_images):
     """
@@ -83,15 +102,17 @@ def save_three_by_two_grey(images, title, save_dir, filename, with_deg=False):
     for i in range(3):
         for j in range(3):
             length_im = images[0].shape[1]
-            middle = int(length_im/2)
+            middle_small = int(length_im/2)
             slices = [j]+[slice(None)]*3
-            slices[i+1] = middle
+            slices[i+1] = middle_small
             axarr[i*2, j].imshow(images[0][tuple(slices)], cmap='gray', vmin=0,
                                vmax=2)
             axarr[i*2, j].set_xticks([0, length_im-1])
             axarr[i*2, j].set_yticks([0, length_im-1])
             # if j == 1:
                 # axarr[i*2, j].set_xtitle(f'{plane_labels[i]} plane')
+            middle_large = int(images[1].shape[1]/2)
+            slices[i+1] = middle_large
             axarr[i*2+1, j].imshow(images[1][tuple(slices)], cmap='gray', vmin=0,
                                  vmax=2)
     if with_deg:
