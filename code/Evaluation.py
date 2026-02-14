@@ -1,3 +1,4 @@
+import os
 import BatchMaker
 import LearnTools
 import Networks
@@ -22,12 +23,22 @@ def main(save_im = True):
     g_file_name, super_sample = args.g_image_path, args.super_sampling
     phases_to_low, g_epoch_id = args.phases_low_res_idx, args.g_epoch_id
 
-    progress_main_dir = 'progress/' + progress_dir
-    # progress_main_dir = 'progress'
-    path_to_g_weights = progress_main_dir + '/g_weights' + g_epoch_id + '.pth'
-    # path_to_g_weights = progress_main_dir + '/g_weights_large_slice.pth'
-    G_image_path = 'data/' + g_file_name
-    # G_image_path = 'data/new_vol_down_sample.tif'
+    # progress directory: allow absolute, otherwise keep old "progress/<name>"
+    progress_main_dir = (
+        progress_dir
+        if os.path.isabs(progress_dir)
+        else os.path.join("progress", progress_dir)
+    )
+
+    # weights path: join safely; keep old naming
+    path_to_g_weights = os.path.join(progress_main_dir, f"g_weights{g_epoch_id}.pth")
+
+    # image path: allow absolute, otherwise keep old "data/<name>"
+    G_image_path = (
+        g_file_name
+        if os.path.isabs(g_file_name)
+        else os.path.join("data", g_file_name)
+    )
 
     rand_id = str(np.random.randint(10000))
 
