@@ -586,7 +586,6 @@ def main(
                 imwrite(progress_main_dir + '/' + file_name + '_pore', img)
             else:
                 imwrite(progress_main_dir + '/' + file_name, img)
-
             # also save the low-res input.
             imwrite(progress_main_dir + '/' + file_name.split('.')[0] + '_low_res.tif',
                 low_res)
